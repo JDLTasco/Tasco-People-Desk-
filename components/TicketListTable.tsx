@@ -8,9 +8,9 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
   }
 
   return (
-    <table style={{ borderCollapse: "collapse", width: "100%" }}>
+    <table>
       <thead>
-        <tr style={{ textAlign: "left", borderBottom: "2px solid #333" }}>
+        <tr>
           <th>Ticket</th>
           <th>Subject</th>
           <th>Requester</th>
@@ -27,7 +27,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
           const due = effectiveDueDate(t.slaDueAt, t.targetDueAt);
           const overdue = isOverdue(t.slaDueAt, t.targetDueAt, t.status);
           return (
-            <tr key={t.id} style={{ borderBottom: "1px solid #ddd" }}>
+            <tr key={t.id}>
               <td>
                 <Link href={`/tickets/${t.id}`}>{t.ticketNo}</Link>
               </td>
@@ -35,12 +35,16 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
                 {t.subject} {t.isConfidential && <span title="Confidential">🔒</span>}
               </td>
               <td>{t.requesterName}</td>
-              <td>{t.status}</td>
-              <td>{t.priority}</td>
+              <td>
+                <span className={`chip chip-status-${t.status}`}>{t.status}</span>
+              </td>
+              <td>
+                <span className={`chip chip-priority-${t.priority}`}>{t.priority}</span>
+              </td>
               <td>{t.category?.name ?? <em>none</em>}</td>
               <td>{t.businessUnit?.name ?? <em>none</em>}</td>
               <td>{t.assignee ? `${t.assignee.displayName} (${t.assignee.initials})` : <em>unassigned</em>}</td>
-              <td style={overdue ? { color: "#b00020", fontWeight: "bold" } : undefined}>
+              <td className={overdue ? "overdue" : undefined}>
                 {due.toLocaleString()} {overdue && "-- OVERDUE"}
               </td>
             </tr>

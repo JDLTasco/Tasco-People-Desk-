@@ -2,26 +2,294 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tasco brand palette (§13: "Tasco colour palette") -- matches the
+   established convention already in production in the sibling Tasco
+   Fleet app (app/globals.css there), which itself derives from the
+   Tasco Petroleum logo (navy oval/wordmark, red accent swoosh). Reused
+   here rather than invented separately, so the whole Tasco app suite
+   looks like one family. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --tasco-navy: #1b3a6b;
+  --tasco-navy-hover: #254f96;
+  --tasco-navy-light: #d0dcf0;
+  --tasco-navy-pale: #f0f4fa;
+  --tasco-red: #c5221f;
+  --tasco-red-pale: #fce8e6;
+  --tasco-green: #137333;
+  --tasco-green-pale: #e6f4ea;
+  --tasco-amber: #b45309;
+  --tasco-amber-pale: #fff3cd;
+  --ink: #1a1a1a;
+  --border: #e2e2e2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--ink);
+  background: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  margin: 0;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+a {
+  color: var(--tasco-navy);
+}
+
+/* Nav */
+.main-nav {
+  display: flex;
+  gap: 1.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0 1rem;
+  height: 56px;
+  background: var(--tasco-navy);
+}
+.main-nav a {
+  color: var(--tasco-navy-light);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.main-nav a:hover {
+  color: #fff;
+}
+.nav-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+.nav-spacer {
+  margin-left: auto;
+  color: var(--tasco-navy-light);
+  font-size: 0.85rem;
+}
+
+/* Page shell */
+main {
+  padding: 1.5rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+h1 {
+  color: var(--tasco-navy);
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+h2 {
+  color: var(--tasco-navy);
+  font-size: 1.15rem;
+  border-bottom: 2px solid var(--tasco-navy-pale);
+  padding-bottom: 0.35rem;
+}
+h3 {
+  color: var(--tasco-navy);
+  font-size: 1rem;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+th,
+td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+th {
+  background: var(--tasco-navy-pale);
+  color: var(--tasco-navy);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+tr:hover td {
+  background: #fafbfd;
+}
+
+/* Forms */
+input,
+select,
+textarea {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--tasco-navy);
+  box-shadow: 0 0 0 2px rgba(27, 58, 107, 0.15);
+}
+label {
+  font-size: 0.85rem;
+  color: #444;
+}
+
+/* Buttons */
+button {
+  padding: 0.5rem 0.9rem;
+  border-radius: 5px;
+  border: 1px solid var(--tasco-navy);
+  background: var(--tasco-navy);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+button:hover:not(:disabled) {
+  background: var(--tasco-navy-hover);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+button.secondary {
+  background: #fff;
+  color: var(--tasco-navy);
+}
+button.secondary:hover:not(:disabled) {
+  background: var(--tasco-navy-pale);
+}
+
+/* Status / priority chips */
+.chip {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.chip-status-NEW { background: var(--tasco-navy-pale); color: var(--tasco-navy); }
+.chip-status-ALLOCATED { background: #eef2ff; color: #3730a3; }
+.chip-status-IN_ACTION { background: var(--tasco-amber-pale); color: var(--tasco-amber); }
+.chip-status-OUTCOME { background: #f3e8ff; color: #6b21a8; }
+.chip-status-CLOSED { background: #f0f0f0; color: #555; }
+.chip-status-ARCHIVED { background: #f0f0f0; color: #888; }
+
+.chip-priority-P1 { background: var(--tasco-red-pale); color: var(--tasco-red); }
+.chip-priority-P2 { background: var(--tasco-amber-pale); color: var(--tasco-amber); }
+.chip-priority-P3 { background: var(--tasco-navy-pale); color: var(--tasco-navy); }
+
+.overdue {
+  color: var(--tasco-red);
+  font-weight: 700;
+}
+
+/* Banners */
+.banner {
+  padding: 0.6rem 0.9rem;
+  border-radius: 5px;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.banner-legal-hold {
+  background: var(--tasco-amber-pale);
+  color: #7a4a00;
+  font-weight: 700;
+  border: 1px solid #f0c36d;
+}
+.banner-confidential {
+  background: var(--tasco-navy-pale);
+  color: var(--tasco-navy);
+  border: 1px solid var(--tasco-navy-light);
+}
+.banner-error {
+  background: var(--tasco-red-pale);
+  color: var(--tasco-red);
+}
+
+/* Sections / cards */
+.section-card {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+.item-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: #fafbfd;
+}
+.meta-grid {
+  display: flex;
+  gap: 1.75rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--tasco-navy-pale);
+  border-radius: 8px;
+}
+.meta-grid > div {
+  font-size: 0.9rem;
+}
+
+/* Auth pages */
+.auth-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tasco-navy-pale);
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  margin: 2rem;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(27, 58, 107, 0.12);
+  overflow: hidden;
+}
+.auth-card-header {
+  background: var(--tasco-navy);
+  color: #fff;
+  padding: 1.25rem 1.5rem;
+}
+.auth-card-header h1 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.3rem;
+}
+.auth-card-header p {
+  margin: 0.15rem 0 0;
+  color: var(--tasco-navy-light);
+  font-size: 0.8rem;
+}
+.auth-card-body {
+  padding: 1.5rem;
+}
+
+/* Print */
+@media print {
+  .main-nav,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    font-size: 11px;
+  }
+  table {
+    font-size: 10px;
+  }
+  th {
+    background: #eee !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

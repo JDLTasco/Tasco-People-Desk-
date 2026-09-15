@@ -8,7 +8,7 @@ export default async function MyTicketsPage() {
   const tickets = await getMyTickets(session.user.id);
 
   return (
-    <main style={{ padding: "1rem" }}>
+    <main>
       <h1>My tickets</h1>
       <TicketListTable tickets={tickets} />
     </main>

@@ -19,24 +19,22 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
 
   return (
-    <main style={{ padding: "1rem", maxWidth: 900 }}>
+    <main>
       <h1>
         {ticket.ticketNo} -- {ticket.subject}
       </h1>
 
       {ticket.isLegalHold && (
-        <p style={{ background: "#fff3cd", padding: "0.5rem", fontWeight: "bold" }}>
-          LEGAL HOLD -- RETENTION PURGE SUSPENDED
-        </p>
+        <p className="banner banner-legal-hold">LEGAL HOLD -- RETENTION PURGE SUSPENDED</p>
       )}
-      {ticket.isConfidential && <p style={{ background: "#f0f0f0", padding: "0.5rem" }}>🔒 Confidential</p>}
+      {ticket.isConfidential && <p className="banner banner-confidential">🔒 Confidential</p>}
 
-      <section style={{ display: "flex", gap: "2rem", flexWrap: "wrap", margin: "1rem 0" }}>
+      <section className="meta-grid">
         <div>
-          <strong>Status:</strong> {ticket.status}
+          <strong>Status:</strong> <span className={`chip chip-status-${ticket.status}`}>{ticket.status}</span>
         </div>
         <div>
-          <strong>Priority:</strong> {ticket.priority}
+          <strong>Priority:</strong> <span className={`chip chip-priority-${ticket.priority}`}>{ticket.priority}</span>
         </div>
         <div>
           <strong>Category:</strong>{" "}
@@ -49,10 +47,13 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           <strong>Assignee:</strong>{" "}
           {ticket.assignee ? `${ticket.assignee.displayName} (${ticket.assignee.initials})` : <em>unassigned</em>}
         </div>
-        <div style={overdue ? { color: "#b00020", fontWeight: "bold" } : undefined}>
+        <div className={overdue ? "overdue" : undefined}>
           <strong>Due:</strong> {due.toLocaleString()}
           {ticket.targetDueAt && (
-            <> (target: {ticket.targetDueAt.toLocaleString()}, reason: {ticket.targetDueReason})</>
+            <>
+              {" "}
+              (target: {ticket.targetDueAt.toLocaleString()}, reason: {ticket.targetDueReason})
+            </>
           )}
           {overdue && " -- OVERDUE"}
         </div>
@@ -73,11 +74,11 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         userId={session.user.id}
       />
 
-      <section style={{ marginTop: "2rem" }}>
+      <section className="section-card">
         <h2>Correspondence</h2>
         {ticket.messages.length === 0 && <p>No messages yet.</p>}
         {ticket.messages.map((m) => (
-          <article key={m.id} style={{ border: "1px solid #ddd", padding: "0.5rem", marginBottom: "0.5rem" }}>
+          <article key={m.id} className="item-card">
             <div>
               <strong>[{m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]</strong> {m.fromName} ({m.fromAddress})
               -- {(m.receivedAt ?? m.sentAt)?.toLocaleString()}
@@ -88,7 +89,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         ))}
       </section>
 
-      <section style={{ marginTop: "2rem" }}>
+      <section className="section-card">
         <h2>Attachments</h2>
         {ticket.attachments.length === 0 && <p>No attachments.</p>}
         {ticket.attachments.length > 0 && (
@@ -108,11 +109,11 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         )}
       </section>
 
-      <section style={{ marginTop: "2rem" }}>
+      <section className="section-card">
         <h2>Internal notes</h2>
         {ticket.notes.length === 0 && <p>No notes yet.</p>}
         {ticket.notes.map((n) => (
-          <article key={n.id} style={{ border: "1px solid #ddd", padding: "0.5rem", marginBottom: "0.5rem" }}>
+          <article key={n.id} className="item-card">
             <div>
               <strong>[INTERNAL NOTE]</strong> {n.author.displayName} ({n.author.initials}) --{" "}
               {n.createdAt.toLocaleString()} {n.supersedesNoteId && <em>(edited)</em>}
@@ -124,7 +125,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         <NoteForm ticketId={ticket.id} mode="create" />
       </section>
 
-      <section style={{ marginTop: "2rem" }}>
+      <section className="section-card">
         <h2>Status history</h2>
         <ul>
           {ticket.statusHistory.map((h) => (

@@ -8,7 +8,7 @@ export default async function PoolPage() {
   const tickets = await getPoolTickets(session.user.id, session.user.role);
 
   return (
-    <main style={{ padding: "1rem" }}>
+    <main>
       <h1>Pool</h1>
       <p>Unassigned tickets, available for anyone to self-assign.</p>
       <TicketListTable tickets={tickets} />

@@ -9,22 +9,13 @@ export default async function NavBar() {
   if (!session?.user) return null;
 
   return (
-    <nav
-      style={{
-        display: "flex",
-        gap: "1rem",
-        alignItems: "center",
-        padding: "0.75rem 1rem",
-        borderBottom: "1px solid #ccc",
-        flexWrap: "wrap",
-      }}
-    >
-      <strong>Tasco People Desk</strong>
+    <nav className="main-nav no-print">
+      <span className="nav-brand">Tasco People Desk</span>
       <Link href="/pool">Pool</Link>
       <Link href="/my-tickets">My tickets</Link>
       <Link href="/all-open">All open</Link>
       <Link href="/overdue">Overdue</Link>
-      <span style={{ marginLeft: "auto" }}>
+      <span className="nav-spacer">
         {session.user.name} ({session.user.role})
       </span>
       <SignOutButton />

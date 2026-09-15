@@ -8,7 +8,7 @@ export default async function AllOpenPage() {
   const tickets = await getAllOpenTickets(session.user.id, session.user.role);
 
   return (
-    <main style={{ padding: "1rem" }}>
+    <main>
       <h1>All open</h1>
       <TicketListTable tickets={tickets} />
     </main>

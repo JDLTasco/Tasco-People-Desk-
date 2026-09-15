@@ -7,6 +7,14 @@
 - Blockers / required operator actions: §14 items 0-8 — still none started. **Confirmed this session: Stage 4 could only be built against mocked/synthetic data, exactly as anticipated** -- real Graph ingestion needs §14 items 0-3 before any of the built-but-inert real-Graph code path can be exercised or trusted.
 - Recommended next command or task: nominate Stage 5 ("Outbound and SLA"), OR prioritize getting §14 items 0-3 done operator-side so Stage 4's real-Graph code path can finally be tested for real.
 
+## Post-Stage-4 session: Tasco colour palette applied, a real dev-port bug found and fixed
+
+Not a numbered build-order stage -- John asked to see the dashboard, which surfaced two things worth recording.
+
+**Tasco colour palette applied** (§13's "Tasco colour palette" requirement, previously flagged as deferred in Stage 3): `app/globals.css` now uses the same brand palette already established in the sibling Tasco Fleet app (`#1B3A6B` navy, `#c5221f` red, `#137333` green -- matches the Tasco Petroleum logo's navy/red), applied across nav, buttons, tables, forms, status/priority chips, and the legal-hold/confidential banners. All page components updated to use the new classes instead of ad hoc inline styles. §13's print stylesheet and full keyboard-navigation pass are still not done -- this was a colour/component-styling pass only, not a full §13 UI-requirements pass.
+
+**Real bug found and fixed**: `NEXTAUTH_URL` was hardcoded to `http://localhost:3000`, but this machine already runs other Tasco projects' dev servers on 3000 (FMI) and 3001 -- `next dev` was silently falling back to whichever port was free, while NextAuth kept building post-sign-in redirect URLs from the stale `NEXTAUTH_URL`. Live symptom: signing in sent the browser to the FMI project's dashboard instead of staying on Tasco People Desk. Fixed by pinning this project to its own dedicated port: `package.json`'s `dev`/`start` scripts now run `next dev -p 3002` / `next start -p 3002` explicitly, `.env`/`.env.example`'s `NEXTAUTH_URL` updated to match. Verified live: the sign-in response's redirect `url` now correctly points at `:3002`. **Local dev server now always runs at `http://localhost:3002`, not whatever port happened to be free.**
+
 ## Stage 4 deliverables (§16 item 4)
 
 **Built and fully live-tested** (pure logic + a dev-only fixture endpoint that feeds synthetic email straight into the real ingestion pipeline -- no fake Graph client needed, see "Local dev environment notes"):

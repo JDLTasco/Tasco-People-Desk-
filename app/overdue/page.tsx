@@ -8,7 +8,7 @@ export default async function OverduePage() {
   const tickets = await getOverdueTickets(session.user.id, session.user.role);
 
   return (
-    <main style={{ padding: "1rem" }}>
+    <main>
       <h1>Overdue</h1>
       <TicketListTable tickets={tickets} />
     </main>

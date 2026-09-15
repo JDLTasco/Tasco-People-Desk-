@@ -86,10 +86,10 @@ export default function TicketActions({
   }
 
   return (
-    <section style={{ border: "1px solid #ccc", padding: "1rem", margin: "1rem 0" }}>
+    <section className="section-card">
       <h2>Actions</h2>
       {error && (
-        <p role="alert" style={{ color: "#b00020" }}>
+        <p role="alert" className="banner banner-error">
           {error}
         </p>
       )}

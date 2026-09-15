@@ -44,7 +44,7 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
 
   if (mode === "edit" && !editing) {
     return (
-      <button type="button" onClick={() => setEditing(true)} style={{ fontSize: "0.85em" }}>
+      <button type="button" className="secondary" onClick={() => setEditing(true)} style={{ fontSize: "0.8rem", padding: "0.25rem 0.6rem" }}>
         Edit
       </button>
     );
@@ -53,17 +53,17 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
   return (
     <div style={{ marginTop: "0.5rem" }}>
       {error && (
-        <p role="alert" style={{ color: "#b00020" }}>
+        <p role="alert" className="banner banner-error">
           {error}
         </p>
       )}
       <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} style={{ width: "100%" }} />
       <br />
-      <button type="button" disabled={busy || !body.trim()} onClick={() => void submit()}>
+      <button type="button" disabled={busy || !body.trim()} onClick={() => void submit()} style={{ marginTop: "0.4rem" }}>
         {mode === "create" ? "Add note" : "Save revision"}
       </button>
       {mode === "edit" && (
-        <button type="button" onClick={() => setEditing(false)} style={{ marginLeft: "0.5rem" }}>
+        <button type="button" className="secondary" onClick={() => setEditing(false)} style={{ marginLeft: "0.5rem" }}>
           Cancel
         </button>
       )}
