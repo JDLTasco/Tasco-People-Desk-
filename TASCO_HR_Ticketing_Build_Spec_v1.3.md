@@ -453,6 +453,16 @@ Evaluated in order:
 
 **No attachment is downloadable while `scan_status` is `PENDING`.** The UI shows a "scanning" state. `MALICIOUS` and `BLOCKED` attachments are never downloadable and display the reason.
 
+### 7.3.2 Scan verdict ingestion
+
+Same webhook-plus-poller pattern already proven for Graph ingestion, for the same reason: event delivery drops, and a stuck `PENDING` attachment fails silently.
+
+Defender publishes malware scan results to an Event Grid custom topic. An Event Grid subscription delivers by webhook to `POST /api/scan/notifications`, which must handle the Event Grid subscription-validation handshake (echo `validationCode`) exactly as the Graph endpoint does, and authenticate delivery by shared secret from Key Vault. The handler maps the event's blob URL to `ticket_attachments.blob_path` and sets `scan_status` from the verdict, writing `audit_log` with the request correlation ID.
+
+Reconciliation job `attachment-scan-reconcile` runs every 15 minutes. For any attachment `PENDING` longer than 15 minutes, read the blob's Malware Scanning scan result index tag directly and set status from it. Tag values map: No threats found → `CLEAN`; Malicious → `MALICIOUS`; Error or Not scanned → `BLOCKED` with reason `SCAN_UNAVAILABLE`. Anything still `PENDING` after 60 minutes is set to `BLOCKED` with reason `SCAN_TIMEOUT` and raises an Application Insights alert.
+
+**Fail closed.** No verdict, an error verdict, or a timeout all mean not downloadable. Never default to `CLEAN`.
+
 ### 7.4 Outbound communications
 
 All outbound mail sends **from the shared mailbox** via Graph `sendMail`, with `In-Reply-To` and `References` headers set to the original ingestion message. Every send writes a `ticket_messages` row (`OUTBOUND`) and one or more `email_log` rows, both carrying the request's `correlation_id`.
