@@ -118,6 +118,105 @@ export async function getClosedTickets(userId: string, role: UserRole): Promise<
  * same filter every other list view already applies) and excludes
  * ARCHIVED tickets (never a valid merge source or target).
  */
+export interface ArchiveSearchFilters {
+  ticketNo?: string;
+  requester?: string;
+  subject?: string;
+  categoryId?: string;
+  businessUnitId?: string;
+  assigneeId?: string;
+  from?: string;
+  to?: string;
+  legalHold?: boolean;
+  includeNotARequest?: boolean;
+}
+
+/**
+ * §11 "Archive search": full-text over archived tickets. "'Not a
+ * request' closures excluded by default, with a toggle to include."
+ * Confidentiality-scoped the same as every other search/list view.
+ */
+export async function searchArchive(userId: string, role: UserRole, filters: ArchiveSearchFilters): Promise<TicketListRow[]> {
+  const where: Prisma.TicketWhereInput = {
+    status: "ARCHIVED",
+    isDeleted: false,
+    ...confidentialFilter(userId, role),
+  };
+  if (!filters.includeNotARequest) {
+    where.closeReason = { not: "NOT_A_REQUEST" };
+  }
+  if (filters.ticketNo) where.ticketNo = { contains: filters.ticketNo, mode: "insensitive" };
+  if (filters.requester) {
+    where.OR = [
+      { requesterName: { contains: filters.requester, mode: "insensitive" } },
+      { requesterEmail: { contains: filters.requester, mode: "insensitive" } },
+    ];
+  }
+  if (filters.subject) where.subject = { contains: filters.subject, mode: "insensitive" };
+  if (filters.categoryId) where.categoryId = filters.categoryId;
+  if (filters.businessUnitId) where.businessUnitId = filters.businessUnitId;
+  if (filters.assigneeId) where.assignedToId = filters.assigneeId;
+  if (filters.legalHold !== undefined) where.isLegalHold = filters.legalHold;
+  if (filters.from || filters.to) {
+    where.requestDate = {
+      ...(filters.from ? { gte: new Date(filters.from) } : {}),
+      ...(filters.to ? { lte: new Date(filters.to) } : {}),
+    };
+  }
+
+  return prisma.ticket.findMany({
+    where,
+    select: TICKET_LIST_SELECT,
+    orderBy: { requestDate: "desc" },
+    take: 200,
+  });
+}
+
+const LEGAL_HOLD_SELECT = {
+  id: true,
+  ticketNo: true,
+  subject: true,
+  legalHoldReason: true,
+  legalHoldSetAt: true,
+  legalHoldSetBy: { select: { displayName: true } },
+} satisfies Prisma.TicketSelect;
+
+export type LegalHoldRow = Prisma.TicketGetPayload<{ select: typeof LEGAL_HOLD_SELECT }>;
+
+/**
+ * §10 "Admin legal holds view": "lists every ticket with an active hold
+ * ... sorts oldest first" -- so a hold nobody has reviewed surfaces
+ * first, not last. The "over 12 months old" flag is computed by the
+ * caller (a pure display concern, not a query concern).
+ */
+export async function getLegalHoldTickets(): Promise<LegalHoldRow[]> {
+  return prisma.ticket.findMany({
+    where: { isLegalHold: true },
+    select: LEGAL_HOLD_SELECT,
+    orderBy: { legalHoldSetAt: "asc" },
+  });
+}
+
+const DELETED_SELECT = {
+  id: true,
+  ticketNo: true,
+  subject: true,
+  deleteReason: true,
+  deletedAt: true,
+  deletedBy: { select: { displayName: true } },
+} satisfies Prisma.TicketSelect;
+
+export type DeletedTicketRow = Prisma.TicketGetPayload<{ select: typeof DELETED_SELECT }>;
+
+/** §10 "Deletion": "Removed from all views except an ADMIN 'Deleted' view." */
+export async function getDeletedTickets(): Promise<DeletedTicketRow[]> {
+  return prisma.ticket.findMany({
+    where: { isDeleted: true },
+    select: DELETED_SELECT,
+    orderBy: { deletedAt: "desc" },
+  });
+}
+
 export async function searchTickets(userId: string, role: UserRole, query: string): Promise<TicketListRow[]> {
   const q = query.trim();
   if (!q) return [];

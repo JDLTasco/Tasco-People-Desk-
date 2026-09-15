@@ -9,6 +9,7 @@ import { effectiveDueDate, isOverdue } from "./due-dates";
 export type DueFilter = "" | "OVERDUE" | "TODAY" | "WEEK" | "MONTH";
 
 export interface TicketFilterCriteria {
+  ticketNo?: string;
   requester?: string;
   status?: string;
   priority?: string;
@@ -32,6 +33,9 @@ function matchesDueFilter(ticket: TicketListRow, filter: DueFilter | undefined, 
 }
 
 export function matchesFilters(ticket: TicketListRow, criteria: TicketFilterCriteria, now: Date = new Date()): boolean {
+  if (criteria.ticketNo) {
+    if (!ticket.ticketNo.toLowerCase().includes(criteria.ticketNo.toLowerCase())) return false;
+  }
   if (criteria.requester) {
     if (!ticket.requesterName.toLowerCase().includes(criteria.requester.toLowerCase())) return false;
   }

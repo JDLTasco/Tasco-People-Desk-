@@ -28,3 +28,17 @@ export function getOrCreateCorrelationId(headers: Headers): string {
   }
   return newCorrelationId();
 }
+
+/**
+ * Stage 6: the confidential-ticket-view audit log (§9.1) needs a
+ * correlation ID from Server Components too (the ticket detail page,
+ * which calls loadTicketForViewer() directly -- not every viewer of a
+ * confidential ticket necessarily goes through the GET API route first).
+ * middleware.ts forwards X-Correlation-Id onto every request it lets
+ * through, page requests included, so next/headers' headers() sees the
+ * same ID a concurrent API call for the same request would.
+ */
+export async function getRequestCorrelationId(): Promise<string> {
+  const { headers } = await import("next/headers");
+  return getOrCreateCorrelationId(headers());
+}

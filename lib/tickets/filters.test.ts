@@ -24,6 +24,17 @@ function ticket(overrides: Partial<TicketListRow> = {}): TicketListRow {
   } as TicketListRow;
 }
 
+describe("matchesFilters: ticketNo", () => {
+  it("matches a case-insensitive substring of ticketNo", () => {
+    assert.equal(matchesFilters(ticket({ ticketNo: "260615000042" }), { ticketNo: "0042" }), true);
+    assert.equal(matchesFilters(ticket({ ticketNo: "260615000042" }), { ticketNo: "9999" }), false);
+  });
+
+  it("empty ticketNo filter matches everything", () => {
+    assert.equal(matchesFilters(ticket(), { ticketNo: "" }), true);
+  });
+});
+
 describe("matchesFilters: requester", () => {
   it("matches a case-insensitive substring of requesterName", () => {
     assert.equal(matchesFilters(ticket({ requesterName: "Jane Smith" }), { requester: "jane" }), true);

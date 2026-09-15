@@ -17,6 +17,7 @@ function uniqueSorted(values: (string | undefined)[]): string[] {
 // Filter-matching logic itself lives in lib/tickets/filters.ts, tested
 // independently of this component's state/UI.
 export default function FilterableTicketList({ tickets }: { tickets: TicketListRow[] }) {
+  const [ticketNo, setTicketNo] = useState("");
   const [requester, setRequester] = useState("");
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -32,12 +33,19 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
     [tickets],
   );
 
-  const filtered = tickets.filter((t) => matchesFilters(t, { requester, status, priority, businessUnit, assignee, due }));
-  const anyFilterActive = requester || status || priority || businessUnit || assignee || due;
+  const filtered = tickets.filter((t) => matchesFilters(t, { ticketNo, requester, status, priority, businessUnit, assignee, due }));
+  const anyFilterActive = ticketNo || requester || status || priority || businessUnit || assignee || due;
 
   return (
     <>
       <div className="filter-bar no-print">
+        <input
+          type="text"
+          placeholder="Ticket number..."
+          value={ticketNo}
+          onChange={(e) => setTicketNo(e.target.value)}
+          style={{ width: "9rem" }}
+        />
         <input
           type="text"
           placeholder="Requester..."
@@ -91,6 +99,7 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
             type="button"
             className="secondary"
             onClick={() => {
+              setTicketNo("");
               setRequester("");
               setStatus("");
               setPriority("");

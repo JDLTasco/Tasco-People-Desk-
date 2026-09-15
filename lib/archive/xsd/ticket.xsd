@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TASCO HR Ticketing -- archive record schema (§10).
+  Matches lib/archive/render.ts's renderTicketXml() element-for-element;
+  keep the two in sync if either changes. Category, business unit, both
+  due dates, and legal hold state are discrete elements (not free text)
+  so archived records remain machine-analysable after the source row is
+  purged from the database (§10's own stated requirement).
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="urn:tasco:hr-ticketing:archive"
+           targetNamespace="urn:tasco:hr-ticketing:archive"
+           elementFormDefault="qualified">
+
+  <xs:simpleType name="PriorityType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="P1"/>
+      <xs:enumeration value="P2"/>
+      <xs:enumeration value="P3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StatusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="NEW"/>
+      <xs:enumeration value="ALLOCATED"/>
+      <xs:enumeration value="IN_ACTION"/>
+      <xs:enumeration value="OUTCOME"/>
+      <xs:enumeration value="CLOSED"/>
+      <xs:enumeration value="ARCHIVED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="CloseReasonType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="RESOLVED"/>
+      <xs:enumeration value="NOT_A_REQUEST"/>
+      <xs:enumeration value="REDIRECTED"/>
+      <xs:enumeration value="AUTOCLOSE"/>
+      <xs:enumeration value="MERGED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ScanStatusType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="PENDING"/>
+      <xs:enumeration value="CLEAN"/>
+      <xs:enumeration value="BLOCKED"/>
+      <xs:enumeration value="MALICIOUS"/>
+      <xs:enumeration value="SKIPPED"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="ThreadEntryType">
+    <xs:sequence>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+      <xs:element name="author" type="xs:string"/>
+      <xs:element name="content" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="type" use="required">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="EMAIL_IN"/>
+          <xs:enumeration value="EMAIL_OUT"/>
+          <xs:enumeration value="INTERNAL_NOTE"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="edited" type="xs:boolean" use="required"/>
+  </xs:complexType>
+
+  <xs:complexType name="StatusEventType">
+    <xs:sequence>
+      <xs:element name="timestamp" type="xs:dateTime"/>
+      <xs:element name="fromStatus" type="StatusType" minOccurs="0"/>
+      <xs:element name="toStatus" type="StatusType"/>
+      <xs:element name="actor" type="xs:string"/>
+      <xs:element name="reason" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="AttachmentType">
+    <xs:sequence>
+      <xs:element name="filename" type="xs:string"/>
+      <xs:element name="sizeBytes" type="xs:nonNegativeInteger"/>
+      <xs:element name="sha256" type="xs:string"/>
+      <xs:element name="scanStatus" type="ScanStatusType"/>
+      <xs:element name="blockReason" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="LegalHoldType">
+    <xs:sequence>
+      <xs:element name="reason" type="xs:string" minOccurs="0"/>
+      <xs:element name="setBy" type="xs:string" minOccurs="0"/>
+      <xs:element name="setAt" type="xs:dateTime" minOccurs="0"/>
+      <xs:element name="clearedBy" type="xs:string" minOccurs="0"/>
+      <xs:element name="clearedAt" type="xs:dateTime" minOccurs="0"/>
+    </xs:sequence>
+    <xs:attribute name="active" type="xs:boolean" use="required"/>
+  </xs:complexType>
+
+  <xs:element name="ticket">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="ticketNo" type="xs:string"/>
+        <xs:element name="subject" type="xs:string"/>
+        <xs:element name="originalSubject" type="xs:string"/>
+        <xs:element name="requesterEmail" type="xs:string"/>
+        <xs:element name="requesterName" type="xs:string"/>
+        <xs:element name="receivedAt" type="xs:dateTime"/>
+        <xs:element name="requestDate" type="xs:date"/>
+        <xs:element name="category" type="xs:string" minOccurs="0"/>
+        <xs:element name="businessUnit" type="xs:string" minOccurs="0"/>
+        <xs:element name="priority" type="PriorityType"/>
+        <xs:element name="slaDueAt" type="xs:dateTime"/>
+        <xs:element name="targetDueAt" type="xs:dateTime" minOccurs="0"/>
+        <xs:element name="targetDueReason" type="xs:string" minOccurs="0"/>
+        <xs:element name="status" type="StatusType"/>
+        <xs:element name="closeReason" type="CloseReasonType" minOccurs="0"/>
+        <xs:element name="mergedIntoTicketNo" type="xs:string" minOccurs="0"/>
+        <xs:element name="assignee" type="xs:string" minOccurs="0"/>
+        <xs:element name="firstViewedAt" type="xs:dateTime" minOccurs="0"/>
+        <xs:element name="firstViewedBy" type="xs:string" minOccurs="0"/>
+        <xs:element name="closedAt" type="xs:dateTime" minOccurs="0"/>
+        <xs:element name="legalHold" type="LegalHoldType" minOccurs="0"/>
+        <xs:element name="outcomeForRequester" type="xs:string" minOccurs="0"/>
+        <xs:element name="outcomeSentAt" type="xs:dateTime" minOccurs="0"/>
+        <xs:element name="correspondence">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="entry" type="ThreadEntryType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="statusHistory">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="event" type="StatusEventType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="attachments">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="attachment" type="AttachmentType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

@@ -1,6 +1,9 @@
 import { prisma } from "../prisma";
 import { canViewConfidentialTicket } from "../rbac";
 import type { UserRole } from "../roles";
+import { determineAccessBasis } from "./confidential-access";
+import { writeAuditLog } from "../audit";
+import { getRequestCorrelationId } from "../correlation";
 
 export const TICKET_DETAIL_INCLUDE = {
   category: { select: { id: true, name: true } },
@@ -28,6 +31,8 @@ export const TICKET_DETAIL_INCLUDE = {
   accessGrants: { select: { userId: true } },
   mergedIntoTicket: { select: { id: true, ticketNo: true } },
   mergedFromTickets: { select: { id: true, ticketNo: true } },
+  legalHoldSetBy: { select: { displayName: true } },
+  confidentialSetBy: { select: { displayName: true } },
 };
 
 export type TicketDetail = NonNullable<Awaited<ReturnType<typeof loadTicketForViewer>>>;
@@ -56,6 +61,19 @@ export async function loadTicketForViewer(id: string, userId: string, role: User
     if (!canViewConfidentialTicket(role, { isAssignee, hasExplicitGrant })) {
       return null;
     }
+    // §9.1: every view of a confidential ticket, not just the first.
+    // "No break-glass mechanism ... The audit record is the control" --
+    // this must never be skippable, so it happens unconditionally here
+    // rather than behind any UI action.
+    await writeAuditLog({
+      correlationId: await getRequestCorrelationId(),
+      actorId: userId,
+      action: "CONFIDENTIAL_TICKET_VIEWED",
+      entity: "ticket",
+      entityId: ticket.id,
+      ticketId: ticket.id,
+      accessBasis: determineAccessBasis(role, isAssignee, hasExplicitGrant),
+    });
   }
 
   if (!ticket.firstViewedAt) {

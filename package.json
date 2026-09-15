@@ -18,12 +18,14 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "archiver": "^6.0.2",
     "next": "14.2.35",
     "next-auth": "^4.24.15",
     "react": "^18",
     "react-dom": "^18"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.4",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

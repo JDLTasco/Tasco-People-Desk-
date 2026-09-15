@@ -442,7 +442,14 @@ model AuditLog {
   userAgent     String?      @map("user_agent")
   createdAt     DateTime     @default(now()) @map("created_at")
 
-  ticket Ticket? @relation(fields: [ticketId], references: [id])
+  // Stage 6: onDelete: SetNull is load-bearing, not cosmetic -- the
+  // retention-purge job hard-deletes ticket rows after 7 years while
+  // audit_log itself must survive 10 (§10 "Retention"). Without this, a
+  // purge would fail outright on its very first FK-referencing audit row.
+  // entityId (a plain string, not itself a FK) is the durable identifier
+  // that survives the ticket row's deletion -- ticketId is only ever a
+  // convenience join while the ticket still exists.
+  ticket Ticket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
   actor  User    @relation("AuditLogActor", fields: [actorId], references: [id])
 
   @@index([correlationId])

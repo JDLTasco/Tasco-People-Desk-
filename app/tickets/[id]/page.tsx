@@ -25,9 +25,19 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       </h1>
 
       {ticket.isLegalHold && (
-        <p className="banner banner-legal-hold">LEGAL HOLD -- RETENTION PURGE SUSPENDED</p>
+        <p className="banner banner-legal-hold">
+          LEGAL HOLD -- RETENTION PURGE SUSPENDED
+          <br />
+          Reason: {ticket.legalHoldReason} -- set by {ticket.legalHoldSetBy?.displayName ?? "(unknown)"} on{" "}
+          {ticket.legalHoldSetAt?.toLocaleString()}
+        </p>
       )}
-      {ticket.isConfidential && <p className="banner banner-confidential">🔒 Confidential</p>}
+      {ticket.isConfidential && (
+        <p className="banner banner-confidential">
+          🔒 Confidential -- set by {ticket.confidentialSetBy?.displayName ?? "(unknown)"} on{" "}
+          {ticket.confidentialSetAt?.toLocaleString()}
+        </p>
+      )}
       {ticket.mergedIntoTicket && (
         <p className="banner banner-error">
           This ticket was merged into{" "}
@@ -105,7 +115,14 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         targetDueReason={ticket.targetDueReason}
         notes={ticket.notes.map((n) => ({ id: n.id, body: n.body, visibility: n.visibility }))}
         attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
+        isConfidential={ticket.isConfidential}
+        isLegalHold={ticket.isLegalHold}
       />
+
+      <p className="no-print">
+        Export: <a href={`/api/tickets/${ticket.id}/export`}>.txt</a> |{" "}
+        <a href={`/api/tickets/${ticket.id}/export?attachments=true`}>.zip (with attachments)</a>
+      </p>
 
       <section className="section-card">
         <h2>Correspondence</h2>

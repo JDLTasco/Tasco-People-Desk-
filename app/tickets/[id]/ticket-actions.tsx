@@ -33,6 +33,8 @@ interface Props {
   targetDueReason: string | null;
   notes: OutcomeNote[];
   attachments: OutcomeAttachment[];
+  isConfidential: boolean;
+  isLegalHold: boolean;
 }
 
 interface SimpleUser {
@@ -73,6 +75,8 @@ export default function TicketActions({
   targetDueReason,
   notes,
   attachments,
+  isConfidential,
+  isLegalHold,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +94,8 @@ export default function TicketActions({
   // whenever a date is set (enforced server-side too -- see PATCH /api/tickets/[id]).
   const [targetDue, setTargetDue] = useState(targetDueAt ? targetDueAt.slice(0, 16) : "");
   const [targetDueReasonText, setTargetDueReasonText] = useState(targetDueReason ?? "");
+  const [legalHoldReasonText, setLegalHoldReasonText] = useState("");
+  const [deleteReasonText, setDeleteReasonText] = useState("");
 
   useEffect(() => {
     fetch("/api/users")
@@ -366,6 +372,70 @@ export default function TicketActions({
           >
             Reverse
           </button>
+        </div>
+      )}
+
+      {(role === "ADMIN" || role === "HR_LEAD") && (
+        <div style={{ marginTop: "1rem" }}>
+          <h3>Confidential</h3>
+          {!isConfidential ? (
+            <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/confidential`, { version, set: true }))}>
+              Mark confidential
+            </button>
+          ) : (
+            role === "ADMIN" && (
+              <button
+                disabled={busy}
+                onClick={() => run(() => postJson(`/api/tickets/${ticketId}/confidential`, { version, set: false }))}
+              >
+                Clear confidential (requires a fresh step-up sign-in)
+              </button>
+            )
+          )}
+        </div>
+      )}
+
+      {role === "ADMIN" && (
+        <div style={{ marginTop: "1rem" }}>
+          <h3>Legal hold (requires a fresh step-up sign-in)</h3>
+          <input
+            placeholder="Reason (required)"
+            value={legalHoldReasonText}
+            onChange={(e) => setLegalHoldReasonText(e.target.value)}
+            style={{ width: "18rem" }}
+          />{" "}
+          <button
+            disabled={busy || !legalHoldReasonText.trim()}
+            onClick={() =>
+              run(() => postJson(`/api/tickets/${ticketId}/legal-hold`, { version, set: !isLegalHold, reason: legalHoldReasonText }))
+            }
+          >
+            {isLegalHold ? "Clear legal hold" : "Set legal hold"}
+          </button>
+        </div>
+      )}
+
+      {role === "ADMIN" && (
+        <div style={{ marginTop: "1rem" }}>
+          <h3>Delete (ADMIN only, requires a fresh step-up sign-in)</h3>
+          {isLegalHold ? (
+            <p>Blocked while this ticket is under legal hold.</p>
+          ) : (
+            <>
+              <input
+                placeholder="Reason (required)"
+                value={deleteReasonText}
+                onChange={(e) => setDeleteReasonText(e.target.value)}
+                style={{ width: "18rem" }}
+              />{" "}
+              <button
+                disabled={busy || !deleteReasonText.trim()}
+                onClick={() => run(() => postJson(`/api/tickets/${ticketId}/delete`, { version, reason: deleteReasonText }))}
+              >
+                Delete
+              </button>
+            </>
+          )}
         </div>
       )}
     </section>

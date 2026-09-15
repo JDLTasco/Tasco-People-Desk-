@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { access, mkdir, readFile, rm, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 
 // Stand-in for Azure Blob Storage (§2) until Stage 7 actually provisions
@@ -11,6 +11,10 @@ import { dirname, join } from "path";
 export interface BlobStore {
   save(path: string, content: Buffer): Promise<void>;
   read(path: string): Promise<Buffer>;
+  /** Stage 6: the archive writer needs this to pick the next version number when re-archiving an amended ticket -- "original artefacts are never overwritten." */
+  exists(path: string): Promise<boolean>;
+  /** Stage 6: the retention-purge job needs this -- "hard-deletes ... blob artefacts" (§10). Removes everything under the given path prefix. */
+  deletePrefix(pathPrefix: string): Promise<void>;
 }
 
 const LOCAL_ROOT = join(process.cwd(), ".local-blob-store");
@@ -24,6 +28,19 @@ class LocalFilesystemBlobStore implements BlobStore {
 
   async read(path: string): Promise<Buffer> {
     return readFile(join(LOCAL_ROOT, path));
+  }
+
+  async exists(path: string): Promise<boolean> {
+    try {
+      await access(join(LOCAL_ROOT, path));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async deletePrefix(pathPrefix: string): Promise<void> {
+    await rm(join(LOCAL_ROOT, pathPrefix), { recursive: true, force: true });
   }
 }
 
