@@ -174,6 +174,28 @@ export default function TicketActions({
         )}
       </div>
 
+      {status === "NEW" && (role === "ADMIN" || role === "HR_LEAD") && (
+        <div style={{ marginBottom: "1rem" }}>
+          <h3>Assign to</h3>
+          <select value={selectedAssignee} onChange={(e) => setSelectedAssignee(e.target.value)}>
+            <option value="">(choose a user)</option>
+            {users
+              .filter((u) => u.id !== userId)
+              .map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.displayName} ({u.initials})
+                </option>
+              ))}
+          </select>{" "}
+          <button
+            disabled={busy || !selectedAssignee}
+            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee }))}
+          >
+            Assign
+          </button>
+        </div>
+      )}
+
       {(status === "ALLOCATED" || status === "IN_ACTION") && (
         <div style={{ marginBottom: "1rem" }}>
           <h3>Reassign</h3>
