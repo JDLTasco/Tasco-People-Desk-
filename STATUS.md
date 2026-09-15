@@ -1,5 +1,5 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus four ad hoc additions from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen -- see the "Ad hoc session (2026-09-16)" entries below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus four ad hoc additions and one bug fix from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a real correspondence-ordering bug fixed -- see the "Ad hoc session (2026-09-16)" entries and "Bug fix (2026-09-16)" below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
@@ -25,6 +25,47 @@
 - Read a real generated `ticket.xml` off disk (`.local-blob-store/hr-archive/2026/09/<ticket_no>/ticket.xml`) and eyeballed it: correct namespace, correctly interleaved correspondence entries in chronological order, correct `edited`/`type` attributes, empty-but-present `<attachments>` element for a ticket with none.
 - `/admin/legal-holds`, `/admin/deleted`, `/admin/audit-log`, `/archive-search` all render 200 with no error content as ADMIN.
 - Ticket detail page: set a real legal hold, confirmed the banner shows the actual reason and setter name, not just the static "LEGAL HOLD" string from before this stage.
+
+## Bug fix (2026-09-16): outbound emails (Allocation especially) appearing to go missing from the correspondence thread
+
+John reported the allocation email wasn't showing in a ticket's
+correspondence section. Investigated rather than guessed: the row was
+always being written correctly (`lib/email/send.ts`'s `sendTicketEmail`
+was never the problem), but `lib/tickets/detail.ts`'s
+`TICKET_DETAIL_INCLUDE.messages.orderBy: { received_at: "asc" }` --
+used by both the ticket detail page and `GET /api/tickets/[id]` -- only
+sorts correctly for inbound email. Outbound messages (Allocation,
+Outcome, SLA escalation) never populate `received_at`, only `sent_at`;
+Postgres sorts NULLS LAST for ascending order, so **every** automated
+outbound email was pushed to the very end of the correspondence thread
+regardless of when it actually sent, landing after any later inbound
+reply. On a ticket with several replies after allocation, the allocation
+email ends up buried at the bottom, easy to mistake for genuinely
+missing. `lib/archive/render.ts` (Stage 6's archive export) already had
+this right (`(direction === "INBOUND" ? receivedAt : sentAt) ?? new
+Date(0)`) -- the live ticket-detail view just never got the same
+treatment, since it predates Stage 5's outbound messages entirely
+(built in Stage 3, when every message was still inbound-only).
+
+**Fix**: extracted the archive export's per-direction-timestamp logic
+into a shared `lib/tickets/message-order.ts`
+(`messageTimestamp`/`sortMessagesChronologically`), applied in
+`loadTicketForViewer()` -- messages are now fetched without a DB-level
+sort and re-sorted in application code by actual chronological time
+regardless of direction. `lib/archive/render.ts` itself was left
+untouched (already correct, already tested -- no reason to touch
+working Stage 6 code for a dedupe alone).
+
+**Reproduced before fixing, confirmed fixed after**: created a ticket,
+claimed it (Allocation email sent), then sent a follow-up reply that
+genuinely arrived later. Before the fix, the live `GET /api/tickets/[id]`
+response showed `ORIGINAL, REPLY, ALLOCATION` -- the allocation email
+sorted last despite being sent before the reply arrived. After the fix,
+same scenario returns `ORIGINAL, ALLOCATION, REPLY`, matching real
+chronological order. 2 new unit tests for the sort helper (one
+specifically reproducing this exact ordering, one confirming the
+function doesn't mutate its input). 161 unit tests total, `tsc
+--noEmit`/`next lint` both clean.
 
 ## Ad hoc session (2026-09-16, fourth): Admin -- Categories screen
 

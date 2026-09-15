@@ -4,6 +4,7 @@ import type { UserRole } from "../roles";
 import { determineAccessBasis } from "./confidential-access";
 import { writeAuditLog } from "../audit";
 import { getRequestCorrelationId } from "../correlation";
+import { sortMessagesChronologically } from "./message-order";
 
 export const TICKET_DETAIL_INCLUDE = {
   category: { select: { id: true, name: true } },
@@ -11,11 +12,15 @@ export const TICKET_DETAIL_INCLUDE = {
   assignee: { select: { id: true, displayName: true, initials: true } },
   firstViewedBy: { select: { id: true, displayName: true } },
   messages: {
-    orderBy: { receivedAt: "asc" as const },
-    // Stage 5: lets the ticket detail page show a failed-send banner
-    // without a second query -- see lib/email/failed-sends.ts's own
-    // comment on why "no SENT row among this message's attempts" is the
-    // right failed-state definition here.
+    // Not orderBy: { receivedAt: "asc" } -- outbound messages (Allocation,
+    // Outcome, SLA escalation) never populate received_at, only sent_at, so
+    // that alone would push every automated email to the end of the thread
+    // regardless of when it actually went out (Postgres sorts NULLS LAST),
+    // ahead of nothing and behind replies that arrived afterward. Fixed
+    // below via messageTimestamp()/sortMessagesChronologically(), the same
+    // per-direction-timestamp approach lib/archive/render.ts already used
+    // correctly for the archive export -- this view just never got it.
+    // DB-level order here is arbitrary; re-sorted after fetch.
     include: { emailLog: { orderBy: { attemptedAt: "asc" as const } } },
   },
   notes: {
@@ -82,8 +87,10 @@ export async function loadTicketForViewer(id: string, userId: string, role: User
       data: { firstViewedAt: new Date(), firstViewedById: userId },
     });
     if (result.count > 0) {
-      return prisma.ticket.findUnique({ where: { id }, include: TICKET_DETAIL_INCLUDE });
+      const refreshed = await prisma.ticket.findUnique({ where: { id }, include: TICKET_DETAIL_INCLUDE });
+      if (!refreshed) return null;
+      return { ...refreshed, messages: sortMessagesChronologically(refreshed.messages) };
     }
   }
-  return ticket;
+  return { ...ticket, messages: sortMessagesChronologically(ticket.messages) };
 }
