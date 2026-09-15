@@ -8,16 +8,9 @@ describe("classifyPriority", () => {
     assert.equal(classifyPriority("this is Urgent"), "P1");
   });
 
-  it('"action" (any case) -> P2', () => {
-    assert.equal(classifyPriority("Action required: payslip"), "P2");
-  });
-
-  it("neither keyword -> P3", () => {
+  it('no "urgent" keyword -> P3, determined explicitly at allocation instead (2026-09-16 amendment)', () => {
+    assert.equal(classifyPriority("Action required: payslip"), "P3");
     assert.equal(classifyPriority("General question"), "P3");
-  });
-
-  it('"urgent" wins over "action" when both are present', () => {
-    assert.equal(classifyPriority("Urgent action needed"), "P1");
   });
 
   it("empty/no-subject case is P3", () => {

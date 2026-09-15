@@ -1,5 +1,5 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus an ad hoc addition (subject-based ticket threading, tracking-number email note, admin-editable display names -- see "Ad hoc session (2026-09-16)" below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus two ad hoc additions from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission -- see the two "Ad hoc session (2026-09-16)" entries below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
@@ -25,6 +25,79 @@
 - Read a real generated `ticket.xml` off disk (`.local-blob-store/hr-archive/2026/09/<ticket_no>/ticket.xml`) and eyeballed it: correct namespace, correctly interleaved correspondence entries in chronological order, correct `edited`/`type` attributes, empty-but-present `<attachments>` element for a ticket with none.
 - `/admin/legal-holds`, `/admin/deleted`, `/admin/audit-log`, `/archive-search` all render 200 with no error content as ADMIN.
 - Ticket detail page: set a real legal hold, confirmed the banner shows the actual reason and setter name, not just the static "LEGAL HOLD" string from before this stage.
+
+## Ad hoc session (2026-09-16, second): priority amendment UI, P3 SLA change, due-date permission widened
+
+Four requests from John, none in the v1.3 spec as written -- this one
+actually **amends §7.3 and §12's own text** (priority classification and
+the P3 SLA figure), not just adding something alongside them. No
+clarification stop was needed: the change John asked for was concrete
+and unambiguous, and where the spec's own acceptance-test checklist
+(§15) already anticipated part of it ("Changing priority recalculates
+sla_due_at"), the capability turned out to already be built at the API
+level -- just never exposed in the UI.
+
+**Priority classification (§7.3) amended**: `lib/ingestion/priority.ts`'s
+`classifyPriority()` no longer has an "'action' -> P2" rule. Subject
+contains "urgent" (case-insensitive) -> P1; everything else -> P3
+provisionally, on the basis that a non-urgent ticket's real priority is
+"determined upon allocation" by the officer who picks it up, not guessed
+from a keyword. This was a genuine design call, not a guess dressed up
+as one: since `priority` and `sla_due_at` are both NOT NULL columns
+populated at ticket creation (every escalation/overdue/dashboard
+calculation from Stage 3 onward depends on `sla_due_at` always existing),
+"determined upon allocation" can't mean the column stays empty until
+then -- P3 (the existing fallback, and the most generous clock) is the
+safe provisional default, correctable at any time via the new priority
+amendment UI below. Flagged to John rather than silently assumed to be
+correct; revisit if he meant something else (e.g. P2 as the provisional
+default, or a genuinely nullable priority with allocation blocked until
+it's set).
+
+**P3 SLA changed 336h (14 days) -> 720h (30 days)** (§12). P1 (48h/2
+days) and P2 (168h/7 days) are unchanged -- they already matched what
+John asked for. Found **three separate hardcoded copies** of the same
+`SLA_HOURS` table (`lib/ingestion/process-message.ts`,
+`app/api/tickets/[id]/route.ts`, `prisma/seed.ts`) plus a fourth,
+presentational one (`lib/email/templates.ts`'s `TIMEFRAME_LABEL`, used in
+the Allocation email's "Expected response timeframe" line) -- consolidated
+the first three into one `lib/tickets/sla.ts`, updated the fourth's P3
+label to "30 days" to match.
+
+**Priority amendment now has a UI.** The API already supported
+`PATCH /api/tickets/[id]` with a `priority` field, correctly recalculating
+`sla_due_at` -- built at some earlier stage to satisfy §15's own
+acceptance-test line, but never exposed anywhere in the ticket detail
+page. Added a Priority selector to the existing Metadata panel
+(`app/tickets/[id]/ticket-actions.tsx`), same `canEditMetadata` gate
+(assignee, HR_LEAD, or ADMIN) as category/business unit/subject/cc --
+John asked to "allow amendments," not to widen who can make them, so
+that permission is unchanged.
+
+**Target due date opened to all staff** (`targetDueAt`/`targetDueReason`
+only) -- previously gated the same as every other metadata field
+(assignee/HR_LEAD/ADMIN); §5's own text named "the assignee, HR_LEAD or
+ADMIN" specifically, so this is a deliberate deviation from that
+sentence, done because John explicitly said "from all staff." The
+`PATCH /api/tickets/[id]` route now checks permission per field group
+instead of one blanket gate: subject/priority/category/business
+unit/cc still need `canActOnAssignedTicket`; target due date fields need
+only a valid session (every signed-in user of this app is staff -- there
+is no requester portal, per §17's own non-goals list).
+
+**Verified live** (real dev-mock-inbound-email + PATCH round trips
+against the running dev server, plus a direct DB read of `sla_due_at`):
+an "URGENT" subject created a ticket at P1 with `sla_due_at` exactly 48h
+after `received_at`; the same subject that used to trigger "action"->P2
+created a ticket at P3 with `sla_due_at` exactly 720h later; amending a
+claimed ticket's priority P1->P2 correctly recalculated `sla_due_at` to
+168h after `received_at`; an HR_OFFICER who was **not** the ticket's
+assignee successfully set a target due date (200) but was still refused
+(400) when trying to change that same ticket's priority, confirming the
+two permission paths are genuinely split, not accidentally both
+widened. 159 unit tests (two of the old priority tests collapsed into
+one reflecting the new, simpler rule), `tsc --noEmit`/`next lint` both
+clean.
 
 ## Ad hoc session (2026-09-16): subject-based ticket threading, tracking-number note, admin-editable display names
 

@@ -101,6 +101,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         ticketId={ticket.id}
         version={ticket.version}
         status={ticket.status}
+        priority={ticket.priority}
         categoryId={ticket.categoryId}
         businessUnitId={ticket.businessUnitId}
         isAssignedTicket={isAssignedTicket}

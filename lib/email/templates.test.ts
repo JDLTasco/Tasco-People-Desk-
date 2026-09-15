@@ -24,7 +24,7 @@ describe("renderAllocationEmail", () => {
     );
     assert.match(
       renderAllocationEmail({ ticketNo: "x", displaySubject: "s", assigneeDisplayName: "a", priority: "P3" }).bodyText,
-      /14 days/,
+      /30 days/,
     );
   });
 

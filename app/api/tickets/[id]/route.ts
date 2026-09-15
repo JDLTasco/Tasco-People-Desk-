@@ -5,6 +5,7 @@ import { badRequest, conflict, notFound } from "@/lib/http-errors";
 import { canActOnAssignedTicket } from "@/lib/rbac";
 import { writeAuditLog } from "@/lib/audit";
 import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/lib/tickets/detail";
+import { SLA_HOURS } from "@/lib/tickets/sla";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
@@ -36,8 +37,6 @@ interface PatchBody {
   targetDueReason?: string | null;
 }
 
-const SLA_HOURS: Record<string, number> = { P1: 48, P2: 168, P3: 336 };
-
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
   if (ctx instanceof Response) return ctx;
@@ -51,8 +50,20 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return badRequest("version is required for optimistic locking");
   }
 
+  // target_due_at/target_due_reason are settable by any authenticated
+  // staff member, not just the ticket's assignee -- broadened at John's
+  // request (2026-09-16, not in the original v1.3 §5 text, which named
+  // "the assignee, HR_LEAD or ADMIN" specifically; see STATUS.md).
+  // Every other metadata field (subject, priority, category, business
+  // unit, cc) stays under the original assignee-or-lead/admin gate.
+  const touchesRestrictedFields =
+    body.subject !== undefined ||
+    body.priority !== undefined ||
+    body.ccRecipients !== undefined ||
+    body.categoryId !== undefined ||
+    body.businessUnitId !== undefined;
   const isAssignedTicket = current.assignedToId === session.user.id;
-  if (!canActOnAssignedTicket(session.user.role, isAssignedTicket)) {
+  if (touchesRestrictedFields && !canActOnAssignedTicket(session.user.role, isAssignedTicket)) {
     return badRequest("Not permitted to edit this ticket's metadata");
   }
 

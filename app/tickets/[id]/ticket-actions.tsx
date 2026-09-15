@@ -19,6 +19,7 @@ interface Props {
   ticketId: string;
   version: number;
   status: string;
+  priority: "P1" | "P2" | "P3";
   categoryId: string | null;
   businessUnitId: string | null;
   isAssignedTicket: boolean;
@@ -61,6 +62,7 @@ export default function TicketActions({
   ticketId,
   version,
   status,
+  priority,
   categoryId,
   businessUnitId,
   isAssignedTicket,
@@ -85,6 +87,7 @@ export default function TicketActions({
   const [categories, setCategories] = useState<SimpleLookup[]>([]);
   const [businessUnits, setBusinessUnits] = useState<SimpleLookup[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState("");
+  const [selectedPriority, setSelectedPriority] = useState<"P1" | "P2" | "P3">(priority);
   const [selectedCategory, setSelectedCategory] = useState(categoryId ?? "");
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState(businessUnitId ?? "");
   const [reverseTo, setReverseTo] = useState("");
@@ -139,6 +142,16 @@ export default function TicketActions({
         <div style={{ marginBottom: "1rem" }}>
           <h3>Metadata</h3>
           <label>
+            Priority:{" "}
+            <select value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value as "P1" | "P2" | "P3")}>
+              {["P1", "P2", "P3"].map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>{" "}
+          <label>
             Category:{" "}
             <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
               <option value="">(none)</option>
@@ -169,6 +182,7 @@ export default function TicketActions({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     version,
+                    priority: selectedPriority,
                     categoryId: selectedCategory || null,
                     businessUnitId: selectedBusinessUnit || null,
                   }),
@@ -183,66 +197,66 @@ export default function TicketActions({
         </div>
       )}
 
-      {canEditMetadata && (
-        <div style={{ marginBottom: "1rem" }}>
-          <h3>Target due date (§8 -- optional, for a specific external deadline)</h3>
-          <label>
-            Target due:{" "}
-            <input type="datetime-local" value={targetDue} onChange={(e) => setTargetDue(e.target.value)} />
-          </label>{" "}
-          <label>
-            Reason (required whenever a date is set):{" "}
-            <input
-              value={targetDueReasonText}
-              onChange={(e) => setTargetDueReasonText(e.target.value)}
-              placeholder="e.g. Fair Work response date"
-              style={{ width: "16rem" }}
-            />
-          </label>{" "}
+      {/* Editable by any signed-in staff member, not just the assignee/HR_LEAD/ADMIN --
+          broadened at John's request (2026-09-16), see STATUS.md. */}
+      <div style={{ marginBottom: "1rem" }}>
+        <h3>Target due date (§8 -- optional, for a specific external deadline)</h3>
+        <label>
+          Target due:{" "}
+          <input type="datetime-local" value={targetDue} onChange={(e) => setTargetDue(e.target.value)} />
+        </label>{" "}
+        <label>
+          Reason (required whenever a date is set):{" "}
+          <input
+            value={targetDueReasonText}
+            onChange={(e) => setTargetDueReasonText(e.target.value)}
+            placeholder="e.g. Fair Work response date"
+            style={{ width: "16rem" }}
+          />
+        </label>{" "}
+        <button
+          disabled={busy || (targetDue !== "" && !targetDueReasonText.trim())}
+          onClick={() =>
+            run(async () => {
+              const res = await fetch(`/api/tickets/${ticketId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  version,
+                  targetDueAt: targetDue ? new Date(targetDue).toISOString() : null,
+                  targetDueReason: targetDue ? targetDueReasonText : null,
+                }),
+              });
+              const data = await res.json().catch(() => ({}));
+              return { ok: res.ok, status: res.status, data };
+            })
+          }
+        >
+          Save target due date
+        </button>{" "}
+        {targetDue && (
           <button
-            disabled={busy || (targetDue !== "" && !targetDueReasonText.trim())}
-            onClick={() =>
+            type="button"
+            className="secondary"
+            disabled={busy}
+            onClick={() => {
+              setTargetDue("");
+              setTargetDueReasonText("");
               run(async () => {
                 const res = await fetch(`/api/tickets/${ticketId}`, {
                   method: "PATCH",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    version,
-                    targetDueAt: targetDue ? new Date(targetDue).toISOString() : null,
-                    targetDueReason: targetDue ? targetDueReasonText : null,
-                  }),
+                  body: JSON.stringify({ version, targetDueAt: null, targetDueReason: null }),
                 });
                 const data = await res.json().catch(() => ({}));
                 return { ok: res.ok, status: res.status, data };
-              })
-            }
+              });
+            }}
           >
-            Save target due date
-          </button>{" "}
-          {targetDue && (
-            <button
-              type="button"
-              className="secondary"
-              disabled={busy}
-              onClick={() => {
-                setTargetDue("");
-                setTargetDueReasonText("");
-                run(async () => {
-                  const res = await fetch(`/api/tickets/${ticketId}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ version, targetDueAt: null, targetDueReason: null }),
-                  });
-                  const data = await res.json().catch(() => ({}));
-                  return { ok: res.ok, status: res.status, data };
-                });
-              }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      )}
+            Clear
+          </button>
+        )}
+      </div>
 
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         {status === "NEW" && (

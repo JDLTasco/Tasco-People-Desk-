@@ -12,7 +12,7 @@ export interface RenderedEmail {
   bodyHtml: string;
 }
 
-const TIMEFRAME_LABEL: Record<Priority, string> = { P1: "48 hours", P2: "7 days", P3: "14 days" };
+const TIMEFRAME_LABEL: Record<Priority, string> = { P1: "48 hours", P2: "7 days", P3: "30 days" };
 
 // Outbound HTML is generated here from user-influenced text (subjects,
 // outcome drafts, note bodies) and sent to a real mailbox -- escaped at

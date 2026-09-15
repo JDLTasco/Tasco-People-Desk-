@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { ticketNoWithSequence } from "../lib/ingestion/ticket-number";
 import { melbourneDateOnly } from "../lib/timezone";
 import { SYSTEM_ENTRA_OBJECT_ID } from "../lib/ingestion/process-message";
+import { SLA_HOURS } from "../lib/tickets/sla";
 
 const prisma = new PrismaClient();
 
@@ -38,9 +39,6 @@ const MOCK_USERS = [
   { initials: "JDL", role: "ADMIN" as const },
   { initials: "RGL", role: "ADMIN" as const },
 ];
-
-// SLA hours by priority (§8).
-const SLA_HOURS: Record<string, number> = { P1: 48, P2: 168, P3: 336 };
 
 function purgeDate(requestDate: Date): Date {
   const d = new Date(requestDate);
