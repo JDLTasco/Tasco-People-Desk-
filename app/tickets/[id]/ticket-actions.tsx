@@ -8,6 +8,7 @@ interface Props {
   version: number;
   status: string;
   categoryId: string | null;
+  businessUnitId: string | null;
   isAssignedTicket: boolean;
   canEditMetadata: boolean;
   role: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
@@ -39,6 +40,7 @@ export default function TicketActions({
   version,
   status,
   categoryId,
+  businessUnitId,
   isAssignedTicket,
   canEditMetadata,
   role,
@@ -52,7 +54,7 @@ export default function TicketActions({
   const [businessUnits, setBusinessUnits] = useState<SimpleLookup[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(categoryId ?? "");
-  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState("");
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState(businessUnitId ?? "");
   const [reverseTo, setReverseTo] = useState("");
   const [reverseReason, setReverseReason] = useState("");
 

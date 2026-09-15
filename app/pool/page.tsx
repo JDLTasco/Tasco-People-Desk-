@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { getPoolTickets } from "@/lib/tickets/queries";
-import TicketListTable from "@/components/TicketListTable";
+import FilterableTicketList from "@/components/FilterableTicketList";
 
 export default async function PoolPage() {
   const session = await getSession();
@@ -11,7 +11,7 @@ export default async function PoolPage() {
     <main>
       <h1>Pool</h1>
       <p>Unassigned tickets, available for anyone to self-assign.</p>
-      <TicketListTable tickets={tickets} />
+      <FilterableTicketList tickets={tickets} />
     </main>
   );
 }

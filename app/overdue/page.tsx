@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { getOverdueTickets } from "@/lib/tickets/queries";
-import TicketListTable from "@/components/TicketListTable";
+import FilterableTicketList from "@/components/FilterableTicketList";
 
 export default async function OverduePage() {
   const session = await getSession();
@@ -10,7 +10,7 @@ export default async function OverduePage() {
   return (
     <main>
       <h1>Overdue</h1>
-      <TicketListTable tickets={tickets} />
+      <FilterableTicketList tickets={tickets} />
     </main>
   );
 }

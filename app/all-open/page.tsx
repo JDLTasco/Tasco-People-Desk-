@@ -1,6 +1,6 @@
 import { getSession } from "@/lib/session";
 import { getAllOpenTickets } from "@/lib/tickets/queries";
-import TicketListTable from "@/components/TicketListTable";
+import FilterableTicketList from "@/components/FilterableTicketList";
 
 export default async function AllOpenPage() {
   const session = await getSession();
@@ -10,7 +10,7 @@ export default async function AllOpenPage() {
   return (
     <main>
       <h1>All open</h1>
-      <TicketListTable tickets={tickets} />
+      <FilterableTicketList tickets={tickets} />
     </main>
   );
 }

@@ -68,6 +68,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         version={ticket.version}
         status={ticket.status}
         categoryId={ticket.categoryId}
+        businessUnitId={ticket.businessUnitId}
         isAssignedTicket={isAssignedTicket}
         canEditMetadata={canEditMetadata}
         role={session.user.role}

@@ -211,6 +211,23 @@ button.secondary:hover:not(:disabled) {
   color: var(--tasco-red);
 }
 
+/* Filter bar (ticket list views) */
+.filter-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--tasco-navy-pale);
+  border-radius: 8px;
+}
+.filter-bar select,
+.filter-bar input {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+}
+
 /* Sections / cards */
 .section-card {
   margin-top: 1.5rem;
