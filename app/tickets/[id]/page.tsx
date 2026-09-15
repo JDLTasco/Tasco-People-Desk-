@@ -28,6 +28,24 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         <p className="banner banner-legal-hold">LEGAL HOLD -- RETENTION PURGE SUSPENDED</p>
       )}
       {ticket.isConfidential && <p className="banner banner-confidential">🔒 Confidential</p>}
+      {ticket.mergedIntoTicket && (
+        <p className="banner banner-error">
+          This ticket was merged into{" "}
+          <a href={`/tickets/${ticket.mergedIntoTicket.id}`}>{ticket.mergedIntoTicket.ticketNo}</a> -- see that ticket for
+          the full correspondence.
+        </p>
+      )}
+      {ticket.mergedFromTickets.length > 0 && (
+        <p className="banner banner-confidential">
+          Merged from:{" "}
+          {ticket.mergedFromTickets.map((t, i) => (
+            <span key={t.id}>
+              {i > 0 && ", "}
+              <a href={`/tickets/${t.id}`}>{t.ticketNo}</a>
+            </span>
+          ))}
+        </p>
+      )}
 
       <section className="meta-grid">
         <div>

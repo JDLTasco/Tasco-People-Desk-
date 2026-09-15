@@ -40,6 +40,17 @@ export function canActOnAssignedTicket(role: UserRole, isAssignedTicket: boolean
   return isAssignedTicket;
 }
 
+/**
+ * Merge one ticket into another (added directly with John, Sep 2026 --
+ * not in the original v1.3 permission matrix). ADMIN / HR_LEAD
+ * unconditionally; HR_OFFICER only if they're the assignee of at least
+ * one of the two tickets involved.
+ */
+export function canMergeTickets(role: UserRole, isAssigneeOfEitherTicket: boolean): boolean {
+  if (role === "ADMIN" || role === "HR_LEAD") return true;
+  return isAssigneeOfEitherTicket;
+}
+
 /** Add internal notes -- ADMIN / HR_LEAD / HR_OFFICER, any ticket. */
 export function canAddInternalNote(_role: UserRole): boolean {
   return true;
@@ -52,6 +63,11 @@ export function canEditNote(_role: UserRole, isOwnNote: boolean): boolean {
 
 /** "Not a request" close -- ADMIN / HR_LEAD / HR_OFFICER, any ticket. */
 export function canCloseAsNotARequest(_role: UserRole): boolean {
+  return true;
+}
+
+/** Autoclose (spam / no action needed) -- added directly with John, Sep 2026. Same shape as "Not a request": ADMIN / HR_LEAD / HR_OFFICER, any ticket. */
+export function canCloseAsAutoclose(_role: UserRole): boolean {
   return true;
 }
 

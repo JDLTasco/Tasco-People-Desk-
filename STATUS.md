@@ -1,11 +1,73 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 5 — Outbound and SLA (complete, within what §14's absence allows -- see below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (in progress)
 - Last completed stage: 5
 - Passing acceptance tests: **Communications** now passes live for everything that doesn't require a real Graph tenant -- allocation/outcome/escalation emails all correctly write `ticket_messages` + retry-and-log to `email_log`, the outcome dispatch preview is the only path to OUTCOME, threading headers are set from the original message, target due dates enforce the mandatory-reason rule. The whole **Ingestion** block from Stage 4 still passes (unchanged). Most of **Attachments** still passes (unchanged; CLEAN-status row still pending §7.3.2).
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (can't be exercised until §14), **Legal hold**, **Audit-and-correlation**'s admin-search row, **Archive-and-retention**, **Durability** (Stages 6-7).
 - Architecture deviations / clarifications: **`MessageType` enum was missing `SLA_ESCALATION`** -- a real gap between the schema and §7.4's own outbound trigger table (which names three distinct triggers, not two), fixed via a new migration, not silently misfiled under `MANUAL`. **Design call, not silently assumed**: outcome-email delivery failure does not block the IN_ACTION -> OUTCOME transition (same non-blocking posture as the allocation email, which plainly can't block NEW -> ALLOCATED either) -- transition applies first via optimistic locking, then the send is attempted; a failure is recorded and bannered, never rolled back. **Known tradeoff, documented not silently accepted**: every outbound send is awaited synchronously within its triggering HTTP request (claim/assign/outcome-confirm) -- there is no background job queue in this build, so a real Graph outage adds a few seconds of latency (short backoff: 1s, 3s) to those actions rather than failing silently in the background.
 - Blockers / required operator actions: §14 items 0-8 — still none started. **Confirmed this session (live, not assumed): the whole send pipeline (ticket_messages write, 3-attempt retry, email_log, failed-sends banner, ADMIN failed-sends view) works correctly end-to-end** -- what's genuinely inert until §14 is only the actual Graph `sendMail` network call itself (verified it fails honestly with "Graph is not configured" on every attempt, exactly the same posture Stage 4 left `getMessage`/`listInboxDelta` in).
 - Recommended next command or task: nominate Stage 6 ("Confidential, legal hold, export, archive, retention"), OR prioritize getting §14 items 0-3 done operator-side so the real Graph send/receive paths can finally be tested for real.
+
+## Ad hoc session (2026-09-15, between Stage 5 and Stage 6): ticket merging, Autoclose
+
+Not a numbered build-order stage -- John asked for two capabilities not in
+the original v1.3 spec, directly (same "spec gap resolved by asking the
+operator" pattern as §7.3.2's Defender scan-verdict addition). Both
+recorded here as the authoritative design decisions since neither exists
+in `TASCO_HR_Ticketing_Build_Spec_v1.3.md` itself.
+
+**Ticket merging.** Three design questions put to John before writing any
+code (this project's own operating rule 4 -- never invent business
+logic): (1) merged-away content moves into **one unified thread** on the
+prominent ticket (not kept separate-but-linked); (2) merge permission is
+**assignee of either ticket, or ADMIN/HR_LEAD** (not ADMIN/HR_LEAD-only);
+(3) confirmed decision, not asked (out of scope for this addition) --
+Autoclose stays manual-only, not wired into suppression rules.
+
+Implementation: `Ticket.mergedIntoTicketId` (self-relation, nullable,
+`ON DELETE SET NULL`) plus two new `CloseReason` values, `MERGED` and
+`AUTOCLOSE`. `POST /api/tickets/[id]/merge` (`lib/tickets/transitions.ts`'s
+new `validateMerge()`, `lib/rbac.ts`'s new `canMergeTickets()`) runs a
+single Prisma transaction: both tickets' `version`-checked atomically (a
+new `MergeConflictError` distinguishes which one to report on a 409),
+then `ticket_messages`/`ticket_notes`/`ticket_attachments` are
+re-parented from source to target via `updateMany` (their own
+`correlation_id`/timestamps untouched, so the existing chronological
+sort already interleaves them correctly -- no new sorting logic needed).
+`cc_recipients` union onto the target. The source ticket's own
+`ticket_status_history`/`audit_log` rows deliberately **stay** on the
+source (a historical record of what happened to that ticket, including
+its own merge event) -- only user-facing content moves. **Confidential
+tickets are refused as either source or target** (`badRequest`, not
+silently allowed) -- §9's ACL enforcement doesn't exist until later in
+this same stage, so merging confidential content now would risk
+relocating it somewhere today's access model can't yet protect
+correctly; revisit once this stage's own confidential work lands.
+`GET /api/tickets/search` (new, confidentiality-scoped via the same
+`confidentialFilter()` every list view already uses) backs the merge
+picker UI (`merge-ticket-form.tsx`). Banners added to the ticket detail
+page both directions ("merged into #X" / "Merged from: #A, #B").
+
+**Autoclose.** `POST /api/tickets/[id]/close-autoclose` -- deliberately
+near-identical to the existing `close-not-a-request` route (same
+`validateNotARequestClose()` status set, same any-role permission, same
+no-notification/no-category shape), just a distinct `close_reason` value
+and audit action name for reporting/filtering clarity between "spam" and
+"genuinely not an HR matter." UI button added next to "Not a request"
+close.
+
+**Verified live** (fresh dev server -- the leftover one from the Stage 5
+session had a stale Prisma Client in memory from before this session's
+migration and needed a hard `taskkill`, not just stopping the tracked
+background task, which only kills the `npm` wrapper and leaves the
+actual `next-server` child process listening): autoclose -> CLOSED/
+AUTOCLOSE; search returns matches; merge moves messages+notes+
+attachments into one interleaved thread, unions CC, closes the source as
+CLOSED/MERGED with the correct `mergedIntoTicketId`; re-merging an
+already-merged ticket refused (400); self-merge refused (400); ADMIN can
+merge two tickets neither is assigned to; both ticket-detail banners
+render on the correct side. 8 new unit tests (`validateMerge` x3,
+`canCloseAsAutoclose` x3 across all roles, `canMergeTickets` x2) -- 138/138
+passing, `tsc`/`lint` clean.
 
 ## Stage 5 deliverables (§16 item 5)
 

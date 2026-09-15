@@ -96,6 +96,27 @@ export function validateNotARequestClose(from: TicketStatus): TransitionResult {
   return fail(400, `"Not a request" close is only valid from NEW, ALLOCATED, or IN_ACTION (current status: ${from})`);
 }
 
+/**
+ * Ticket merging (added directly with John, Sep 2026 -- not in the
+ * original v1.3 spec; see STATUS.md). Not a transition table row -- this
+ * validates the pair of tickets involved, not a single from/to move.
+ * Mergeable-away statuses mirror validateNotARequestClose()'s own set
+ * (still-active workflow, the overwhelmingly common real "duplicate
+ * email" case) -- a source ticket that's already CLOSED or ARCHIVED is
+ * refused rather than guessing whether retroactively folding a resolved
+ * matter into a still-open one is ever wanted.
+ */
+export function validateMerge(sourceStatus: TicketStatus, targetStatus: TicketStatus): TransitionResult {
+  const MERGEABLE_SOURCE_STATUSES: TicketStatus[] = ["NEW", "ALLOCATED", "IN_ACTION", "OUTCOME"];
+  if (!MERGEABLE_SOURCE_STATUSES.includes(sourceStatus)) {
+    return fail(400, `Cannot merge a ${sourceStatus} ticket -- only NEW, ALLOCATED, IN_ACTION, or OUTCOME tickets can be merged away`);
+  }
+  if (targetStatus === "ARCHIVED") {
+    return fail(400, "Cannot merge into an archived ticket");
+  }
+  return ok();
+}
+
 /** Reassignment (§4): not a status transition -- ALLOCATED and IN_ACTION tickets only. */
 export function validateReassignment(status: TicketStatus): TransitionResult {
   if (status === "ALLOCATED" || status === "IN_ACTION") {

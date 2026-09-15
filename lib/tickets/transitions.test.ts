@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  validateMerge,
   validateNotARequestClose,
   validateReassignment,
   validateReversal,
@@ -152,5 +153,25 @@ describe("validateReversal (ADMIN-only, enforced by the caller -- this validates
     assert.equal(result.ok, false);
     assert.equal(result.status, 400);
     assert.match(result.error!, /category_id/);
+  });
+});
+
+describe("validateMerge (ticket merging -- added directly with John, Sep 2026)", () => {
+  it("allows merging a still-active source into any non-archived target", () => {
+    for (const status of ["NEW", "ALLOCATED", "IN_ACTION", "OUTCOME"] as const) {
+      assert.equal(validateMerge(status, "IN_ACTION").ok, true, status);
+    }
+    assert.equal(validateMerge("NEW", "CLOSED").ok, true);
+  });
+
+  it("refuses to merge away an already-closed or archived source", () => {
+    assert.equal(validateMerge("CLOSED", "IN_ACTION").ok, false);
+    assert.equal(validateMerge("ARCHIVED", "IN_ACTION").ok, false);
+  });
+
+  it("refuses to merge into an archived target", () => {
+    const result = validateMerge("NEW", "ARCHIVED");
+    assert.equal(result.ok, false);
+    assert.match(result.error!, /archived/);
   });
 });

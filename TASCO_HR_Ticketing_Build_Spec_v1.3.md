@@ -169,6 +169,10 @@ An attempt to move `ALLOCATED` → `IN_ACTION` without a category returns HTTP 4
 
 **"Not a request" close.** Available from `NEW`, `ALLOCATED` or `IN_ACTION`. Sets status directly to `CLOSED` with `close_reason = 'NOT_A_REQUEST'`, bypasses all requester notifications, requires no category, and is excluded from the default archive search view.
 
+**Autoclose.** *(Added 2026-09-15, not in the original v1.3 scope -- an explicit operator addition.)* Same shape as "Not a request" close in every respect (available from `NEW`/`ALLOCATED`/`IN_ACTION`, any role, bypasses all requester notifications, requires no category, excluded from the default archive search view) with `close_reason = 'AUTOCLOSE'` instead -- a distinct reason purely so spam and other no-action-needed mail can be reported/filtered separately from genuine non-HR-matter redirections. Manual only (an officer clicks it); not wired into suppression rules.
+
+**Ticket merging.** *(Added 2026-09-15, not in the original v1.3 scope -- an explicit operator addition.)* Any user who is the assignee of either ticket, or ADMIN/HR_LEAD, may merge one ticket ("source") into another ("target", which becomes the prominent case number). Available when the source is `NEW`/`ALLOCATED`/`IN_ACTION`/`OUTCOME` (not already `CLOSED`/`ARCHIVED`) and the target is not `ARCHIVED`. All `ticket_messages`, `ticket_notes`, and `ticket_attachments` move to the target (one unified correspondence/notes thread, chronologically interleaved by their existing timestamps); the target's `cc_recipients` becomes the union of both tickets' lists. The source ticket itself is set to `CLOSED` with `close_reason = 'MERGED'` and `merged_into_ticket_id` pointing at the target -- it is never deleted, and its own `ticket_status_history`/`audit_log` rows stay on it as the historical record of its own lifecycle (only the user-facing content moves). Neither ticket may be confidential (`is_confidential = true`) -- refused outright, since §9's access-control enforcement must exist and correctly cover moved content before this is safe to allow. A ticket that has already been merged away cannot be merged again, and cannot itself be used as a merge target.
+
 **Reversals.** ADMIN only. Any backward move (e.g. `CLOSED` → `IN_ACTION`) requires step-up re-authentication and a mandatory text reason, and writes to `audit_log`. An archived ticket must be reversed before it can be amended. A reversal into `IN_ACTION` still requires a category.
 
 ---
@@ -227,14 +231,15 @@ Same deactivate-never-delete rule and `ON DELETE RESTRICT` constraint as categor
 | `legal_hold_cleared_by`, `legal_hold_cleared_at` | | |
 | `outcome_for_requester` | text, nullable | The curated, requester-facing resolution. **The only ticket text ever emailed as an outcome** |
 | `outcome_sent_at` | timestamptz | |
-| `close_reason` | enum RESOLVED / NOT_A_REQUEST / REDIRECTED | |
+| `close_reason` | enum RESOLVED / NOT_A_REQUEST / REDIRECTED / AUTOCLOSE / MERGED | `AUTOCLOSE` and `MERGED` added 2026-09-15, see "Autoclose" / "Ticket merging" under §4 |
 | `closed_at`, `archived_at` | timestamptz | |
+| `merged_into_ticket_id` | uuid FK tickets, nullable | Added 2026-09-15. Set only on a ticket that has been merged away -- see "Ticket merging" under §4 |
 | `retention_purge_date` | date | `request_date + 7 years`, computed on insert |
 | `is_deleted` | boolean default false | |
 | `deleted_by`, `deleted_at`, `delete_reason` | | |
 | `version` | integer not null default 0 | Optimistic lock. Incremented on every mutation |
 
-Indexes: `status`, `assigned_to`, `request_date`, `retention_purge_date`, `requester_email`, `is_confidential`, `is_legal_hold`, `category_id`, `business_unit_id`, `sla_due_at`, `target_due_at`.
+Indexes: `status`, `assigned_to`, `request_date`, `retention_purge_date`, `requester_email`, `is_confidential`, `is_legal_hold`, `category_id`, `business_unit_id`, `sla_due_at`, `target_due_at`, `merged_into_ticket_id`.
 
 **Effective due date** is `LEAST(sla_due_at, COALESCE(target_due_at, sla_due_at))`. A target due date can therefore only bring a deadline **forward**, never extend it. This is intentional, not a defect: the SLA is a floor.
 

@@ -5,9 +5,11 @@ import {
   canAddInternalNote,
   canAmendArchivedTicket,
   canBulkExport,
+  canCloseAsAutoclose,
   canCloseAsNotARequest,
   canEditNote,
   canManageAdminSettings,
+  canMergeTickets,
   canReassignTicket,
   canReverseStatusTransition,
   canSelfAssignPooledTicket,
@@ -42,7 +44,23 @@ describe("§3 permission matrix -- unconditional rows (✔ for all three roles)"
     it(`"Not a request" close: ${role} can`, () => {
       assert.equal(canCloseAsNotARequest(role), true);
     });
+
+    it(`Autoclose (spam / no action needed): ${role} can`, () => {
+      assert.equal(canCloseAsAutoclose(role), true);
+    });
   }
+});
+
+describe("Merge one ticket into another (added directly with John, Sep 2026)", () => {
+  it("ADMIN and HR_LEAD can merge any pair of tickets", () => {
+    assert.equal(canMergeTickets(ADMIN, false), true);
+    assert.equal(canMergeTickets(HR_LEAD, false), true);
+  });
+
+  it("HR_OFFICER can only merge when they're the assignee of at least one of the two tickets", () => {
+    assert.equal(canMergeTickets(HR_OFFICER, true), true);
+    assert.equal(canMergeTickets(HR_OFFICER, false), false);
+  });
 });
 
 describe("Reassign another user's ticket", () => {

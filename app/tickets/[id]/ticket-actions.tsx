@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import OutcomeDispatchModal from "./outcome-dispatch-modal";
+import MergeTicketForm from "./merge-ticket-form";
 
 interface OutcomeNote {
   id: string;
@@ -280,7 +281,22 @@ export default function TicketActions({
             &quot;Not a request&quot; close
           </button>
         )}
+
+        {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+          <button
+            disabled={busy}
+            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }))}
+          >
+            Autoclose (spam / no action needed)
+          </button>
+        )}
       </div>
+
+      {canEditMetadata && (status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION" || status === "OUTCOME") && (
+        <div style={{ marginBottom: "1rem" }}>
+          <MergeTicketForm ticketId={ticketId} ticketNo={ticketNo} version={version} />
+        </div>
+      )}
 
       {status === "NEW" && (role === "ADMIN" || role === "HR_LEAD") && (
         <div style={{ marginBottom: "1rem" }}>

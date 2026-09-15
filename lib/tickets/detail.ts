@@ -26,6 +26,8 @@ export const TICKET_DETAIL_INCLUDE = {
   },
   attachments: { orderBy: { createdAt: "asc" as const } },
   accessGrants: { select: { userId: true } },
+  mergedIntoTicket: { select: { id: true, ticketNo: true } },
+  mergedFromTickets: { select: { id: true, ticketNo: true } },
 };
 
 export type TicketDetail = NonNullable<Awaited<ReturnType<typeof loadTicketForViewer>>>;

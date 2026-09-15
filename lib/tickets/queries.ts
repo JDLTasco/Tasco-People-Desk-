@@ -110,3 +110,26 @@ export async function getClosedTickets(userId: string, role: UserRole): Promise<
     orderBy: { closedAt: "desc" },
   });
 }
+
+/**
+ * Ticket merging (added directly with John, Sep 2026): a small text/ticket-
+ * number search used by the merge picker. Respects §9's confidentiality
+ * rule (never surface a confidential ticket a viewer can't already see,
+ * same filter every other list view already applies) and excludes
+ * ARCHIVED tickets (never a valid merge source or target).
+ */
+export async function searchTickets(userId: string, role: UserRole, query: string): Promise<TicketListRow[]> {
+  const q = query.trim();
+  if (!q) return [];
+  return prisma.ticket.findMany({
+    where: {
+      isDeleted: false,
+      status: { not: "ARCHIVED" },
+      OR: [{ ticketNo: { contains: q, mode: "insensitive" } }, { subject: { contains: q, mode: "insensitive" } }],
+      ...confidentialFilter(userId, role),
+    },
+    select: TICKET_LIST_SELECT,
+    orderBy: { receivedAt: "desc" },
+    take: 20,
+  });
+}

@@ -52,6 +52,14 @@ enum CloseReason {
   RESOLVED
   NOT_A_REQUEST
   REDIRECTED
+  // Added directly with John, Sep 2026 (not in the original v1.3 spec):
+  // a no-action-needed close for things like spam -- same shape as
+  // NOT_A_REQUEST (manual, bypasses notifications, no category), a
+  // distinct reason purely for reporting/filtering clarity.
+  AUTOCLOSE
+  // Set on the ticket that stops being the prominent case number when two
+  // tickets are merged -- see Ticket.mergedIntoTicketId's own comment.
+  MERGED
 
   @@map("close_reason")
 }
@@ -244,6 +252,14 @@ model Ticket {
   closedAt            DateTime?    @map("closed_at")
   archivedAt          DateTime?    @map("archived_at")
 
+  // Ticket merging (added directly with John, Sep 2026 -- not in the
+  // original v1.3 spec; see STATUS.md for the design decisions). Set only
+  // on the ticket that stopped being the prominent case number --
+  // correspondence/notes/attachments physically move to the target
+  // (closeReason=MERGED), this row stays as the historical record of its
+  // own lifecycle plus a pointer to where its content went.
+  mergedIntoTicketId String? @map("merged_into_ticket_id") @db.Uuid
+
   retentionPurgeDate DateTime @map("retention_purge_date") @db.Date
 
   isDeleted    Boolean   @default(false) @map("is_deleted")
@@ -261,6 +277,8 @@ model Ticket {
   legalHoldSetBy    User?        @relation("TicketLegalHoldSetBy", fields: [legalHoldSetById], references: [id])
   legalHoldClearedBy User?       @relation("TicketLegalHoldClearedBy", fields: [legalHoldClearedById], references: [id])
   deletedBy         User?        @relation("TicketDeletedBy", fields: [deletedById], references: [id])
+  mergedIntoTicket  Ticket?      @relation("TicketMerge", fields: [mergedIntoTicketId], references: [id])
+  mergedFromTickets Ticket[]     @relation("TicketMerge")
 
   messages       TicketMessage[]
   notes          TicketNote[]
@@ -281,6 +299,7 @@ model Ticket {
   @@index([businessUnitId])
   @@index([slaDueAt])
   @@index([targetDueAt])
+  @@index([mergedIntoTicketId])
   @@map("tickets")
 }
 
