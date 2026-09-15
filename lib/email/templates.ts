@@ -37,6 +37,15 @@ function htmlParagraphs(text: string): string {
 const FOOTER_TEXT = "Tasco Human Resources";
 const FOOTER_HTML = `<p>${FOOTER_TEXT}</p>`;
 
+// Operator addition (not in v1.3 spec): requester-facing emails only --
+// Escalation goes to internal HR_LEAD staff, not the requester, so it's
+// deliberately excluded. Keeping the ticket number in the subject when
+// replying is what lets lib/ingestion/subject-ticket-match.ts thread the
+// reply onto this ticket even without matching conversation_id headers.
+const TRACKING_NOTE_TEXT =
+  "When replying, please keep the ticket number in the subject line so your response can be tracked against this ticket.";
+const TRACKING_NOTE_HTML = `<p>${TRACKING_NOTE_TEXT}</p>`;
+
 export interface AllocationEmailInput {
   ticketNo: string;
   displaySubject: string;
@@ -54,8 +63,8 @@ export function renderAllocationEmail(input: AllocationEmailInput): RenderedEmai
     `You will receive a further update once this matter has been resolved.`;
   return {
     subject,
-    bodyText: `${intro}\n\n${FOOTER_TEXT}`,
-    bodyHtml: `${htmlParagraphs(intro)}\n${FOOTER_HTML}`,
+    bodyText: `${intro}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`,
+    bodyHtml: `${htmlParagraphs(intro)}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`,
   };
 }
 
@@ -82,8 +91,8 @@ export function renderOutcomeEmail(input: OutcomeEmailInput): RenderedEmail {
   const subject = `[${input.ticketNo}] ${input.displaySubject} -- Resolved`;
   const header = `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}`;
   const parts = [header, input.outcomeForRequester, ...input.includedNotes.map((n) => n.body)];
-  const bodyText = `${parts.join("\n\n")}\n\n${FOOTER_TEXT}`;
-  const bodyHtml = `${parts.map(htmlParagraphs).join("\n")}\n${FOOTER_HTML}`;
+  const bodyText = `${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`;
+  const bodyHtml = `${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`;
   return { subject, bodyText, bodyHtml };
 }
 

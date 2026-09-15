@@ -9,6 +9,7 @@ import { isAutoReply } from "./auto-reply";
 import { classifyPriority } from "./priority";
 import { matchSuppressionRule } from "./suppression";
 import { ticketNoWithSequence } from "./ticket-number";
+import { extractTicketNoFromSubject } from "./subject-ticket-match";
 import { validateAttachment } from "./attachments";
 
 const SLA_HOURS: Record<string, number> = { P1: 48, P2: 168, P3: 336 };
@@ -141,12 +142,29 @@ export async function processInboundMessage(
 
   // §7.3 step 3: threading -- conversation_id lives on ticket_messages, so
   // matching "an existing non-archived ticket" means matching through its messages.
-  const existingTicket = await prisma.ticket.findFirst({
+  let existingTicket = await prisma.ticket.findFirst({
     where: {
       messages: { some: { conversationId: message.conversationId } },
       status: { not: "ARCHIVED" },
     },
   });
+
+  // Operator addition (not in v1.3 spec): fallback when conversation_id
+  // threading finds nothing -- a reply whose subject still carries the
+  // ticket number (every outbound email puts it there, see
+  // lib/email/templates.ts) still threads onto the right ticket even if
+  // it arrived as a fresh email or lost its threading headers along the
+  // way. Matches on subject alone, no sender/requester check -- an
+  // explicit operator decision (asked, not guessed), see STATUS.md.
+  if (!existingTicket) {
+    const ticketNo = extractTicketNoFromSubject(message.subject);
+    if (ticketNo) {
+      existingTicket = await prisma.ticket.findFirst({
+        where: { ticketNo, status: { not: "ARCHIVED" } },
+      });
+    }
+  }
+
   if (existingTicket) {
     const reply = await prisma.ticketMessage.create({
       data: {

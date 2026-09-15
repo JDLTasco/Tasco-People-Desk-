@@ -18,7 +18,7 @@ interface AdminUser {
 
 const ROLES: Role[] = ["ADMIN", "HR_LEAD", "HR_OFFICER"];
 
-async function patchUser(id: string, body: { role?: Role; isActive?: boolean }) {
+async function patchUser(id: string, body: { role?: Role; isActive?: boolean; displayName?: string }) {
   const res = await fetch(`/api/admin/users/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -38,6 +38,9 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
   const [upn, setUpn] = useState("");
   const [role, setRole] = useState<Role>("HR_OFFICER");
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+
   async function run(action: () => Promise<{ ok: boolean; status: number; data: { error?: string } }>) {
     setBusy(true);
     setError(null);
@@ -51,6 +54,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
       );
       return;
     }
+    setEditingId(null);
     router.refresh();
   }
 
@@ -77,7 +81,43 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
         <tbody>
           {users.map((u) => (
             <tr key={u.id}>
-              <td>{u.displayName}</td>
+              <td>
+                {editingId === u.id ? (
+                  <span style={{ display: "flex", gap: "0.4rem" }}>
+                    <input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      disabled={busy}
+                      style={{ width: "10rem" }}
+                    />
+                    <button
+                      type="button"
+                      disabled={busy || !editingName.trim()}
+                      onClick={() => run(() => patchUser(u.id, { displayName: editingName.trim() }))}
+                    >
+                      Save
+                    </button>
+                    <button type="button" className="secondary" disabled={busy} onClick={() => setEditingId(null)}>
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <span style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                    {u.displayName}
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditingId(u.id);
+                        setEditingName(u.displayName);
+                      }}
+                    >
+                      Edit
+                    </button>
+                  </span>
+                )}
+              </td>
               <td>{u.initials}</td>
               <td>{u.upn}</td>
               <td>

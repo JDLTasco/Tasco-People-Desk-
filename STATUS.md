@@ -1,5 +1,5 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus an ad hoc addition (subject-based ticket threading, tracking-number email note, admin-editable display names -- see "Ad hoc session (2026-09-16)" below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
@@ -25,6 +25,68 @@
 - Read a real generated `ticket.xml` off disk (`.local-blob-store/hr-archive/2026/09/<ticket_no>/ticket.xml`) and eyeballed it: correct namespace, correctly interleaved correspondence entries in chronological order, correct `edited`/`type` attributes, empty-but-present `<attachments>` element for a ticket with none.
 - `/admin/legal-holds`, `/admin/deleted`, `/admin/audit-log`, `/archive-search` all render 200 with no error content as ADMIN.
 - Ticket detail page: set a real legal hold, confirmed the banner shows the actual reason and setter name, not just the static "LEGAL HOLD" string from before this stage.
+
+## Ad hoc session (2026-09-16): subject-based ticket threading, tracking-number note, admin-editable display names
+
+Three requests from John, none in the v1.3 spec, same "ad hoc addition"
+pattern as merging/Autoclose below. One real design question put to him
+before writing code (this project's own operating rule 4): should
+subject-based ticket matching (see next paragraph) be restricted to the
+ticket's own requester/cc_recipients, or match on subject alone
+regardless of sender? **He chose no restriction** -- any sender whose
+subject contains a live, non-archived ticket's number gets threaded onto
+it. Recorded here because it's a deliberate, security-relevant choice,
+not an oversight: the ticket number (a predictable `YYMMDDHHMM`+sequence
+string) is a de facto write key into that ticket's correspondence once
+this ships. It does **not** grant any extra *view* access -- §9's
+confidential ACL still gates who can see the resulting message -- so the
+exposure is data-integrity (wrong content attributed to a ticket's
+thread), not a confidentiality breach.
+
+**Subject-based ticket threading** (`lib/ingestion/subject-ticket-match.ts`,
+wired into `lib/ingestion/process-message.ts`'s existing §7.3 step 3):
+falls back to matching a bracketed 12-digit ticket number in the subject
+(`[TICKETNO]`, the same format every outbound email already uses) only
+when the primary mechanism -- Graph's `conversation_id` -- finds no
+match. Excludes `ARCHIVED` tickets, same as the existing conversation_id
+path; no other status or confidentiality exclusion, for consistency with
+that same existing path (which also doesn't exclude confidential or
+`CLOSED` tickets). 5 new unit tests for the pure extraction function.
+
+**Tracking-number note**: `lib/email/templates.ts`'s Allocation and
+Outcome emails (the two sent to the requester) now include "When
+replying, please keep the ticket number in the subject line so your
+response can be tracked against this ticket." **Escalation deliberately
+excluded** -- it goes to internal HR_LEAD staff, not the requester.
+
+**Admin-editable display names**: `PATCH /api/admin/users/[id]`
+now also accepts `displayName` (new `USER_DISPLAY_NAME_CHANGED` audit
+action, not step-up gated -- less sensitive than a role change, same
+convention as activation toggling). This was mostly already built --
+creating a user already had a free-text Display name field, and outbound
+emails already render it, not a UPN/login -- the actual gap was that an
+**existing** user's name couldn't be edited afterward. This is
+specifically how John (not Claude) can give the dev-mock users (RJ, LF,
+DN, JDL, RGL) real names -- they were deliberately seeded initials-only,
+no invented names, and that convention is unchanged; the new Edit
+control on `/admin/users` is the sanctioned way to change that.
+
+**Verified live** (fresh dev-mock-inbound-email round trip against the
+real dev server, not just unit tests): an email with `[TICKETNO]` in the
+subject and a brand-new random `conversation_id` (the mock endpoint's
+default) threaded onto the original ticket -- `THREADED` outcome,
+correct `ticketId`; a second, unrelated email with no ticket number
+still created its own new ticket as before; the resulting
+`ticket_messages` row for the threaded reply sits chronologically
+alongside the `ORIGINAL` and the automated `ALLOCATION` send on the same
+ticket, confirmed via direct DB read (no new UI work needed -- the
+correspondence view already renders every `ticket_messages` row
+chronologically, built in Stage 3/6); a real `ALLOCATION` email's stored
+`body_text` confirmed to include the new tracking-number sentence before
+the footer; a display-name PATCH as JDL (ADMIN) took effect and was
+reverted afterward so the seeded dataset wasn't left mutated. 161 unit
+tests total (was 156, +5 for the subject-match extraction function),
+`tsc --noEmit`/`next lint` both clean.
 
 ## Ad hoc session (2026-09-15, between Stage 5 and Stage 6): ticket merging, Autoclose
 
