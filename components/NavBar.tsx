@@ -20,6 +20,7 @@ export default async function NavBar() {
       <Link href="/closed">Closed</Link>
       <Link href="/archive-search">Archive search</Link>
       {canManageAdminSettings(session.user.role) && <Link href="/admin/users">Admin</Link>}
+      {canManageAdminSettings(session.user.role) && <Link href="/admin/business-units">Business units</Link>}
       {canManageAdminSettings(session.user.role) && <Link href="/admin/failed-sends">Failed sends</Link>}
       {canViewAuditLog(session.user.role) && <Link href="/admin/legal-holds">Legal holds</Link>}
       {canManageAdminSettings(session.user.role) && <Link href="/admin/deleted">Deleted</Link>}
