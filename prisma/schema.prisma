@@ -1,0 +1,506 @@
+// TASCO People Desk — data model, translated directly from
+// TASCO_HR_Ticketing_Build_Spec_v1.3.md §5. Column and table names use
+// @map/@@map to match the spec's literal snake_case names exactly, while
+// Prisma models/fields stay idiomatic PascalCase/camelCase in TypeScript.
+//
+// The "effective due date" (LEAST(sla_due_at, COALESCE(target_due_at,
+// sla_due_at))) described in §5 is deliberately NOT a stored column here —
+// the spec's own tickets column table doesn't list it, and it is fully
+// derivable from sla_due_at/target_due_at. Compute it in queries (Stage 3+).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext]
+}
+
+// ---------- Enums ----------
+
+enum UserRole {
+  ADMIN
+  HR_LEAD
+  HR_OFFICER
+
+  @@map("user_role")
+}
+
+enum Priority {
+  P1
+  P2
+  P3
+
+  @@map("priority")
+}
+
+enum TicketStatus {
+  NEW
+  ALLOCATED
+  IN_ACTION
+  OUTCOME
+  CLOSED
+  ARCHIVED
+
+  @@map("ticket_status")
+}
+
+enum CloseReason {
+  RESOLVED
+  NOT_A_REQUEST
+  REDIRECTED
+
+  @@map("close_reason")
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+
+  @@map("message_direction")
+}
+
+enum MessageType {
+  ORIGINAL
+  REPLY
+  ALLOCATION
+  OUTCOME
+  MANUAL
+
+  @@map("message_type")
+}
+
+enum NoteVisibility {
+  INTERNAL
+  REQUESTER_VISIBLE
+
+  @@map("note_visibility")
+}
+
+enum AttachmentSource {
+  EMAIL
+  UPLOAD
+
+  @@map("attachment_source")
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  MALICIOUS
+  BLOCKED
+  SKIPPED
+
+  @@map("scan_status")
+}
+
+enum AccessBasis {
+  ASSIGNEE
+  ACL_GRANTED
+  HR_LEAD
+  ADMIN
+
+  @@map("access_basis")
+}
+
+enum SuppressionType {
+  SENDER
+  DOMAIN
+  SUBJECT_PATTERN
+
+  @@map("suppression_type")
+}
+
+enum EmailLogStatus {
+  SENT
+  FAILED
+  RETRYING
+
+  @@map("email_log_status")
+}
+
+// ---------- Lookups (§5: categories, business_units) ----------
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  sortOrder   Int      @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  createdBy User?    @relation(fields: [createdById], references: [id])
+  tickets   Ticket[]
+
+  @@map("categories")
+}
+
+model BusinessUnit {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  sortOrder   Int      @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  createdBy User?    @relation(fields: [createdById], references: [id])
+  tickets   Ticket[]
+
+  @@map("business_units")
+}
+
+// ---------- Users (§5, §3) ----------
+
+model User {
+  id            String    @id @default(uuid()) @db.Uuid
+  entraObjectId String    @unique @map("entra_object_id")
+  upn           String
+  displayName   String    @map("display_name")
+  initials      String
+  role          UserRole
+  isActive      Boolean   @default(true) @map("is_active")
+  firstSeenAt   DateTime  @default(now()) @map("first_seen_at")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  // Reverse relations — every FK to users from tickets/notes/etc. is named
+  // explicitly so Prisma can disambiguate the many relations to this model.
+  categoriesCreated       Category[]           @relation
+  businessUnitsCreated    BusinessUnit[]       @relation
+  ticketsAssigned         Ticket[]             @relation("TicketAssignee")
+  ticketsFirstViewed      Ticket[]             @relation("TicketFirstViewedBy")
+  ticketsConfidentialSet  Ticket[]             @relation("TicketConfidentialSetBy")
+  ticketsLegalHoldSet     Ticket[]             @relation("TicketLegalHoldSetBy")
+  ticketsLegalHoldCleared Ticket[]             @relation("TicketLegalHoldClearedBy")
+  ticketsDeleted          Ticket[]             @relation("TicketDeletedBy")
+  messagesSent            TicketMessage[]      @relation("MessageSentBy")
+  notesAuthored           TicketNote[]         @relation("NoteAuthor")
+  attachmentsUploaded     TicketAttachment[]   @relation("AttachmentUploadedBy")
+  statusHistoryActed      TicketStatusHistory[] @relation("StatusHistoryActor")
+  ticketAccessGranted     TicketAccess[]       @relation("TicketAccessGrantedBy")
+  ticketAccessGrants      TicketAccess[]       @relation("TicketAccessUser")
+  auditLogEntries         AuditLog[]           @relation("AuditLogActor")
+  suppressionRulesCreated SuppressionRule[]    @relation("SuppressionRuleCreatedBy")
+
+  @@map("users")
+}
+
+// ---------- Tickets (§5) ----------
+
+model Ticket {
+  id                 String    @id @default(uuid()) @db.Uuid
+  ticketNo           String    @unique @map("ticket_no") @db.VarChar(12)
+  originalSubject    String    @map("original_subject")
+  subject            String
+  requesterEmail     String    @map("requester_email") @db.Citext
+  requesterName      String    @map("requester_name")
+  ccRecipients       String[]  @map("cc_recipients")
+  receivedAt         DateTime  @map("received_at")
+  requestDate        DateTime  @map("request_date") @db.Date
+
+  categoryId     String?  @map("category_id") @db.Uuid
+  businessUnitId String?  @map("business_unit_id") @db.Uuid
+
+  priority        Priority
+  slaDueAt        DateTime  @map("sla_due_at")
+  targetDueAt     DateTime? @map("target_due_at")
+  targetDueReason String?   @map("target_due_reason")
+
+  status TicketStatus @default(NEW)
+
+  assignedToId String?   @map("assigned_to") @db.Uuid
+  assignedAt   DateTime? @map("assigned_at")
+
+  firstViewedAt   DateTime? @map("first_viewed_at")
+  firstViewedById String?   @map("first_viewed_by") @db.Uuid
+
+  escalationCount  Int       @default(0) @map("escalation_count")
+  lastEscalatedAt  DateTime? @map("last_escalated_at")
+
+  isConfidential      Boolean   @default(false) @map("is_confidential")
+  confidentialSetById String?   @map("confidential_set_by") @db.Uuid
+  confidentialSetAt   DateTime? @map("confidential_set_at")
+
+  isLegalHold          Boolean   @default(false) @map("is_legal_hold")
+  legalHoldReason      String?   @map("legal_hold_reason")
+  legalHoldSetById     String?   @map("legal_hold_set_by") @db.Uuid
+  legalHoldSetAt       DateTime? @map("legal_hold_set_at")
+  legalHoldClearedById String?   @map("legal_hold_cleared_by") @db.Uuid
+  legalHoldClearedAt   DateTime? @map("legal_hold_cleared_at")
+
+  outcomeForRequester String?      @map("outcome_for_requester")
+  outcomeSentAt       DateTime?    @map("outcome_sent_at")
+  closeReason         CloseReason? @map("close_reason")
+  closedAt            DateTime?    @map("closed_at")
+  archivedAt          DateTime?    @map("archived_at")
+
+  retentionPurgeDate DateTime @map("retention_purge_date") @db.Date
+
+  isDeleted    Boolean   @default(false) @map("is_deleted")
+  deletedById  String?   @map("deleted_by") @db.Uuid
+  deletedAt    DateTime? @map("deleted_at")
+  deleteReason String?   @map("delete_reason")
+
+  version Int @default(0)
+
+  category         Category?     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  businessUnit     BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
+  assignee         User?         @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  firstViewedBy    User?         @relation("TicketFirstViewedBy", fields: [firstViewedById], references: [id])
+  confidentialSetBy User?        @relation("TicketConfidentialSetBy", fields: [confidentialSetById], references: [id])
+  legalHoldSetBy    User?        @relation("TicketLegalHoldSetBy", fields: [legalHoldSetById], references: [id])
+  legalHoldClearedBy User?       @relation("TicketLegalHoldClearedBy", fields: [legalHoldClearedById], references: [id])
+  deletedBy         User?        @relation("TicketDeletedBy", fields: [deletedById], references: [id])
+
+  messages       TicketMessage[]
+  notes          TicketNote[]
+  attachments    TicketAttachment[]
+  statusHistory  TicketStatusHistory[]
+  accessGrants   TicketAccess[]
+  auditLogEntries AuditLog[]
+  emailLog       EmailLog[]
+
+  @@index([status])
+  @@index([assignedToId])
+  @@index([requestDate])
+  @@index([retentionPurgeDate])
+  @@index([requesterEmail])
+  @@index([isConfidential])
+  @@index([isLegalHold])
+  @@index([categoryId])
+  @@index([businessUnitId])
+  @@index([slaDueAt])
+  @@index([targetDueAt])
+  @@map("tickets")
+}
+
+// ---------- Correspondence (§5: ticket_messages) ----------
+
+model TicketMessage {
+  id                String            @id @default(uuid()) @db.Uuid
+  ticketId          String            @map("ticket_id") @db.Uuid
+  direction         MessageDirection
+  messageType       MessageType       @map("message_type")
+  graphMessageId    String?           @unique @map("graph_message_id")
+  internetMessageId String?           @unique @map("internet_message_id")
+  conversationId    String?           @map("conversation_id")
+  fromAddress       String            @map("from_address")
+  fromName          String?           @map("from_name")
+  toRecipients      String[]          @map("to_recipients")
+  ccRecipients      String[]          @map("cc_recipients")
+  subject           String
+  bodyText          String?           @map("body_text")
+  bodyHtml          String?           @map("body_html")
+  sentById          String?           @map("sent_by") @db.Uuid
+  receivedAt        DateTime?         @map("received_at")
+  sentAt            DateTime?         @map("sent_at")
+  correlationId     String            @map("correlation_id") @db.Uuid
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sentBy User?  @relation("MessageSentBy", fields: [sentById], references: [id])
+
+  attachments TicketAttachment[]
+  emailLog    EmailLog[]
+
+  @@index([ticketId])
+  @@index([conversationId])
+  @@map("ticket_messages")
+}
+
+// ---------- Internal notes (§5: ticket_notes) ----------
+
+model TicketNote {
+  id               String         @id @default(uuid()) @db.Uuid
+  ticketId         String         @map("ticket_id") @db.Uuid
+  authorId         String         @map("author_id") @db.Uuid
+  body             String
+  visibility       NoteVisibility @default(INTERNAL)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  isCurrent        Boolean        @default(true) @map("is_current")
+  supersedesNoteId String?        @unique @map("supersedes_note_id") @db.Uuid
+
+  ticket         Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author         User        @relation("NoteAuthor", fields: [authorId], references: [id])
+  // Append-only revision chain: editing a note inserts a new row pointing
+  // back at the one it supersedes (§5) -- never UPDATE/DELETE on this table.
+  supersedesNote TicketNote? @relation("NoteRevisions", fields: [supersedesNoteId], references: [id])
+  supersededBy   TicketNote? @relation("NoteRevisions")
+
+  @@index([ticketId])
+  @@map("ticket_notes")
+}
+
+// ---------- Attachments (§5, §7.3.1) ----------
+
+model TicketAttachment {
+  id                  String           @id @default(uuid()) @db.Uuid
+  ticketId            String           @map("ticket_id") @db.Uuid
+  messageId           String?          @map("message_id") @db.Uuid
+  filename            String
+  declaredContentType String?          @map("declared_content_type")
+  detectedContentType String?          @map("detected_content_type")
+  sizeBytes           Int              @map("size_bytes")
+  blobPath            String           @map("blob_path")
+  sha256              String
+  source              AttachmentSource
+  scanStatus          ScanStatus       @default(PENDING) @map("scan_status")
+  blockReason         String?          @map("block_reason")
+  uploadedById        String?          @map("uploaded_by") @db.Uuid
+  createdAt           DateTime         @default(now()) @map("created_at")
+
+  ticket     Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message    TicketMessage? @relation(fields: [messageId], references: [id])
+  uploadedBy User?          @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
+}
+
+// ---------- Status history (§5) ----------
+
+model TicketStatusHistory {
+  id            String        @id @default(uuid()) @db.Uuid
+  ticketId      String        @map("ticket_id") @db.Uuid
+  fromStatus    TicketStatus? @map("from_status")
+  toStatus      TicketStatus  @map("to_status")
+  fromAssignee  String?       @map("from_assignee") @db.Uuid
+  toAssignee    String?       @map("to_assignee") @db.Uuid
+  actorId       String        @map("actor_id") @db.Uuid
+  reason        String?
+  correlationId String        @map("correlation_id") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at")
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actor  User   @relation("StatusHistoryActor", fields: [actorId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_status_history")
+}
+
+// ---------- Confidential ACL (§5, §9) ----------
+
+model TicketAccess {
+  ticketId  String   @map("ticket_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  grantedById String @map("granted_by") @db.Uuid
+  grantedAt DateTime @default(now()) @map("granted_at")
+
+  ticket    Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User   @relation("TicketAccessUser", fields: [userId], references: [id])
+  grantedBy User   @relation("TicketAccessGrantedBy", fields: [grantedById], references: [id])
+
+  @@id([ticketId, userId])
+  @@map("ticket_access")
+}
+
+// ---------- Audit log (§5) — append-only, enforced at the database ----------
+// The application's Postgres role holds INSERT + SELECT on this table only.
+// See prisma/migrations/*_audit_log_grants for the REVOKE that enforces it.
+
+model AuditLog {
+  id            String       @id @default(uuid()) @db.Uuid
+  ticketId      String?      @map("ticket_id") @db.Uuid
+  actorId       String       @map("actor_id") @db.Uuid
+  action        String
+  entity        String
+  entityId      String       @map("entity_id")
+  beforeJson    Json?        @map("before_json")
+  afterJson     Json?        @map("after_json")
+  accessBasis   AccessBasis? @map("access_basis")
+  reason        String?
+  correlationId String       @map("correlation_id") @db.Uuid
+  ip            String?
+  userAgent     String?      @map("user_agent")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  ticket Ticket? @relation(fields: [ticketId], references: [id])
+  actor  User    @relation("AuditLogActor", fields: [actorId], references: [id])
+
+  @@index([correlationId])
+  @@index([ticketId])
+  @@map("audit_log")
+}
+
+// ---------- Delivery telemetry (§5) — never shown to users, never archived ----------
+
+model EmailLog {
+  id                String         @id @default(uuid()) @db.Uuid
+  ticketId          String         @map("ticket_id") @db.Uuid
+  messageId         String         @map("message_id") @db.Uuid
+  attemptNo         Int            @map("attempt_no")
+  graphResponseCode Int?           @map("graph_response_code")
+  status            EmailLogStatus
+  error             String?
+  correlationId     String         @map("correlation_id") @db.Uuid
+  attemptedAt       DateTime       @default(now()) @map("attempted_at")
+
+  ticket  Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message TicketMessage @relation(fields: [messageId], references: [id])
+
+  @@index([ticketId])
+  @@map("email_log")
+}
+
+// ---------- Suppression (§5, §7.0.1) ----------
+
+model SuppressionRule {
+  id          String          @id @default(uuid()) @db.Uuid
+  type        SuppressionType
+  value       String
+  createdById String?         @map("created_by") @db.Uuid
+  createdAt   DateTime        @default(now()) @map("created_at")
+  isActive    Boolean         @default(true) @map("is_active")
+
+  createdBy User?           @relation("SuppressionRuleCreatedBy", fields: [createdById], references: [id])
+  log       SuppressionLog[]
+
+  @@map("suppression_rules")
+}
+
+model SuppressionLog {
+  id                String   @id @default(uuid()) @db.Uuid
+  ruleId            String   @map("rule_id") @db.Uuid
+  fromAddress       String   @map("from_address")
+  subject           String?
+  internetMessageId String?  @map("internet_message_id")
+  receivedAt        DateTime @map("received_at")
+  correlationId     String   @map("correlation_id") @db.Uuid
+
+  rule SuppressionRule @relation(fields: [ruleId], references: [id])
+
+  @@map("suppression_log")
+}
+
+// ---------- Graph subscriptions (§7.1) ----------
+
+model GraphSubscription {
+  id             String   @id @default(uuid()) @db.Uuid
+  subscriptionId String   @map("subscription_id")
+  resource       String
+  expiresAt      DateTime @map("expires_at")
+  clientState    String   @map("client_state")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("graph_subscriptions")
+}
+
+// ---------- Job runs (§12, §12.1) ----------
+// status is left as a free-form String, not an enum: the spec does not
+// enumerate its values, and inventing a fixed set here would be exactly the
+// kind of unspecified business logic §0.1.4 says to stop and ask about.
+
+model JobRun {
+  id              String    @id @default(uuid()) @db.Uuid
+  jobName         String    @map("job_name")
+  correlationId   String    @map("correlation_id") @db.Uuid
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  status          String
+  itemsProcessed  Int?      @map("items_processed")
+  error           String?
+
+  @@index([jobName])
+  @@map("job_runs")
+}

@@ -1,0 +1,24 @@
+# Local development Postgres only. Production is Azure Database for
+# PostgreSQL Flexible Server (§2), provisioned via Bicep in Stage 7.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set POSTGRES_SUPERUSER_PASSWORD in .env}
+      POSTGRES_DB: tasco_people_desk
+    ports:
+      # 5433 on the host -- 5432 is already taken by the FMI project's own
+      # local Postgres container on this machine.
+      - "5433:5432"
+    volumes:
+      - tasco_people_desk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  tasco_people_desk_pgdata:
