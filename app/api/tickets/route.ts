@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { requireApiContext } from "@/lib/api-context";
 import { badRequest } from "@/lib/http-errors";
-import { getAllOpenTickets, getMyTickets, getOverdueTickets, getPoolTickets } from "@/lib/tickets/queries";
+import {
+  getAllOpenTickets,
+  getClosedTickets,
+  getMyTickets,
+  getOverdueTickets,
+  getPoolTickets,
+} from "@/lib/tickets/queries";
 
-// §13's four list views. "view" defaults to pool, the spec's own default landing view.
+// §13's list views. "view" defaults to pool, the spec's own default landing view.
 export async function GET(request: Request) {
   const ctx = await requireApiContext(request);
   if (ctx instanceof Response) return ctx;
@@ -20,7 +26,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ tickets: await getAllOpenTickets(session.user.id, session.user.role) });
     case "overdue":
       return NextResponse.json({ tickets: await getOverdueTickets(session.user.id, session.user.role) });
+    case "closed":
+      return NextResponse.json({ tickets: await getClosedTickets(session.user.id, session.user.role) });
     default:
-      return badRequest(`Unknown view: ${view} (expected pool, mine, open, or overdue)`);
+      return badRequest(`Unknown view: ${view} (expected pool, mine, open, overdue, or closed)`);
   }
 }

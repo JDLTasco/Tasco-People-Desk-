@@ -89,3 +89,24 @@ export async function getOverdueTickets(userId: string, role: UserRole): Promise
   const open = await getAllOpenTickets(userId, role);
   return open.filter((t) => isOverdue(t.slaDueAt, t.targetDueAt, t.status));
 }
+
+/**
+ * Closed (history): every ticket that has reached CLOSED or ARCHIVED,
+ * across all officers -- a running record of everything resolved, not
+ * scoped to who worked it. This is a lightweight "what's been closed"
+ * list built off data that already exists; it is NOT §11's Archive
+ * Search (full-text search over the archive artefacts themselves,
+ * Stage 6) -- no archive artefacts exist yet since the archive job
+ * (§10) hasn't been built. Most recently closed first.
+ */
+export async function getClosedTickets(userId: string, role: UserRole): Promise<TicketListRow[]> {
+  return prisma.ticket.findMany({
+    where: {
+      status: { in: ["CLOSED", "ARCHIVED"] },
+      isDeleted: false,
+      ...confidentialFilter(userId, role),
+    },
+    select: TICKET_LIST_SELECT,
+    orderBy: { closedAt: "desc" },
+  });
+}

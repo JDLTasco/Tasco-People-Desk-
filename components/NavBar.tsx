@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { canManageAdminSettings } from "@/lib/rbac";
 import SignOutButton from "./SignOutButton";
 
-// §13's view list, the four this stage builds. Archive search/Admin
-// (also listed in §13) depend on Stage 6 and aren't linked yet.
+// §13's view list. Archive Search (full-text over archive artefacts,
+// Stage 6) isn't linked yet -- Closed here is a lighter-weight history
+// list, not that feature.
 export default async function NavBar() {
   const session = await getSession();
   if (!session?.user) return null;
@@ -15,6 +17,8 @@ export default async function NavBar() {
       <Link href="/my-tickets">My tickets</Link>
       <Link href="/all-open">All open</Link>
       <Link href="/overdue">Overdue</Link>
+      <Link href="/closed">Closed</Link>
+      {canManageAdminSettings(session.user.role) && <Link href="/admin/users">Admin</Link>}
       <span className="nav-spacer">
         {session.user.name} ({session.user.role})
       </span>
