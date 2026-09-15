@@ -1,11 +1,60 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 3 — Core UI and state machine (complete)
-- Last completed stage: 3
-- Passing acceptance tests: several §15 rows are now genuinely exercisable and pass live -- see "Stage 3 verification" below for the exact list (atomic-claim double-claim 409, category guard 400, first-view-once, stale-version 409, confidential 404-not-403, reassignment rules, note revisions, step-up-gated reversal)
-- Failing / pending acceptance tests: everything under §15's Ingestion/Communications/Attachments/Legal hold/Audit-and-correlation/Archive-and-retention/Durability headings (Stages 4-7 not started); the Classification/Identity-and-state/Deadlines rows that depend on real email ingestion to create a ticket are also still pending since ingestion doesn't exist yet
-- Architecture deviations / clarifications: None from the spec itself. Same two local-environment workarounds as before (Prisma engines, node:test).
-- Blockers / required operator actions: §14 items 0-8 — none started, not required until Stage 4. Nothing currently blocks Stage 4, though Stage 4 itself needs §14 items 0-3 per the build order.
-- Recommended next command or task: nominate Stage 4 ("Graph ingestion")
+- Current stage: 4 — Graph ingestion (complete, within what §14's absence allows -- see below)
+- Last completed stage: 4
+- Passing acceptance tests: the whole **Ingestion** block of §15 now passes live via the dev-only fixture endpoint (duplicate delivery, threading, invalid clientState -> 400, suppression) except the two rows that need a real mailbox (webhook against real live traffic, delta-poll safety net against a broken real webhook) and the go-live-timestamp row (no cutover date exists yet). Most of **Attachments** passes too (`.exe` blocked, `.iso` blocked, `.zip` accepted+quarantined, TYPE_MISMATCH, no server-side extraction) except the CLEAN-status row, which depends on the undefined Defender-verdict mechanism (see below).
+- Failing / pending acceptance tests: **Communications**, **Legal hold**, **Audit-and-correlation**'s admin-search row, **Archive-and-retention**, **Durability** (Stages 5-7). The two live-mailbox Ingestion rows and the CLEAN-status Attachments row noted above stay pending on §14 + the Defender-verdict mechanism regardless of stage.
+- Architecture deviations / clarifications: None from the spec itself. Same local-environment workarounds as before, plus a real gap found and fixed this stage (a new table Stage 1's grant migration didn't cover -- see "Stage 4 deliverables" below), and one genuine spec gap flagged rather than guessed at (Defender's scan-verdict delivery mechanism, undefined in §7.3.1 -- see "Open question for Stage 7").
+- Blockers / required operator actions: §14 items 0-8 — still none started. **Confirmed this session: Stage 4 could only be built against mocked/synthetic data, exactly as anticipated** -- real Graph ingestion needs §14 items 0-3 before any of the built-but-inert real-Graph code path can be exercised or trusted.
+- Recommended next command or task: nominate Stage 5 ("Outbound and SLA"), OR prioritize getting §14 items 0-3 done operator-side so Stage 4's real-Graph code path can finally be tested for real.
+
+## Stage 4 deliverables (§16 item 4)
+
+**Built and fully live-tested** (pure logic + a dev-only fixture endpoint that feeds synthetic email straight into the real ingestion pipeline -- no fake Graph client needed, see "Local dev environment notes"):
+- `lib/ingestion/suppression.ts`, `auto-reply.ts`, `priority.ts`, `ticket-number.ts`, `attachments.ts`: every rule from §7.3/§7.3.1 as a pure function. 38 new unit tests (including 6 new `lib/timezone.ts` tests -- see below).
+- `lib/ingestion/process-message.ts` (`processInboundMessage`): the full §7.3 pipeline in its exact order -- idempotency check (internet_message_id), suppression, auto-reply, threading, ticket creation (with the real collision-retry ticket-number loop), attachment storage. Graph-agnostic by design (`lib/graph/message-types.ts`'s `NormalizedMessage`) -- this is the one function the real webhook, the real delta poller, and the dev fixture endpoint all call identically.
+- **`lib/timezone.ts`**: a real bug fix, not just new code -- Stage 1's `request_date`/ticket-number logic (duplicated ad hoc in the original `prisma/seed.ts`) used the server's UTC date components, not Australia/Melbourne (§5, §7.3 both require Melbourne). Fixed with `Intl.DateTimeFormat` (no new dependency, DST-correct), and `seed.ts` now imports the same shared, tested functions instead of its own copy.
+- **Webhook** (`/api/graph/notifications`): validation handshake (echoes `validationToken`, text/plain, 200), `clientState` check (400 on missing/mismatch, logged, not processed), rate limiting (`lib/rate-limit.ts` -- in-memory, correct for this project's single-instance App Service tier, explicitly flagged as needing a shared store if that ever changes), 202-then-fire-and-forget processing.
+- **Jobs**: `POST /api/jobs/mailbox-delta-poll` and `POST /api/jobs/graph-subscription-renew`, both behind `X-Job-Key` (`lib/jobs/auth.ts`, 401 on missing/invalid), both wrapped in `lib/jobs/run.ts` so every run -- success, failure, or "Graph isn't configured yet" -- writes a real `job_runs` row (§12.1's liveness alert depends on this being unconditional, not skipped when there's nothing to do).
+- **A real gap found and fixed**: this stage's own new `graph_delta_state` table had **no `app_role` grant at all** after its migration -- Stage 1's `audit_log_grants` migration only granted `ON ALL TABLES IN SCHEMA public` for tables that existed *at that moment*, not future ones. Fixed with a new migration (`app_role_default_privileges`) that grants the new table explicitly and sets `ALTER DEFAULT PRIVILEGES` so every table any *future* migration creates gets the grant automatically -- `audit_log`'s own append-only restriction is untouched (re-verified live: still `permission denied` for UPDATE/DELETE as `app_role`). This class of bug could easily have recurred silently in every future stage without the fix.
+- **System actor** (`prisma/seed.ts`, `SYSTEM_ENTRA_OBJECT_ID` in `lib/ingestion/process-message.ts`): audit_log and ticket_notes both require a real actor/author FK, and the spec never names one for automated actions -- seeded explicitly as a real row (not a real Entra account, `role: ADMIN` only because the enum has no better option and it never signs in or hits a permission check), filtered out of the user-facing assign/reassign picker.
+- **Local Blob Storage stand-in** (`lib/blob-store.ts`): a filesystem-backed implementation of the same interface Stage 7's real `@azure/storage-blob` implementation will satisfy -- same reasoning as Stage 1's local Postgres. `blob_path` values are identical either way, so nothing upstream changes when Stage 7 swaps this in.
+- **Attachments UI**: read-only panel added to the ticket detail page (filename, size, scan status, block reason). Download is not wired -- needs real Blob Storage (Stage 7).
+
+**Genuinely inert until §14** (written to the real spec, never exercised): `lib/graph/client.ts`'s `GraphApiClient` -- plain `fetch` + OAuth client-credentials token acquisition against Microsoft Graph (no SDK dependency added; Graph is a REST API). `isGraphConfigured()` gates every real call; every route that needs it fails cleanly (logged, or a `FAILED` `job_runs` row) rather than crashing when it isn't configured.
+
+## Open question for Stage 7, not guessed at
+
+**The spec never specifies how the app learns Defender for Storage's malware-scan verdict** (§7.3.1 says Defender is enabled and is "the primary control," but nowhere says whether the app is notified via a webhook, an Event Grid subscription, polling blob index tags, or something else). Everything up to and including `scan_status = PENDING`/`BLOCKED` is built and deterministic; the `PENDING -> CLEAN`/`MALICIOUS` transition has no code path at all, on purpose -- inventing one would be exactly the kind of unspecified business logic §0.1.4 says to stop and ask about, and there's nothing to test it against until Stage 7 actually provisions Defender for Storage anyway. **Needs an explicit operator decision before Stage 7's Bicep work can be complete.**
+
+## Stage 4 verification (live against a running dev server, plus new unit tests)
+
+- **111 unit tests** total (was 88 after Stage 3; +38 ingestion rules, but +6 timezone/-2 net from a small consolidation -- see individual files): `npm test`, `tsc --noEmit`, `next lint` all clean.
+- **16/16 live end-to-end checks passed**, driven as a real signed-in user against the real running app (not just unit tests of the pure logic):
+  - Webhook validation handshake echoes the token correctly as `text/plain`, 200.
+  - Webhook `clientState`: missing -> 400, mismatched -> 400, correct -> 202.
+  - Job auth: no key -> 401, wrong key -> 401, correct key (Graph unconfigured) -> the job fails cleanly and records it in `job_runs`, not a crash.
+  - A normal email creates a ticket (priority classification confirmed: "Urgent..." -> P1).
+  - Duplicate `internetMessageId` creates exactly one ticket (verified same `ticketId` returned both times).
+  - A sender matching a seeded `DOMAIN` suppression rule creates no ticket.
+  - `Auto-Submitted: auto-replied` creates no ticket (confirmed independent of, and correctly ordered after, the suppression check -- caught a test-fixture wording collision with a suppression rule during verification, not a code bug).
+  - A reply on the same `conversationId` threads onto the existing ticket rather than creating a second one.
+  - A `.exe` attachment: the ticket is still created, the attachment is recorded `BLOCKED`/`EXECUTABLE_EXTENSION`, and a system note naming the file is added (verified via the ticket detail API) -- "nothing silently lost," confirmed, not assumed.
+  - A `.zip` attachment is accepted and recorded `PENDING`, not blocked.
+  - The ticket detail page's new Attachments panel renders 200 with no error text.
+
+## Deferred / not this stage
+
+- Outbound email entirely (Stage 5) -- allocation emails, the outcome dispatch, SLA escalation emails, threading headers on replies.
+- Attachment download (needs Stage 7's real Blob Storage).
+- Admin UI to manage suppression rules (create/edit/deactivate) -- Stage 4 only reads and matches against them; 2 rules seeded as dev/test fixtures, same convention as categories/business units.
+- Confidential/legal-hold toggles, `CONFIDENTIAL_TICKET_VIEWED` logging, archive, retention, audit-log view, remaining Admin screens -- Stage 6.
+- The Defender scan-verdict mechanism -- genuinely undefined by the spec, flagged above for an explicit operator decision before Stage 7.
+
+## Local dev environment notes (carried forward, plus two new items)
+
+- Same Prisma-engine-binary and node:test-instead-of-Vitest workarounds as before.
+- **New this stage**: `/api/dev/mock-inbound-email` (gated to non-production, same convention as the Stage 2 mock auth provider) is how the entire ingestion pipeline gets tested without a real or fake Graph client -- it feeds a synthetic `NormalizedMessage` straight into `processInboundMessage`, the exact function the real webhook and delta poller will call once §14 exists.
+- **New this stage**: always re-run `prisma migrate dev` (or `deploy`) *and* check `app_role`'s grants after adding any new table in any future stage -- Stage 1's original grant migration only covered tables that existed at the time, and this stage is proof that gap is real, not theoretical. The `ALTER DEFAULT PRIVILEGES` fix added this stage should prevent a recurrence, but it was worth writing down explicitly given it already happened once.
 
 ## Stage 3 deliverables (§16 item 3)
 

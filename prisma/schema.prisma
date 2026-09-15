@@ -486,6 +486,21 @@ model GraphSubscription {
   @@map("graph_subscriptions")
 }
 
+// ---------- Delta-poll resume state (§7.2) ----------
+// Not in the spec's own §5 table -- the delta poller needs somewhere to
+// persist Graph's deltaLink between 15-minute runs, and §5 doesn't list a
+// column for it anywhere. Added here as its own singleton table (one row)
+// rather than overloading graph_subscriptions, which is specifically
+// about the webhook subscription's lifecycle (a separate, independent
+// mechanism from the delta-poll safety net per §7.1/§7.2).
+model GraphDeltaState {
+  id        String   @id @default(uuid()) @db.Uuid
+  deltaLink String   @map("delta_link")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("graph_delta_state")
+}
+
 // ---------- Job runs (§12, §12.1) ----------
 // status is left as a free-form String, not an enum: the spec does not
 // enumerate its values, and inventing a fixed set here would be exactly the

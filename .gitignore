@@ -29,6 +29,9 @@ yarn-error.log*
 .env
 .env*.local
 
+# local stand-in for Azure Blob Storage until Stage 7 (lib/blob-store.ts)
+.local-blob-store/
+
 # vercel
 .vercel
 

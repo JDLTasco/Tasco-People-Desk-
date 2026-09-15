@@ -89,6 +89,26 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       </section>
 
       <section style={{ marginTop: "2rem" }}>
+        <h2>Attachments</h2>
+        {ticket.attachments.length === 0 && <p>No attachments.</p>}
+        {ticket.attachments.length > 0 && (
+          <ul>
+            {ticket.attachments.map((a) => (
+              <li key={a.id}>
+                {a.filename} ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}
+                {a.scanStatus === "PENDING" && "scanning"}
+                {a.scanStatus === "CLEAN" && "clean"}
+                {a.scanStatus === "BLOCKED" && `blocked (${a.blockReason})`}
+                {a.scanStatus === "MALICIOUS" && "malicious"}
+                {a.scanStatus === "SKIPPED" && "skipped (inline image)"}
+                {/* Download isn't wired yet -- needs real Blob Storage, Stage 7. */}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section style={{ marginTop: "2rem" }}>
         <h2>Internal notes</h2>
         {ticket.notes.length === 0 && <p>No notes yet.</p>}
         {ticket.notes.map((n) => (

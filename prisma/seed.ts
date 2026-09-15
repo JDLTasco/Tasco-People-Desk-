@@ -2,6 +2,9 @@
 // Categories/business units are never deleted, only deactivated -- this
 // seed is safe to re-run (upsert by unique name).
 import { PrismaClient } from "@prisma/client";
+import { ticketNoWithSequence } from "../lib/ingestion/ticket-number";
+import { melbourneDateOnly } from "../lib/timezone";
+import { SYSTEM_ENTRA_OBJECT_ID } from "../lib/ingestion/process-message";
 
 const prisma = new PrismaClient();
 
@@ -36,22 +39,8 @@ const MOCK_USERS = [
   { initials: "RGL", role: "ADMIN" as const },
 ];
 
-// SLA hours by priority (§8) -- duplicated from lib/tickets's own constant
-// deliberately: seed.ts is a standalone script, not part of the Next.js
-// build, and pulling in app code here would blur what's fixture-only.
+// SLA hours by priority (§8).
 const SLA_HOURS: Record<string, number> = { P1: 48, P2: 168, P3: 336 };
-
-function ticketNo(receivedAt: Date, seq: number): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return (
-    `${pad(receivedAt.getFullYear() % 100)}${pad(receivedAt.getMonth() + 1)}${pad(receivedAt.getDate())}` +
-    `${pad(receivedAt.getHours())}${pad(receivedAt.getMinutes())}${pad(seq)}`
-  );
-}
-
-function requestDateOnly(receivedAt: Date): Date {
-  return new Date(Date.UTC(receivedAt.getUTCFullYear(), receivedAt.getUTCMonth(), receivedAt.getUTCDate()));
-}
 
 function purgeDate(requestDate: Date): Date {
   const d = new Date(requestDate);
@@ -89,6 +78,41 @@ async function main() {
         role: mockUser.role,
       },
     });
+  }
+
+  // The system actor for automated ingestion (§7.3, §7.3.1) -- audit_log
+  // and ticket_notes both require a real actor/author, and the spec never
+  // names one, so this is a real, deliberately-seeded row rather than
+  // something invented ad hoc in ingestion code. Not a real Entra
+  // account; filtered out of user-facing pickers (app/api/users/route.ts)
+  // by this same entraObjectId. role must be a real UserRole value (the
+  // enum has no "system" option) -- ADMIN is used here only because the
+  // system account is never signed in as and never reaches any
+  // permission check, not because it should be treated as one.
+  await prisma.user.upsert({
+    where: { entraObjectId: SYSTEM_ENTRA_OBJECT_ID },
+    update: {},
+    create: {
+      entraObjectId: SYSTEM_ENTRA_OBJECT_ID,
+      upn: "system@internal",
+      displayName: "System",
+      initials: "SYS",
+      role: "ADMIN",
+    },
+  });
+
+  // A couple of suppression rules (§7.0.1) for Stage 4's ingestion testing
+  // -- the admin UI to manage these is a later stage; this is dev/test
+  // seed data only, same convention as categories/business units/users above.
+  const suppressionFixtures: { type: "SENDER" | "DOMAIN" | "SUBJECT_PATTERN"; value: string }[] = [
+    { type: "DOMAIN", value: "noisy-newsletter.example.com" },
+    { type: "SUBJECT_PATTERN", value: "out of office" },
+  ];
+  for (const rule of suppressionFixtures) {
+    const existing = await prisma.suppressionRule.findFirst({ where: { type: rule.type, value: rule.value } });
+    if (!existing) {
+      await prisma.suppressionRule.create({ data: rule });
+    }
   }
 
   // Fixture tickets for Stage 3's UI/state-machine work. Real ingestion
@@ -182,15 +206,16 @@ async function main() {
   ];
 
   for (const fixture of fixtures) {
-    const requestDate = requestDateOnly(fixture.receivedAt);
+    const requestDate = melbourneDateOnly(fixture.receivedAt);
     const slaDueAt = new Date(fixture.receivedAt.getTime() + SLA_HOURS[fixture.priority] * 60 * 60 * 1000);
     const assignee = fixture.assigneeInitials ? users[fixture.assigneeInitials] : undefined;
+    const fixtureTicketNo = ticketNoWithSequence(fixture.receivedAt, fixture.seq);
 
     const ticket = await prisma.ticket.upsert({
-      where: { ticketNo: ticketNo(fixture.receivedAt, fixture.seq) },
+      where: { ticketNo: fixtureTicketNo },
       update: {},
       create: {
-        ticketNo: ticketNo(fixture.receivedAt, fixture.seq),
+        ticketNo: fixtureTicketNo,
         originalSubject: fixture.subject,
         subject: fixture.subject,
         requesterEmail: fixture.requesterEmail,
@@ -243,7 +268,8 @@ async function main() {
   }
 
   console.log(
-    `Seeded ${CATEGORIES.length} categories, ${BUSINESS_UNITS.length} business units, ${MOCK_USERS.length} mock users, and ${fixtures.length} fixture tickets.`,
+    `Seeded ${CATEGORIES.length} categories, ${BUSINESS_UNITS.length} business units, ${MOCK_USERS.length} mock users, ` +
+      `1 system user, ${suppressionFixtures.length} suppression rules, and ${fixtures.length} fixture tickets.`,
   );
 }
 

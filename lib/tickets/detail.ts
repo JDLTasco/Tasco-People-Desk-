@@ -17,6 +17,7 @@ export const TICKET_DETAIL_INCLUDE = {
     orderBy: { createdAt: "asc" as const },
     include: { actor: { select: { id: true, displayName: true, initials: true } } },
   },
+  attachments: { orderBy: { createdAt: "asc" as const } },
   accessGrants: { select: { userId: true } },
 };
 
