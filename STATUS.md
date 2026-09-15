@@ -1,11 +1,48 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 2 — Auth and RBAC (complete)
-- Last completed stage: 2
-- Passing acceptance tests: none from §15 directly yet (§15's items target ticket/email/archive behaviour built in later stages); Stage 2's own deliverables were verified live end-to-end against a running dev server -- see "Stage 2 verification" below, and the relevant §15 rows this unblocks are noted there
-- Failing / pending acceptance tests: all of §15 (Stages 3-9 not started)
-- Architecture deviations / clarifications: None from the spec itself. Two local-environment workarounds, not spec deviations -- see "Local dev environment notes" below (Prisma engines, carried from Stage 1; now also the Vitest→node:test swap).
-- Blockers / required operator actions: §14 items 0-8 — none started, not required until Stage 4. **Real Azure AD sign-in and real group-based role derivation cannot be exercised until §14 items 1 (app registration) and 4 (security groups) exist** — the code path is written and unit-tested with synthetic data, but nobody has signed in through it for real. Nothing currently blocks Stage 3.
-- Recommended next command or task: nominate Stage 3 ("Core UI and state machine")
+- Current stage: 3 — Core UI and state machine (complete)
+- Last completed stage: 3
+- Passing acceptance tests: several §15 rows are now genuinely exercisable and pass live -- see "Stage 3 verification" below for the exact list (atomic-claim double-claim 409, category guard 400, first-view-once, stale-version 409, confidential 404-not-403, reassignment rules, note revisions, step-up-gated reversal)
+- Failing / pending acceptance tests: everything under §15's Ingestion/Communications/Attachments/Legal hold/Audit-and-correlation/Archive-and-retention/Durability headings (Stages 4-7 not started); the Classification/Identity-and-state/Deadlines rows that depend on real email ingestion to create a ticket are also still pending since ingestion doesn't exist yet
+- Architecture deviations / clarifications: None from the spec itself. Same two local-environment workarounds as before (Prisma engines, node:test).
+- Blockers / required operator actions: §14 items 0-8 — none started, not required until Stage 4. Nothing currently blocks Stage 4, though Stage 4 itself needs §14 items 0-3 per the build order.
+- Recommended next command or task: nominate Stage 4 ("Graph ingestion")
+
+## Stage 3 deliverables (§16 item 3)
+
+- **State machine** (`lib/tickets/transitions.ts`): every row of §4's transition table as its own validator, including the category guard, the dispatch-preview-only gate on `IN_ACTION`→`OUTCOME` (so the generic API can never reach `OUTCOME` -- only Stage 5's dedicated endpoint will be able to, matching "there is no path to send an outcome without this step"), the automated-job-only gate on `CLOSED`→`ARCHIVED`, `"not a request"` close, reassignment (not a status transition), and ADMIN-only reversal (including "a reversal into `IN_ACTION` still requires a category"). 30 unit tests.
+- **Effective due date / overdue** (`lib/tickets/due-dates.ts`): pure functions, not stored columns (per schema.prisma's own note from Stage 1). 12 unit tests confirming a target date can only bring a deadline forward, never extend it.
+- **Optimistic locking and the atomic claim** (§5), implemented literally: `/api/tickets/[id]/claim` and the pool-assignment half of `/api/tickets/[id]/assign` use the exact conditional-UPDATE-with-zero-rows-means-409 pattern from §5's own SQL example; every other mutation route requires the client's `version` and returns 409 with current server state on a mismatch.
+- **Audit writes** (`lib/audit.ts`, `lib/tickets/history.ts`): every transition, reassignment, category/business-unit/priority/target-due-date change, and note creation/revision writes `audit_log` and (for transitions/reassignment) `ticket_status_history`, both carrying the request's `correlation_id`.
+- **Confidential visibility** (§9), built into the query/detail layer itself rather than bolted on: `lib/tickets/queries.ts`'s list queries and `lib/tickets/detail.ts`'s `loadTicketForViewer` both apply the exact ADMIN/HR_LEAD-see-everything, HR_OFFICER-only-if-assignee-or-granted rule, and ticket detail returns 404 (never 403) for an unauthorized viewer.
+- **First-view stamping** (§4): lives inside `loadTicketForViewer` specifically so both the ticket-detail page and its API route trigger it identically, and no other route (claim, assign, notes, ...) accidentally does.
+- **Routes**: `GET /api/tickets` (pool/mine/open/overdue), `GET+PATCH /api/tickets/[id]`, `POST .../claim`, `.../assign` (covers both pool-assignment and reassignment), `.../start-action`, `.../close-not-a-request`, `.../close`, `.../reverse`, `GET+POST .../notes`, `PATCH .../notes/[noteId]`. Plus read-only `GET /api/users`, `/api/categories`, `/api/business-units` for the UI's pickers.
+- **UI** (§13, the Stage-3-scoped subset): Pool (default landing, `/` now redirects there), My Tickets, All Open, Overdue -- all four list views; ticket detail with metadata panel (category/business unit selectors, gated by `canActOnAssignedTicket`), correspondence thread (read-only render of seeded `ticket_messages`), internal notes panel (create + edit-as-revision, `(edited)` marker), status timeline, and action buttons (claim, start action, "not a request" close, reassign, ADMIN-only reverse with a reason field). Legal-hold and confidential badges render read-only when true.
+- **Fixture tickets** (`prisma/seed.ts`): 5 tickets covering NEW/ALLOCATED/IN_ACTION/CLOSED states, one confidential, one already past its P1 SLA (for the Overdue view) -- synthetic requester identities only, clearly marked as fixture data. Necessary because real ingestion (§7) is Stage 4; nothing else can create a ticket yet.
+
+## Explicitly deferred to their assigned stages (not built this stage, on purpose)
+
+- The outcome dispatch/email itself (§7.4) -- Stage 5. `IN_ACTION`→`OUTCOME` is unreachable via the generic API by design; `/api/tickets/[id]/close` (OUTCOME→CLOSED) exists and is tested against fixture data, since nothing in §4's table ties *that* transition to email being sent.
+- Setting/clearing the confidential flag and legal hold -- Stage 6. The *visibility* rule is built (Stage 3's own concern for correct lists/detail); the UI/API to toggle either flag is not.
+- `CONFIDENTIAL_TICKET_VIEWED` audit logging with `access_basis` (§9.1) -- Stage 6's own listed deliverable. The 404 gate that necessitates it is built; the audit trail for it is not, noted explicitly in `app/api/tickets/[id]/route.ts`'s own comment so it isn't mistaken for done.
+- Attachments upload/download/scanning -- needs Blob storage (Stage 7) and Defender scanning (Stage 4/7). Not touched.
+- Reassignment's "notify the new assignee internally" -- no notification channel exists yet (Stage 5). The DB-level reassignment (status history + audit log) is complete; the internal notification is deferred.
+- Archive search, audit-log view, Admin screens (users/categories/business units/suppression) -- Stage 6.
+- §13's print stylesheet, full keyboard-navigation pass, and Tasco colour palette -- not addressed this stage. Flagged here rather than silently skipped; UI is functional but visually minimal (plain HTML elements, no design pass).
+
+## Stage 3 verification (live against a running dev server, plus new unit tests)
+
+- **88 unit tests** total (was 46 after Stage 2; +30 transitions, +12 due-dates): `npm test` clean, `tsc --noEmit` clean, `next lint` clean.
+- **18/18 live end-to-end checks passed**, driven as real signed-in users (LF/RJ/DN/JDL via the mock provider) against the fixture tickets, not just unit tests of the pure logic:
+  - Pool correctly includes the unassigned ticket; All Open correctly **excludes** the confidential ticket for an unauthorized HR_OFFICER and correctly **includes** it for HR_LEAD.
+  - Confidential ticket detail: 404 for an unauthorized HR_OFFICER (both the API route and the actual page), 200 for HR_LEAD.
+  - Atomic claim: first claim succeeds, an immediate second claim attempt gets 409.
+  - Category guard: `start-action` without a category fails 400 naming `category_id`; after setting the category, it succeeds and reaches `IN_ACTION`.
+  - Optimistic locking: a PATCH with a stale `version` gets 409 with the current server state in the body.
+  - `"Not a request"` close succeeds from `IN_ACTION` with no category re-check.
+  - Notes: creation succeeds; editing someone else's note is 403; editing your own note creates a new current row linked via `supersedesNoteId`.
+  - Reversal: fails 403 without a fresh step-up, succeeds once signed in with step-up simulated, and fails 403 for a non-ADMIN regardless of step-up.
+  - All five UI pages (`/pool`, `/my-tickets`, `/all-open`, `/overdue`, `/tickets/[id]`) render 200 with no error text as a real signed-in user, including the ticket detail page for a non-confidential ticket.
+- Smoke-testing necessarily mutated some fixture tickets (the pool ticket got claimed/categorized/closed, the closed one got reversed back to ALLOCATED, a note got added) -- left as-is rather than reset, since it's fixture/dev data and the mutated state is itself a reasonable demonstration of the system having been used. Noted here rather than silently left unexplained.
 
 ## Stage 2 deliverables (§16 item 2)
 
