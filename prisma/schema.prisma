@@ -68,6 +68,14 @@ enum MessageType {
   REPLY
   ALLOCATION
   OUTCOME
+  // Stage 5 (§7.4): the spec's own outbound trigger table names "SLA
+  // escalation" as a third distinct email type ("Every send writes a
+  // ticket_messages row"), but this enum only ever had ALLOCATION/OUTCOME
+  // for the other two -- a real gap between the schema and the spec's own
+  // requirement, not a new business rule. Added here rather than
+  // misfiled under MANUAL, which means something different (an officer
+  // manually composing correspondence outside the three defined triggers).
+  SLA_ESCALATION
   MANUAL
 
   @@map("message_type")

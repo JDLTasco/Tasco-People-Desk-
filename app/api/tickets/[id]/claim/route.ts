@@ -4,6 +4,7 @@ import { requireApiContext } from "@/lib/api-context";
 import { conflict, notFound } from "@/lib/http-errors";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
+import { sendAllocationEmail } from "@/lib/email/allocation";
 
 // §3: "Self-assign a pooled ticket -- ADMIN / HR_LEAD / HR_OFFICER" (any
 // role may claim). §5: the literal atomic conditional UPDATE -- zero rows
@@ -53,5 +54,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
   });
 
   const ticket = await prisma.ticket.findUnique({ where: { id: params.id } });
+  if (ticket) {
+    // §7.4: "First entry into this [ALLOCATED] state sends the allocation
+    // email." Awaited (see lib/email/send.ts's own note on why -- no
+    // background queue exists in this build), but a delivery failure never
+    // undoes the claim that already succeeded; it's recorded and bannered.
+    await sendAllocationEmail(ticket, session.user.name ?? "your assigned HR officer", correlationId, session.user.id);
+  }
   return NextResponse.json({ ticket });
 }

@@ -63,6 +63,12 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         </div>
       </section>
 
+      {ticket.messages.some((m) => m.emailLog.length > 0 && !m.emailLog.some((l) => l.status === "SENT")) && (
+        <p className="banner banner-error">
+          One or more emails for this ticket failed to send after 3 attempts -- see Admin &rarr; Failed sends.
+        </p>
+      )}
+
       <TicketActions
         ticketId={ticket.id}
         version={ticket.version}
@@ -73,6 +79,14 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         canEditMetadata={canEditMetadata}
         role={session.user.role}
         userId={session.user.id}
+        ticketNo={ticket.ticketNo}
+        displaySubject={ticket.subject}
+        requesterEmail={ticket.requesterEmail}
+        ccRecipients={ticket.ccRecipients}
+        targetDueAt={ticket.targetDueAt ? ticket.targetDueAt.toISOString() : null}
+        targetDueReason={ticket.targetDueReason}
+        notes={ticket.notes.map((n) => ({ id: n.id, body: n.body, visibility: n.visibility }))}
+        attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
       />
 
       <section className="section-card">
@@ -116,8 +130,9 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         {ticket.notes.map((n) => (
           <article key={n.id} className="item-card">
             <div>
-              <strong>[INTERNAL NOTE]</strong> {n.author.displayName} ({n.author.initials}) --{" "}
-              {n.createdAt.toLocaleString()} {n.supersedesNoteId && <em>(edited)</em>}
+              <strong>[{n.visibility === "REQUESTER_VISIBLE" ? "NOTE -- REQUESTER-VISIBLE" : "INTERNAL NOTE"}]</strong>{" "}
+              {n.author.displayName} ({n.author.initials}) -- {n.createdAt.toLocaleString()}{" "}
+              {n.supersedesNoteId && <em>(edited)</em>}
             </div>
             <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>
             {n.authorId === session.user.id && <NoteForm ticketId={ticket.id} noteId={n.id} initialBody={n.body} mode="edit" />}

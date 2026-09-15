@@ -14,6 +14,7 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
   const router = useRouter();
   const [editing, setEditing] = useState(mode === "create");
   const [body, setBody] = useState(initialBody ?? "");
+  const [requesterVisible, setRequesterVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -27,7 +28,9 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body }),
+      // Visibility is create-only (§5: editing a note preserves the
+      // original row's visibility -- the API's PATCH has no field for it).
+      body: JSON.stringify(mode === "create" ? { body, visibility: requesterVisible ? "REQUESTER_VISIBLE" : "INTERNAL" } : { body }),
     });
     setBusy(false);
 
@@ -37,7 +40,10 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
       return;
     }
 
-    if (mode === "create") setBody("");
+    if (mode === "create") {
+      setBody("");
+      setRequesterVisible(false);
+    }
     setEditing(mode === "create");
     router.refresh();
   }
@@ -58,6 +64,13 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
         </p>
       )}
       <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} style={{ width: "100%" }} />
+      <br />
+      {mode === "create" && (
+        <label style={{ fontSize: "0.85rem" }}>
+          <input type="checkbox" checked={requesterVisible} onChange={(e) => setRequesterVisible(e.target.checked)} />{" "}
+          Requester-visible (§7.4: available to opt in when drafting an outcome -- never sent automatically)
+        </label>
+      )}
       <br />
       <button type="button" disabled={busy || !body.trim()} onClick={() => void submit()} style={{ marginTop: "0.4rem" }}>
         {mode === "create" ? "Add note" : "Save revision"}

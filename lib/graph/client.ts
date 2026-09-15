@@ -10,12 +10,35 @@ export interface SubscriptionResult {
   expiresAt: Date;
 }
 
+export interface OutboundEmail {
+  toRecipients: string[];
+  ccRecipients: string[];
+  subject: string;
+  bodyHtml: string;
+  /**
+   * §7.4: "with In-Reply-To and References headers set to the original
+   * ingestion message." Graph's sendMail action has no dedicated
+   * reply-threading parameter for a freshly-composed message (that only
+   * exists on the createReply/reply actions, which reply as the literal
+   * mail item -- not what this app does, since it renders its own
+   * curated body); internetMessageHeaders is Graph's documented
+   * mechanism for setting arbitrary standard headers on a sent message,
+   * used here for exactly that purpose. Omitted entirely when there is
+   * no original message to thread against (e.g. nothing to reply to
+   * yet).
+   */
+  inReplyToInternetMessageId?: string;
+  referencesInternetMessageIds?: string[];
+}
+
 export interface GraphClient {
   getMessage(messageId: string): Promise<NormalizedMessage>;
   /** §7.2: delta query against the inbox. Pass the previous run's deltaLink to resume; omit for a full initial sync. */
   listInboxDelta(deltaLink?: string): Promise<DeltaResult>;
   createSubscription(notificationUrl: string, clientState: string): Promise<SubscriptionResult>;
   renewSubscription(subscriptionId: string): Promise<{ expiresAt: Date }>;
+  /** §7.4: sends from the shared HR mailbox via Graph's sendMail action. Throws on any non-2xx response -- the caller (lib/email/send.ts) owns retry/backoff. */
+  sendMail(email: OutboundEmail): Promise<void>;
 }
 
 interface GraphMessageResource {
@@ -156,6 +179,35 @@ export class GraphApiClient implements GraphClient {
       body: JSON.stringify({ expirationDateTime }),
     });
     return { expiresAt: new Date(data.expirationDateTime) };
+  }
+
+  async sendMail(email: OutboundEmail): Promise<void> {
+    const internetMessageHeaders: { name: string; value: string }[] = [];
+    if (email.inReplyToInternetMessageId) {
+      internetMessageHeaders.push({ name: "In-Reply-To", value: email.inReplyToInternetMessageId });
+    }
+    if (email.referencesInternetMessageIds?.length) {
+      internetMessageHeaders.push({ name: "References", value: email.referencesInternetMessageIds.join(" ") });
+    }
+
+    const token = await this.getAccessToken();
+    const res = await fetch(`https://graph.microsoft.com/v1.0/users/${this.mailboxId}/sendMail`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: {
+          subject: email.subject,
+          body: { contentType: "HTML", content: email.bodyHtml },
+          toRecipients: email.toRecipients.map((address) => ({ emailAddress: { address } })),
+          ccRecipients: email.ccRecipients.map((address) => ({ emailAddress: { address } })),
+          ...(internetMessageHeaders.length > 0 ? { internetMessageHeaders } : {}),
+        },
+        saveToSentItems: true,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Graph sendMail failed: ${res.status} ${await res.text()}`);
+    }
   }
 }
 

@@ -7,7 +7,14 @@ export const TICKET_DETAIL_INCLUDE = {
   businessUnit: { select: { id: true, name: true } },
   assignee: { select: { id: true, displayName: true, initials: true } },
   firstViewedBy: { select: { id: true, displayName: true } },
-  messages: { orderBy: { receivedAt: "asc" as const } },
+  messages: {
+    orderBy: { receivedAt: "asc" as const },
+    // Stage 5: lets the ticket detail page show a failed-send banner
+    // without a second query -- see lib/email/failed-sends.ts's own
+    // comment on why "no SENT row among this message's attempts" is the
+    // right failed-state definition here.
+    include: { emailLog: { orderBy: { attemptedAt: "asc" as const } } },
+  },
   notes: {
     where: { isCurrent: true },
     orderBy: { createdAt: "asc" as const },

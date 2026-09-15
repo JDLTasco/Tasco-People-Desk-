@@ -21,7 +21,8 @@ const SLA_HOURS: Record<string, number> = { P1: 48, P2: 168, P3: 336 };
 export const SYSTEM_ENTRA_OBJECT_ID = "system";
 
 let systemUserId: string | null = null;
-async function getSystemUserId(): Promise<string> {
+/** Exported for Stage 5's sla-escalation job, which is the other automated actor needing this same seeded system user. */
+export async function getSystemUserId(): Promise<string> {
   if (systemUserId) return systemUserId;
   const user = await prisma.user.findUnique({ where: { entraObjectId: SYSTEM_ENTRA_OBJECT_ID } });
   if (!user) throw new Error('System user not seeded -- run "prisma db seed" (see prisma/seed.ts)');

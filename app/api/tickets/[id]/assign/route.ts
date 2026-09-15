@@ -6,6 +6,7 @@ import { canReassignTicket } from "@/lib/rbac";
 import { validateReassignment } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
+import { sendAllocationEmail } from "@/lib/email/allocation";
 
 interface AssignBody {
   userId: string;
@@ -69,6 +70,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       afterJson: { assignedToId: body.userId, status: "ALLOCATED" },
     });
 
+    // §7.4: "First entry into this [ALLOCATED] state sends the allocation
+    // email" -- same as the self-claim path, just with the assignor's
+    // choice of officer as the display name instead of the acting user.
+    await sendAllocationEmail(
+      { id: ticket.id, ticketNo: ticket.ticketNo, subject: ticket.subject, requesterEmail: ticket.requesterEmail, priority: ticket.priority },
+      targetUser.displayName,
+      correlationId,
+      session.user.id,
+    );
+
     return NextResponse.json({ ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }) });
   }
 
@@ -97,9 +108,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   // §4: "Does not re-send the allocation email to the requester; notifies
-  // the new assignee internally." Neither notification exists yet --
-  // outbound email is Stage 5. The DB-level reassignment itself is
-  // complete and correct now; the internal notification is deferred.
+  // the new assignee internally." The requester side is correctly a no-op
+  // (confirmed: reassignment never calls sendAllocationEmail). The internal
+  // notification to the new assignee has no defined channel or content
+  // anywhere in the spec -- §7.4's table names exactly three outbound
+  // triggers (Allocation/Outcome/SLA escalation), none of which is this.
+  // Left deferred rather than invented; the DB-level reassignment itself
+  // is complete and correct.
   await writeStatusHistory({
     ticketId: ticket.id,
     fromStatus: ticket.status,

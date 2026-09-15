@@ -19,6 +19,7 @@ export default async function NavBar() {
       <Link href="/overdue">Overdue</Link>
       <Link href="/closed">Closed</Link>
       {canManageAdminSettings(session.user.role) && <Link href="/admin/users">Admin</Link>}
+      {canManageAdminSettings(session.user.role) && <Link href="/admin/failed-sends">Failed sends</Link>}
       <span className="nav-spacer">
         {session.user.name} ({session.user.role})
       </span>

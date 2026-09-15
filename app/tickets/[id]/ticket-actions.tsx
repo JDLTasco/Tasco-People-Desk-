@@ -2,6 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import OutcomeDispatchModal from "./outcome-dispatch-modal";
+
+interface OutcomeNote {
+  id: string;
+  body: string;
+  visibility: "INTERNAL" | "REQUESTER_VISIBLE";
+}
+interface OutcomeAttachment {
+  id: string;
+  filename: string;
+}
 
 interface Props {
   ticketId: string;
@@ -13,6 +24,14 @@ interface Props {
   canEditMetadata: boolean;
   role: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
   userId: string;
+  ticketNo: string;
+  displaySubject: string;
+  requesterEmail: string;
+  ccRecipients: string[];
+  targetDueAt: string | null;
+  targetDueReason: string | null;
+  notes: OutcomeNote[];
+  attachments: OutcomeAttachment[];
 }
 
 interface SimpleUser {
@@ -45,6 +64,14 @@ export default function TicketActions({
   canEditMetadata,
   role,
   userId,
+  ticketNo,
+  displaySubject,
+  requesterEmail,
+  ccRecipients,
+  targetDueAt,
+  targetDueReason,
+  notes,
+  attachments,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +84,11 @@ export default function TicketActions({
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState(businessUnitId ?? "");
   const [reverseTo, setReverseTo] = useState("");
   const [reverseReason, setReverseReason] = useState("");
+  // §8: target_due_at is an ISO string sliced to the datetime-local input's
+  // expected "YYYY-MM-DDTHH:mm" shape; targetDueReason is mandatory
+  // whenever a date is set (enforced server-side too -- see PATCH /api/tickets/[id]).
+  const [targetDue, setTargetDue] = useState(targetDueAt ? targetDueAt.slice(0, 16) : "");
+  const [targetDueReasonText, setTargetDueReasonText] = useState(targetDueReason ?? "");
 
   useEffect(() => {
     fetch("/api/users")
@@ -144,6 +176,67 @@ export default function TicketActions({
         </div>
       )}
 
+      {canEditMetadata && (
+        <div style={{ marginBottom: "1rem" }}>
+          <h3>Target due date (§8 -- optional, for a specific external deadline)</h3>
+          <label>
+            Target due:{" "}
+            <input type="datetime-local" value={targetDue} onChange={(e) => setTargetDue(e.target.value)} />
+          </label>{" "}
+          <label>
+            Reason (required whenever a date is set):{" "}
+            <input
+              value={targetDueReasonText}
+              onChange={(e) => setTargetDueReasonText(e.target.value)}
+              placeholder="e.g. Fair Work response date"
+              style={{ width: "16rem" }}
+            />
+          </label>{" "}
+          <button
+            disabled={busy || (targetDue !== "" && !targetDueReasonText.trim())}
+            onClick={() =>
+              run(async () => {
+                const res = await fetch(`/api/tickets/${ticketId}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    version,
+                    targetDueAt: targetDue ? new Date(targetDue).toISOString() : null,
+                    targetDueReason: targetDue ? targetDueReasonText : null,
+                  }),
+                });
+                const data = await res.json().catch(() => ({}));
+                return { ok: res.ok, status: res.status, data };
+              })
+            }
+          >
+            Save target due date
+          </button>{" "}
+          {targetDue && (
+            <button
+              type="button"
+              className="secondary"
+              disabled={busy}
+              onClick={() => {
+                setTargetDue("");
+                setTargetDueReasonText("");
+                run(async () => {
+                  const res = await fetch(`/api/tickets/${ticketId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ version, targetDueAt: null, targetDueReason: null }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  return { ok: res.ok, status: res.status, data };
+                });
+              }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
         {status === "NEW" && (
           <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/claim`, {}))}>
@@ -158,6 +251,19 @@ export default function TicketActions({
           >
             Start action
           </button>
+        )}
+
+        {status === "IN_ACTION" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
+          <OutcomeDispatchModal
+            ticketId={ticketId}
+            version={version}
+            ticketNo={ticketNo}
+            displaySubject={displaySubject}
+            requesterEmail={requesterEmail}
+            initialCcRecipients={ccRecipients}
+            notes={notes}
+            attachments={attachments}
+          />
         )}
 
         {status === "OUTCOME" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
