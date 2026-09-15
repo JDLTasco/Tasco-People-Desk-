@@ -1,5 +1,5 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus three ad hoc additions from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen -- see the "Ad hoc session (2026-09-16)" entries below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus four ad hoc additions from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen -- see the "Ad hoc session (2026-09-16)" entries below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
@@ -25,6 +25,24 @@
 - Read a real generated `ticket.xml` off disk (`.local-blob-store/hr-archive/2026/09/<ticket_no>/ticket.xml`) and eyeballed it: correct namespace, correctly interleaved correspondence entries in chronological order, correct `edited`/`type` attributes, empty-but-present `<attachments>` element for a ticket with none.
 - `/admin/legal-holds`, `/admin/deleted`, `/admin/audit-log`, `/archive-search` all render 200 with no error content as ADMIN.
 - Ticket detail page: set a real legal hold, confirmed the banner shows the actual reason and setter name, not just the static "LEGAL HOLD" string from before this stage.
+
+## Ad hoc session (2026-09-16, fourth): Admin -- Categories screen
+
+John asked for the equivalent of the Business units screen (previous
+entry) for **categories** -- the same gap (no admin UI existed at all,
+despite §13/§15 describing one). `app/api/admin/categories/[id]/route.ts`
+and `app/admin/categories` mirror the business-units versions exactly:
+ADMIN-only PATCH (name and/or `isActive`), name-collision check
+(`name` is `@unique` on `categories` too), `CATEGORY_RENAMED`/
+`CATEGORY_ACTIVATION_CHANGED` audit actions, same list+inline-edit UX.
+No specific rename requested this time -- the screen itself was the ask.
+
+**Verified live**: a rename-then-revert round trip on the "Other"
+category (200 both ways, left the seeded data unchanged afterward) and
+an HR_LEAD correctly refused (403, ADMIN-only, same as business units),
+plus both `CATEGORY_RENAMED` audit_log rows confirmed via direct DB
+read. 159 unit tests (unchanged, same reasoning as the business-units
+entry), `tsc --noEmit`/`next lint` both clean.
 
 ## Ad hoc session (2026-09-16, third): Admin -- Business units screen, two renames
 
