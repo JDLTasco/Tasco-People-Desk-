@@ -1,11 +1,85 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus six ad hoc additions and two bug fixes from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a correspondence-ordering bug fixed; Add category/Add business unit + audit-log ticket-number search + Archive Search Autoclose toggle (plus a bug in that same audit-log change caught and fixed before commit); an all-roles Instructions page (plus a global list/paragraph CSS rendering bug caught and fixed while building it) -- see the "Ad hoc session (2026-09-16)" and "Bug fix (2026-09-16)" entries below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus seven ad hoc additions and two bug fixes from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a correspondence-ordering bug fixed; Add category/Add business unit + audit-log ticket-number search + Archive Search Autoclose toggle (plus a bug in that same audit-log change caught and fixed before commit); an all-roles Instructions page (plus a global list/paragraph CSS rendering bug caught and fixed while building it); manual ticket creation for any staff member -- see the "Ad hoc session (2026-09-16)" and "Bug fix (2026-09-16)" entries below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
 - Architecture deviations / clarifications: **`archiver` downgraded 8.0.0 -> 6.0.2 mid-stage** -- v8 is ESM-only with a conditional `exports` map ("Default condition should be last one") that Next.js 14's webpack can't resolve at all, and the failure took down every route in the dev server, not just the export one, until caught. v6 is the last pre-ESM-only major, same functional API modulo the factory-function call style. **No XSD validator available in this environment** (no `xmllint`, no `lxml`, and adding one would be a second new dependency beyond the already-approved `archiver`) -- `ticket.xml` is verified well-formed via a hand-written balanced-tag check in `render.test.ts` and eyeballed against a live-generated sample, not validated against the committed XSD by any tool. **`AuditLog.ticket`'s FK turned out to already be `ON DELETE SET NULL`** at the database level (Prisma's implicit default for an optional relation) -- made explicit in the schema with a comment explaining why it's load-bearing for the retention-purge job, no migration needed since nothing was actually changing.
 - Blockers / required operator actions: §14 items 0-8 — still none started (unchanged). §7 Stage 7 infrastructure (real Blob Storage, Defender for Storage, Key Vault, backups) doesn't exist yet either -- archiving/retention work correctly against the local filesystem stand-in (`lib/blob-store.ts`), but "durable" and "backed up" are not yet real properties of the archive artefacts.
 - Recommended next command or task: nominate Stage 7 ("Infrastructure") to give archiving/retention/backup real Azure resources to write to, OR Stage 8 ("CI/CD and hardening"), OR prioritize §14 operator-side so the real Graph paths can finally be tested.
+
+## Ad hoc session (2026-09-16, seventh): manual ticket creation
+
+John asked for any staff member to be able to create a new ticket
+directly, not only via email ingestion. The literal ticket lifecycle
+text (§4: "NEW — created by email ingestion") doesn't describe this, but
+it's not a §17 non-goal either, and `ticket_messages.message_type`'s own
+enum already had a `MANUAL` value with nothing using it yet --
+`schema.prisma`'s own Stage 5 comment on that value: "an officer
+manually composing correspondence outside the three defined triggers."
+Treated as the intended use for a manually-created ticket's first
+message, once confirmed it wasn't about something else (it isn't --
+that comment is specifically about correspondence on an *existing*
+ticket, this is a new capability for a ticket that doesn't exist yet;
+recorded so the distinction isn't lost).
+
+**`lib/tickets/create-ticket.ts`** (new): the ticket_no
+assignment/same-minute-collision-retry logic and SLA/request-date/
+retention-date derivation, extracted from
+`lib/ingestion/process-message.ts`'s create step (§7.3 step 4) --
+previously the only caller, now shared with manual creation so both
+paths use identical numbering/SLA rules instead of a second copy that
+could drift. `processInboundMessage` itself is otherwise unchanged;
+this was purely an extraction, verified by re-running the exact same
+live ingestion check Stage 4 originally used (Urgent subject -> P1,
+correct `sla_due_at`) after the refactor, not just trusting the diff.
+
+**`POST /api/tickets`** (new): any signed-in staff member (no role
+gate, same posture as self-claiming from the Pool) -- `requesterName`,
+`requesterEmail`, `subject`, `description`, `priority` (P1/P2/P3,
+explicitly chosen by the creator rather than auto-classified from a
+typed subject -- a real request they're describing directly deserves an
+explicit choice, not a keyword guess). Lands as `NEW`, unassigned, in
+the Pool, `receivedAt = now()`, first message `direction: INBOUND,
+messageType: MANUAL`. `TICKET_CREATED` audit-logged with the real
+creator as actor (ingestion's own version of this same audit action
+uses the seeded system user instead -- correctly different, now that
+there's a real human actor to attribute it to for a manual entry).
+
+**`/tickets/new`** (new page + form) -- requester name/email, subject,
+description, a priority dropdown (defaults P3). A "+ New ticket" button
+was added to the Pool page specifically, since John's ask named "the
+dashboard" and Pool is the app's own default-landing/dashboard view;
+not added to every other list view or the nav bar, to keep this change
+scoped to what was actually asked.
+
+**A deliberate display choice, flagged rather than silently decided**:
+the ticket detail correspondence panel labels every inbound message
+`[EMAIL IN]` regardless of `message_type` (direction-only, not
+type-aware) -- so a manually-created ticket's first entry displays as
+`[EMAIL IN]` even though it never was one. Could add a distinct
+`[MANUAL ENTRY]` label, but that would mean touching
+`app/tickets/[id]/page.tsx`'s correspondence rendering *and*
+`lib/archive/render.ts`'s already-tested Stage 6 archive-label mapping
+(same three-label scheme, `[EMAIL IN]`/`[EMAIL OUT]`/`[INTERNAL NOTE]`,
+literally named in §10) to stay consistent between the live view and
+the archived record. Left both untouched for this first version --
+`message_type = MANUAL` still correctly distinguishes it in the
+database and audit log, just not yet in either rendered view. Flag for
+John: revisit if a visible distinction turns out to matter in practice.
+
+**Verified live**: re-ran ingestion's own regression check post-refactor
+(still correct); manual creation as a plain HR_OFFICER (no ADMIN/HR_LEAD
+needed) succeeded, landed `NEW`/unassigned/correct priority/correct
+`MANUAL` message; missing-field validation correctly rejected an
+incomplete submission; the created ticket appeared in the Pool; **a
+different HR_OFFICER than the creator** successfully claimed it exactly
+like a real ticket, confirming full downstream compatibility (no special
+casing needed anywhere else in the app). Also drove the actual browser
+form end to end (not just the API) -- filled it in, submitted, landed on
+the new ticket's own detail page, correspondence panel showed the typed
+description correctly. 161 unit tests (unchanged -- this is Prisma-backed
+ticket creation, verified live rather than unit-tested, same convention
+as ingestion itself), `tsc --noEmit`/`next lint` both clean.
 
 ## Data cleanup (2026-09-16): all 52 test/fixture tickets soft-deleted
 

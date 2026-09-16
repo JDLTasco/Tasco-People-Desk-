@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { getPoolTickets } from "@/lib/tickets/queries";
 import FilterableTicketList from "@/components/FilterableTicketList";
@@ -9,7 +10,12 @@ export default async function PoolPage() {
 
   return (
     <main>
-      <h1>Pool</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+        <h1>Pool</h1>
+        <Link href="/tickets/new">
+          <button type="button">+ New ticket</button>
+        </Link>
+      </div>
       <p>Unassigned tickets, available for anyone to self-assign.</p>
       <FilterableTicketList tickets={tickets} />
     </main>
