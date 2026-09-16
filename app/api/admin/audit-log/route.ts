@@ -22,6 +22,16 @@ export async function GET(request: Request) {
   const p = new URL(request.url).searchParams;
   const where: Prisma.AuditLogWhereInput = {};
   if (p.get("ticketId")) where.ticketId = p.get("ticketId")!;
+  // Ticket number (what a real user actually has, not the internal uuid
+  // ticketId already supported above) -- resolves to the ticket's id. A
+  // ticketId column is a real Postgres uuid, so a non-matching ticket
+  // number can't be expressed as a WHERE value (Prisma throws P2023, not
+  // "no rows") -- short-circuit to an empty result instead.
+  if (p.get("ticketNo")) {
+    const ticket = await prisma.ticket.findUnique({ where: { ticketNo: p.get("ticketNo")! } });
+    if (!ticket) return NextResponse.json({ entries: [] });
+    where.ticketId = ticket.id;
+  }
   if (p.get("actorId")) where.actorId = p.get("actorId")!;
   if (p.get("action")) where.action = { contains: p.get("action")!, mode: "insensitive" };
   if (p.get("correlationId")) where.correlationId = p.get("correlationId")!;
@@ -33,7 +43,10 @@ export async function GET(request: Request) {
 
   const entries = await prisma.auditLog.findMany({
     where,
-    include: { actor: { select: { displayName: true, initials: true } } },
+    include: {
+      actor: { select: { displayName: true, initials: true } },
+      ticket: { select: { ticketNo: true } },
+    },
     orderBy: { createdAt: "desc" },
     take: 500,
   });

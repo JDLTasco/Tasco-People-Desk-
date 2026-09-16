@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     to: p.get("to") ?? undefined,
     legalHold: p.has("legalHold") ? p.get("legalHold") === "true" : undefined,
     includeNotARequest: p.get("includeNotARequest") === "true",
+    includeAutoclose: p.get("includeAutoclose") === "true",
   });
   return NextResponse.json({ tickets });
 }

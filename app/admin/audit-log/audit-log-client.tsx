@@ -13,9 +13,11 @@ interface Entry {
   correlationId: string;
   createdAt: string;
   actor: { displayName: string; initials: string };
+  ticket: { ticketNo: string } | null;
 }
 
 export default function AuditLogClient() {
+  const [ticketNo, setTicketNo] = useState("");
   const [action, setAction] = useState("");
   const [correlationId, setCorrelationId] = useState("");
   const [from, setFrom] = useState("");
@@ -26,6 +28,7 @@ export default function AuditLogClient() {
   async function search() {
     setBusy(true);
     const params = new URLSearchParams();
+    if (ticketNo) params.set("ticketNo", ticketNo);
     if (action) params.set("action", action);
     if (correlationId) params.set("correlationId", correlationId);
     if (from) params.set("from", from);
@@ -39,6 +42,12 @@ export default function AuditLogClient() {
   return (
     <>
       <div className="filter-bar">
+        <input
+          placeholder="Ticket number..."
+          value={ticketNo}
+          onChange={(e) => setTicketNo(e.target.value)}
+          style={{ width: "9rem" }}
+        />
         <input placeholder="Action..." value={action} onChange={(e) => setAction(e.target.value)} style={{ width: "12rem" }} />
         <input
           placeholder="Correlation ID..."
@@ -64,6 +73,7 @@ export default function AuditLogClient() {
             <thead>
               <tr>
                 <th>When</th>
+                <th>Ticket</th>
                 <th>Action</th>
                 <th>Actor</th>
                 <th>Entity</th>
@@ -76,6 +86,7 @@ export default function AuditLogClient() {
               {entries.map((e) => (
                 <tr key={e.id}>
                   <td>{new Date(e.createdAt).toLocaleString()}</td>
+                  <td>{e.ticket?.ticketNo ?? ""}</td>
                   <td>{e.action}</td>
                   <td>
                     {e.actor.displayName} ({e.actor.initials})

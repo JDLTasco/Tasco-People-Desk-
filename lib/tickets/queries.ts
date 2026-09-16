@@ -129,12 +129,22 @@ export interface ArchiveSearchFilters {
   to?: string;
   legalHold?: boolean;
   includeNotARequest?: boolean;
+  /** Operator addition, 2026-09-16 (not in the original v1.3 §11 text --
+   * see STATUS.md): Autoclose (spam / no action needed, added alongside
+   * ticket merging) is the same kind of non-substantive closure as "Not a
+   * request" -- excluded from the default result set for the same reason,
+   * with its own separate toggle rather than folded into
+   * includeNotARequest, since they're distinct close reasons an operator
+   * may want to include independently of each other. */
+  includeAutoclose?: boolean;
 }
 
 /**
  * §11 "Archive search": full-text over archived tickets. "'Not a
  * request' closures excluded by default, with a toggle to include."
- * Confidentiality-scoped the same as every other search/list view.
+ * Autoclose closures get the identical treatment (see includeAutoclose's
+ * own comment). Confidentiality-scoped the same as every other
+ * search/list view.
  */
 export async function searchArchive(userId: string, role: UserRole, filters: ArchiveSearchFilters): Promise<TicketListRow[]> {
   const where: Prisma.TicketWhereInput = {
@@ -142,8 +152,11 @@ export async function searchArchive(userId: string, role: UserRole, filters: Arc
     isDeleted: false,
     ...confidentialFilter(userId, role),
   };
-  if (!filters.includeNotARequest) {
-    where.closeReason = { not: "NOT_A_REQUEST" };
+  const excludedCloseReasons: ("NOT_A_REQUEST" | "AUTOCLOSE")[] = [];
+  if (!filters.includeNotARequest) excludedCloseReasons.push("NOT_A_REQUEST");
+  if (!filters.includeAutoclose) excludedCloseReasons.push("AUTOCLOSE");
+  if (excludedCloseReasons.length > 0) {
+    where.closeReason = { notIn: excludedCloseReasons };
   }
   if (filters.ticketNo) where.ticketNo = { contains: filters.ticketNo, mode: "insensitive" };
   if (filters.requester) {

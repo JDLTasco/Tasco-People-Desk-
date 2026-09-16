@@ -19,12 +19,23 @@ async function patchBusinessUnit(id: string, body: { name?: string; isActive?: b
   return { ok: res.ok, status: res.status, data };
 }
 
+async function createBusinessUnit(name: string) {
+  const res = await fetch("/api/admin/business-units", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
+}
+
 export default function BusinessUnitAdminPanel({ businessUnits }: { businessUnits: AdminBusinessUnit[] }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [newName, setNewName] = useState("");
 
   async function run(action: () => Promise<{ ok: boolean; status: number; data: { error?: string } }>) {
     setBusy(true);
@@ -114,6 +125,29 @@ export default function BusinessUnitAdminPanel({ businessUnits }: { businessUnit
           ))}
         </tbody>
       </table>
+
+      <section className="section-card">
+        <h2>Add a business unit</h2>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            run(async () => {
+              const result = await createBusinessUnit(newName.trim());
+              if (result.ok) setNewName("");
+              return result;
+            });
+          }}
+        >
+          <label>
+            Name
+            <br />
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} required />
+          </label>{" "}
+          <button type="submit" disabled={busy || !newName.trim()} style={{ marginTop: "0.75rem" }}>
+            Add business unit
+          </button>
+        </form>
+      </section>
     </>
   );
 }

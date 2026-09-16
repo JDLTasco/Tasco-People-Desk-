@@ -1,5 +1,5 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus four ad hoc additions and one bug fix from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a real correspondence-ordering bug fixed -- see the "Ad hoc session (2026-09-16)" entries and "Bug fix (2026-09-16)" below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus five ad hoc additions and two bug fixes from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a correspondence-ordering bug fixed; Add category/Add business unit + audit-log ticket-number search + Archive Search Autoclose toggle, plus a bug in that same audit-log change caught and fixed before commit -- see the "Ad hoc session (2026-09-16)" and "Bug fix (2026-09-16)" entries below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
@@ -25,6 +25,83 @@
 - Read a real generated `ticket.xml` off disk (`.local-blob-store/hr-archive/2026/09/<ticket_no>/ticket.xml`) and eyeballed it: correct namespace, correctly interleaved correspondence entries in chronological order, correct `edited`/`type` attributes, empty-but-present `<attachments>` element for a ticket with none.
 - `/admin/legal-holds`, `/admin/deleted`, `/admin/audit-log`, `/archive-search` all render 200 with no error content as ADMIN.
 - Ticket detail page: set a real legal hold, confirmed the banner shows the actual reason and setter name, not just the static "LEGAL HOLD" string from before this stage.
+
+## Ad hoc session (2026-09-16, fifth): Add category/Add business unit, audit-log ticket-number search, Archive Search Autoclose toggle
+
+Four requests from John in one message, plus a question answered inline
+(not a code change): "explain the difference between Archive and
+Closed tickets" -- answered directly in conversation, not recorded here
+since it's not a spec/behavior change, but worth restating for anyone
+reading this file cold: **CLOSED** is the normal terminal working
+status (via Outcome, "Not a request," or Autoclose) -- still a live,
+fully visible, ADMIN-reversible row, not yet archived. **ARCHIVED**
+happens later, automatically (the nightly `archive-closed` job, or
+ADMIN on-demand) -- it writes the durable `ticket.txt`/`ticket.xml`
+artefacts (§10), flips status to `ARCHIVED`, and makes the portal view
+read-only except to ADMIN. The **Closed** page (§13's lighter history
+list) shows both CLOSED and ARCHIVED tickets across all officers;
+**Archive Search** (§11) is a distinct, narrower feature -- full-text
+search over archived tickets specifically, via the archive artefacts'
+own metadata, and only exists because Stage 6 built the archiving
+pipeline.
+
+**Add category / Add business unit**: `POST /api/admin/categories` and
+`POST /api/admin/business-units` (ADMIN only, §3), literally what §5's
+own text already called for ("New categories are added through the
+admin UI with no migration") but was never built. New entries append at
+the end of the existing sort order (max + 1) -- not specified by the
+spec, an uncontroversial default. `CATEGORY_CREATED`/
+`BUSINESS_UNIT_CREATED` audit actions, name-collision check (both
+`name` columns are `@unique`), `createdById` set to the creating admin
+(the field existed but nothing populated it until now). "Add a
+category"/"Add a business unit" forms added to the existing admin
+screens, same pattern as Admin Users' "Add a user" form.
+
+**Audit log: search by ticket number.** The page's own long-standing
+comment already said "§11 'Audit search': by ticket, actor, action, date
+range, correlation ID" -- date range already worked, but no ticket
+field existed in the UI or was reachable via the API (only the internal
+`ticketId` uuid was, which no real user has). Added a `ticketNo` query
+param that resolves to the ticket's id server-side, plus a "Ticket
+number" field in the UI and a "Ticket" column in the results table (a
+`ticket: { select: { ticketNo: true } }` include added to the query, so
+entries are actually legible without knowing a raw uuid by heart).
+
+**A real bug caught before commit, in this same change**: the first cut
+of ticket-number resolution used a `"__no_match__"` string sentinel for
+"no ticket found," fed straight into `where: { ticketId: sentinel }`.
+`ticket_id` is a real Postgres `uuid` column, so Prisma threw
+`PrismaClientKnownRequestError P2023` ("Error creating UUID, invalid
+character") instead of returning zero rows -- a 500, not an empty
+result. Caught during this session's own live verification (a ticket
+number that doesn't exist), not left for John to find. Fixed by
+short-circuiting to `{ entries: [] }` before the query runs at all when
+the ticket number doesn't resolve, rather than trying to express "no
+match" as a fake uuid.
+
+**Archive Search: a separate "Include Autoclose closures" toggle.**
+Previously only "Not a request" closures were excluded from the default
+result set (with a toggle to include them); Autoclose (spam / no action
+needed) is the same *kind* of non-substantive closure and got the
+identical treatment -- excluded by default, its own separate checkbox
+(not folded into the existing one, since an operator may want either
+independently of the other). `ArchiveSearchFilters.includeAutoclose`,
+`searchArchive()`'s exclusion logic now builds a list of excluded
+`CloseReason`s (`notIn`) instead of a single `not`.
+
+**Verified live**: add-category and add-business-unit both succeeded as
+ADMIN, both correctly refused a duplicate name (400) and a non-ADMIN
+caller (403, HR_LEAD tested); audit-log search by a real action found
+the just-created `CATEGORY_CREATED` entry, and by a non-existent ticket
+number correctly returned `200`/0 entries (confirming the P2023 fix);
+Archive Search's result count changed (6 -> 7) when the Autoclose toggle
+was switched on, confirming an autoclosed-and-archived ticket exists and
+the filter genuinely includes/excludes it. Verification-only test
+category/business unit deactivated afterward so they don't linger in
+the real lookup lists. 161 unit tests (unchanged -- all four changes are
+Prisma-backed admin/search plumbing, verified live rather than with new
+unit tests, same convention as the two admin screens before this),
+`tsc --noEmit`/`next lint` both clean.
 
 ## Bug fix (2026-09-16): outbound emails (Allocation especially) appearing to go missing from the correspondence thread
 

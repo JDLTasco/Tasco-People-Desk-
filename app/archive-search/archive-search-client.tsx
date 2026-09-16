@@ -26,6 +26,7 @@ export default function ArchiveSearchClient({ canBulkExport }: Props) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [includeNotARequest, setIncludeNotARequest] = useState(false);
+  const [includeAutoclose, setIncludeAutoclose] = useState(false);
   const [results, setResults] = useState<Result[] | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,6 +39,7 @@ export default function ArchiveSearchClient({ canBulkExport }: Props) {
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     if (includeNotARequest) params.set("includeNotARequest", "true");
+    if (includeAutoclose) params.set("includeAutoclose", "true");
     const res = await fetch(`/api/archive-search?${params.toString()}`);
     const data = await res.json().catch(() => ({ tickets: [] }));
     setResults(data.tickets ?? []);
@@ -64,6 +66,10 @@ export default function ArchiveSearchClient({ canBulkExport }: Props) {
           <label>
             <input type="checkbox" checked={includeNotARequest} onChange={(e) => setIncludeNotARequest(e.target.checked)} /> Include
             &quot;Not a request&quot; closures
+          </label>
+          <label>
+            <input type="checkbox" checked={includeAutoclose} onChange={(e) => setIncludeAutoclose(e.target.checked)} /> Include
+            Autoclose closures (spam / no action needed)
           </label>
           <button type="button" disabled={busy} onClick={() => void search()}>
             Search
