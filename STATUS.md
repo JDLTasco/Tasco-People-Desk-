@@ -7,6 +7,34 @@
 - Blockers / required operator actions: §14 items 0-8 — still none started (unchanged). §7 Stage 7 infrastructure (real Blob Storage, Defender for Storage, Key Vault, backups) doesn't exist yet either -- archiving/retention work correctly against the local filesystem stand-in (`lib/blob-store.ts`), but "durable" and "backed up" are not yet real properties of the archive artefacts.
 - Recommended next command or task: nominate Stage 7 ("Infrastructure") to give archiving/retention/backup real Azure resources to write to, OR Stage 8 ("CI/CD and hardening"), OR prioritize §14 operator-side so the real Graph paths can finally be tested.
 
+## Data cleanup (2026-09-16): all 52 test/fixture tickets soft-deleted
+
+John asked for the accumulated seed/dev-verification tickets cleaned out
+of the dashboard. Confirmed first, not assumed: queried every
+non-deleted ticket (52 of them) and every single one had an
+`@example.com` requester and an obviously synthetic subject ("Test dup,"
+"Page render check," "Stage 6 test confidential," the 5 original
+`prisma/seed.ts` fixtures, etc.) -- consistent with §14 never having
+landed, so nothing in the database is a real ticket yet.
+
+Cleaned up through the app's own sanctioned path -- `POST
+/api/tickets/[id]/delete` (ADMIN + step-up + mandatory reason,
+soft-delete only) -- **not** a raw SQL delete, so every removal is
+audit-logged and reversible in principle (the row itself is untouched,
+just `is_deleted`/`deleted_by`/`deleted_at`/`delete_reason` set). One
+ticket (`260916062402`, a Stage 6 legal-hold test fixture) was still
+under an active legal hold, which blocks deletion by design -- cleared
+that hold first (also step-up + reason, also audit-logged) before
+deleting it.
+
+**Verified live**: Pool now shows "0 of 0 tickets"; `Admin -> Deleted`
+lists all 54 soft-deleted tickets (the 52 from this cleanup plus 2
+pre-existing ones from Stage 6's own delete-feature testing, untouched
+here), each with who deleted it, when, and the reason -- nothing
+silently vanished. 54 `TICKET_SOFT_DELETED` audit_log rows confirmed via
+direct DB read. No code changed, so nothing to commit for this entry --
+purely operational.
+
 ## Stage 6 deliverables (§16 item 6)
 
 **Built and fully live-tested** (real dev server, real signed-in HTTP requests via the actual NextAuth flow):
