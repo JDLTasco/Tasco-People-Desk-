@@ -38,6 +38,21 @@ a {
   color: var(--tasco-navy);
 }
 
+/* Tailwind's Preflight strips list markers/indentation by default --
+   never noticed before since nothing rendered a real bulleted/numbered
+   list until the Instructions page (2026-09-16); re-enabled globally
+   since the existing bare <ul>/<ol> usages (attachments, status history)
+   read better with markers too, not just the new page. */
+ul, ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+ul { list-style: disc; }
+ol { list-style: decimal; }
+li { margin: 0.2rem 0; }
+p { margin: 0 0 0.6rem; }
+p:last-child { margin-bottom: 0; }
+
 /* Nav */
 .main-nav {
   display: flex;

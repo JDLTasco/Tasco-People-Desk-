@@ -1,5 +1,5 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus five ad hoc additions and two bug fixes from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a correspondence-ordering bug fixed; Add category/Add business unit + audit-log ticket-number search + Archive Search Autoclose toggle, plus a bug in that same audit-log change caught and fixed before commit -- see the "Ad hoc session (2026-09-16)" and "Bug fix (2026-09-16)" entries below)
+- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus six ad hoc additions and two bug fixes from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a correspondence-ordering bug fixed; Add category/Add business unit + audit-log ticket-number search + Archive Search Autoclose toggle (plus a bug in that same audit-log change caught and fixed before commit); an all-roles Instructions page (plus a global list/paragraph CSS rendering bug caught and fixed while building it) -- see the "Ad hoc session (2026-09-16)" and "Bug fix (2026-09-16)" entries below)
 - Last completed stage: 6
 - Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
 - Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
@@ -102,6 +102,48 @@ the real lookup lists. 161 unit tests (unchanged -- all four changes are
 Prisma-backed admin/search plumbing, verified live rather than with new
 unit tests, same convention as the two admin screens before this),
 `tsc --noEmit`/`next lint` both clean.
+
+## Ad hoc session (2026-09-16, sixth): Instructions page
+
+John asked for a page explaining how the system works and a procedure
+for day-to-day use, accessible to everyone -- not role-gated like every
+other `/admin/*` screen. `app/instructions/page.tsx`: static content
+(no Prisma reads, deliberately, so it can't drift into showing stale
+live data), grounded directly in the actual build spec and the app's
+real current behaviour rather than generic HR advice -- lifecycle,
+priority/SLA rules (including the 2026-09-16 amendment), replying/
+threading, the full §3 permission matrix, a Closed-vs-Archived
+explanation, a step-by-step ticket-handling walkthrough, and a summary
+of what ADMIN-only screens do (visible to everyone for awareness, even
+though only ADMIN can actually use them). Explicitly notes the current
+§14 limitation (no real mailbox yet) so it doesn't read as false
+documentation of a live mail connection. No new route exemption needed
+in `middleware.ts` -- any authenticated session already reaches it,
+which is exactly "accessible by all" (there's no requester portal in
+this app, so "all" means all three staff roles). Linked in `NavBar.tsx`
+unconditionally, alongside the other view links, not inside any
+`canManageAdminSettings`/`canViewAuditLog` gate.
+
+**A real, pre-existing rendering bug found and fixed while building
+this**: plain `<ul>`/`<ol>` lists rendered with no bullets/numbers and no
+indentation anywhere in the app -- Tailwind's Preflight base layer
+strips list markers by default, and nothing had used a real prose list
+before (the two existing bare lists, attachments and status history on
+the ticket detail page, are short enough that nobody had noticed). Fixed
+globally in `app/globals.css` (re-enabled `list-style`/indentation for
+`ul`/`ol`/`li`), which also improved those two pre-existing lists, not
+just the new page. Also added `p { margin-bottom: 0.6rem }` globally --
+paragraphs had zero spacing between them (same Preflight reset), fine
+for the single-paragraph banners elsewhere in the app but genuinely hard
+to read on a page with this much prose.
+
+**Verified live**: fetched `/instructions` as LF (HR_OFFICER, the
+lowest-privilege role) -- 200, full content renders, nav link present.
+Screenshotted the rendered page (both before and after the list/
+paragraph CSS fix) to confirm it actually reads well, not just that it
+returns 200. `tsc --noEmit`/`next lint` both clean, 161 unit tests
+unchanged (this is a static content page + a global CSS fix, nothing
+here has business logic to unit-test).
 
 ## Bug fix (2026-09-16): outbound emails (Allocation especially) appearing to go missing from the correspondence thread
 
