@@ -17,7 +17,10 @@
     "esbuild": "0.28.1"
   },
   "dependencies": {
+    "@azure/identity": "^4.13.3",
+    "@azure/storage-blob": "^12.33.0",
     "@prisma/client": "6.19.3",
+    "applicationinsights": "^3.16.0",
     "archiver": "^6.0.2",
     "next": "14.2.35",
     "next-auth": "^4.24.15",

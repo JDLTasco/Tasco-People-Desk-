@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { newCorrelationId } from "../correlation";
+import { trackJobRunSucceeded } from "../telemetry";
 
 // §12: "Each job is idempotent, generates a correlation_id at entry, and
 // writes a job_runs row." One wrapper so every job does this identically --
@@ -21,6 +22,7 @@ export async function runJob<T>(jobName: string, fn: (correlationId: string) => 
       where: { id: jobRun.id },
       data: { status: "SUCCEEDED", completedAt: new Date(), itemsProcessed },
     });
+    trackJobRunSucceeded(jobName);
     return result;
   } catch (err) {
     await prisma.jobRun.update({

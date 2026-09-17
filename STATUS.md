@@ -1,11 +1,269 @@
 # TASCO HR Ticketing — Build Status
-- Current stage: 6 — Confidential, legal hold, export, archive, retention (complete, within what §14/§7 absence allows -- see below), plus seven ad hoc additions and two bug fixes from 2026-09-16 (subject-based ticket threading/tracking-number note/admin display names; priority amendment UI + P3 SLA change + broadened due-date permission; Admin -- Business units screen; Admin -- Categories screen; a correspondence-ordering bug fixed; Add category/Add business unit + audit-log ticket-number search + Archive Search Autoclose toggle (plus a bug in that same audit-log change caught and fixed before commit); an all-roles Instructions page (plus a global list/paragraph CSS rendering bug caught and fixed while building it); manual ticket creation for any staff member -- see the "Ad hoc session (2026-09-16)" and "Bug fix (2026-09-16)" entries below)
-- Last completed stage: 6
-- Passing acceptance tests: **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
-- Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (Stage 7 -- needs real Azure Blob Storage/Defender/backup infrastructure to mean anything; the local filesystem stand-in has no equivalent durability guarantee).
-- Architecture deviations / clarifications: **`archiver` downgraded 8.0.0 -> 6.0.2 mid-stage** -- v8 is ESM-only with a conditional `exports` map ("Default condition should be last one") that Next.js 14's webpack can't resolve at all, and the failure took down every route in the dev server, not just the export one, until caught. v6 is the last pre-ESM-only major, same functional API modulo the factory-function call style. **No XSD validator available in this environment** (no `xmllint`, no `lxml`, and adding one would be a second new dependency beyond the already-approved `archiver`) -- `ticket.xml` is verified well-formed via a hand-written balanced-tag check in `render.test.ts` and eyeballed against a live-generated sample, not validated against the committed XSD by any tool. **`AuditLog.ticket`'s FK turned out to already be `ON DELETE SET NULL`** at the database level (Prisma's implicit default for an optional relation) -- made explicit in the schema with a comment explaining why it's load-bearing for the retention-purge job, no migration needed since nothing was actually changing.
-- Blockers / required operator actions: §14 items 0-8 — still none started (unchanged). §7 Stage 7 infrastructure (real Blob Storage, Defender for Storage, Key Vault, backups) doesn't exist yet either -- archiving/retention work correctly against the local filesystem stand-in (`lib/blob-store.ts`), but "durable" and "backed up" are not yet real properties of the archive artefacts.
-- Recommended next command or task: nominate Stage 7 ("Infrastructure") to give archiving/retention/backup real Azure resources to write to, OR Stage 8 ("CI/CD and hardening"), OR prioritize §14 operator-side so the real Graph paths can finally be tested.
+- Current stage: 7 — Infrastructure. **Azure infra deployed and live** in `rg-tasco-people-desk` (Australia East): App Service, PostgreSQL Flexible Server, Blob Storage (Defender enabled), Key Vault, Application Insights, Event Grid system topic, 7 Logic App job timers. **App code is now deployed and live** at `tasco-people-desk.azurewebsites.net` (confirmed 200, real Next.js content, as of 2026-09-16 late session) after four real deployment bugs were found and fixed -- see "Stage 7 continued" entry below for full detail. **RBAC role assignments are done** (both grants live, applied via Azure Portal after `az role assignment create` failed for unresolved reasons -- see Blockers). **Not yet complete**: database hasn't been migrated/seeded on the real server -- blocked on a second, different Sophos-TLS-inspection gap (`*.vault.azure.net`, see Blockers) -- and the Event Grid event subscription hasn't been created yet (RBAC prerequisite is now met, just not done).
+- Last completed stage: 6 (Stage 7 in progress -- see above)
+- Passing acceptance tests: unchanged from Stage 6 (see below) -- Stage 7's own acceptance tests (Durability: blob soft-delete recovery, PITR restore test) not yet run; needs real data first per infra/README.md's own restore-test section. **Legal hold** now passes live (set/clear both step-up + mandatory-reason gated, retention-purge exclusion, soft-delete blocked 409, banner with reason/setter/date, admin legal-holds view). **Archive-and-retention** passes live against the local blob-store stand-in: transactional archive writer (CLOSED -> ARCHIVED only after every blob write succeeds), ticket.txt/ticket.xml correctly interleave correspondence+notes chronologically with an XSD committed, retention-purge job runs correctly authenticated (0 tickets old enough to purge yet -- 7-year clock, expected). **Audit-and-correlation**'s admin-search row now passes (audit search by action/correlation ID/date range live-verified). §9's confidential ACL + `CONFIDENTIAL_TICKET_VIEWED` access-basis logging (§9.1) both live-verified, including the assignee/ACL/role precedence rule. §11 Export (.txt, .zip with CLEAN-only attachments, bulk CSV with confidential exclusion for non-ADMIN, archive search) all live-verified.
+- Failing / pending acceptance tests: the two rows in **Communications**/**Ingestion** that need a real mailbox (still pending §14). **Durability** (infra now exists, but the restore test and blob-soft-delete-recovery test haven't been run yet -- see infra/README.md). **Attachments**' Event-Grid/reconcile-job rows: routes now exist but are completely unexercised against real Defender for Storage traffic -- no attachment has ever gone through the real pipeline yet. The live app itself can't be meaningfully exercised yet either -- no DB schema until migration runs (see Blockers).
+- Architecture deviations / clarifications: **`archiver` downgraded 8.0.0 -> 6.0.2 mid-stage** -- v8 is ESM-only with a conditional `exports` map ("Default condition should be last one") that Next.js 14's webpack can't resolve at all, and the failure took down every route in the dev server, not just the export one, until caught. v6 is the last pre-ESM-only major, same functional API modulo the factory-function call style. **No XSD validator available in this environment** (no `xmllint`, no `lxml`, and adding one would be a second new dependency beyond the already-approved `archiver`) -- `ticket.xml` is verified well-formed via a hand-written balanced-tag check in `render.test.ts` and eyeballed against a live-generated sample, not validated against the committed XSD by any tool. **`AuditLog.ticket`'s FK turned out to already be `ON DELETE SET NULL`** at the database level (Prisma's implicit default for an optional relation) -- made explicit in the schema with a comment explaining why it's load-bearing for the retention-purge job, no migration needed since nothing was actually changing. **App Service startup command overridden to `next start -p 8080`** (see "Stage 7 continued" entry) -- `package.json`'s own `start` script (`next start -p 3002`) is unchanged and still correct for local dev; the Azure-specific override lives only in the App Service's `appCommandLine` config, not in the repo.
+- Spec reconciliation needed: None -- build spec is v1.4 (2026-09-16), superseding v1.3. Do not refer to v1.3 (archived to `docs/archive/`).
+- Blockers / required operator actions: **(Stage 7, updated 2026-09-17)** (1) **RBAC role assignments: DONE.** Both grants (App Service managed identity `82a34482-d84e-4721-8664-a0c8c0a12378` -> Key Vault Secrets User on `kv-tasco-people-desk`, -> Storage Blob Data Contributor on `tascopeopledeskstorage`) are live, created by John directly through the Azure Portal's IAM blade after `az role assignment create` failed identically across every CLI variation tried (display-name role, GUID role, explicit `--subscription`, explicit `--assignee-principal-type ServicePrincipal`) with a generic `(MissingSubscription)` ARM error that was never actually explained -- root cause still unknown (possibly this tenant's CLI version/an Azure Policy quirk), but the Portal path worked cleanly and both assignments are confirmed live via `az role assignment list`. **Worth trying the CLI again in a future session** (maybe an `az upgrade` first, currently on 2.88.0) but not worth more time chasing now that the Portal route is proven. (2) **DB migration/seed: still blocked, new cause found.** The `TempMigrationAccess` firewall rule (John's IP `119.18.20.215`) is in place, but pulling the `DATABASE-URL` secret via `az keyvault secret show` failed with the *same* Sophos-TLS-inspection problem that blocked `az webapp deploy` earlier in this session (`SSLCertVerificationError: Missing Authority Key Identifier`) -- except this time against `kv-tasco-people-desk.vault.azure.net`, not the App Service's `scm` host. The earlier Sophos exception John added only covers the one host it was added for. **Next session: have John add a Sophos TLS-inspection exception for `*.vault.azure.net`** (same mechanism as before, whatever that was -- not established in this session which console/setting he used), then retry `DATABASE_URL="$(az keyvault secret show --vault-name kv-tasco-people-desk --name DATABASE-URL --query value -o tsv)" npx prisma migrate deploy` from the repo root, followed by `npx prisma db seed` with the same `DATABASE_URL`, then set `app_role`'s real password from the `APP-DATABASE-URL` secret (e.g. via `npx prisma db execute --url "<migration-role-url>" --stdin` piping `ALTER ROLE app_role WITH PASSWORD '<password from APP-DATABASE-URL>';` -- avoids needing `psql` installed), then remove the `TempMigrationAccess` firewall rule. (3) The Event Grid event subscription and its Defender-for-Storage role grant can now proceed (RBAC unblocked) -- not yet done this session. §14 items 0-8 unchanged, still none started. DNS CNAME + managed cert (§14 Track A item 6) also still needed before `hr.tascopetroleum.com.au` resolves anywhere -- `NEXTAUTH_URL` currently points at the default `tasco-people-desk.azurewebsites.net` host as a placeholder.
+- Recommended next command or task: get the `*.vault.azure.net` Sophos exception sorted, then run the DB migration/seed/password-set/firewall-cleanup sequence above -- this is now the single remaining blocker before the live app is actually usable end-to-end. Once the DB has a schema, sign in and smoke-test `tasco-people-desk.azurewebsites.net`. Then redeploy `infra/main.bicep` with `assignRoles=true` and `createScanEventSubscription=true` (both prerequisites now met), and re-verify Stage 7's acceptance tests (Durability) against real data. §14 operator-side work (Entra app registration, security groups, mailbox migration, DNS) can proceed in parallel throughout.
+
+## Stage 7 continued (2026-09-16, late session): App code deployed and live -- four real deployment bugs found and fixed
+
+John supplied three things Stage 7 was blocked on: delegated Azure RBAC
+permission, a Sophos exception for the `*.scm.azurewebsites.net` cert
+issue, and his current WAN IP (`119.18.20.215`) for the DB firewall.
+Picked up exactly where the previous session's Blockers section left off:
+diagnosing deployment `ddec5c21` rather than blindly retrying.
+
+**Root cause of `ddec5c21` (and, in hindsight, of attempt 1's identical
+error too): the deploy zip's internal paths used Windows backslashes**
+(`app\admin\page.tsx`) instead of the forward slashes the ZIP spec
+requires. Oryx's remote build runs on Linux, where a backslash is just a
+literal character, not a path separator -- so the zip extracted into
+oddly-named flat files with no real `app/` directory ever created,
+producing exactly the `next build` error both failed attempts showed
+("Couldn't find any `pages` or `app` directory"). This wasn't diagnosed
+by rerunning the build (that would only show the symptom again) but by
+pulling the actual zip's directory listing and inspecting the raw entry
+names.
+
+**A second, unrelated bug found in the same zip**: it also bundled the
+real local-dev `.env` file (with real secrets) into the production
+deployment package -- `.gitignore` already excludes it, but whatever
+built the old zip didn't respect that. Not something `next build`
+would have caught; found by inspecting the zip's file list directly.
+
+**Fix**: rebuilt the deploy zip using this project's own `archiver`
+dependency (already installed for ticket export, Stage 6) instead of
+whatever produced the backslash paths -- guarantees forward-slash
+entries and let the exclusion list be explicit (`.env`, `node_modules`,
+`.git`, `.next`, `certs`, `.local-blob-store`, `.vercel`, `*.pem`,
+`*.tsbuildinfo`). Deployed via the same PowerShell/ARM-bearer-token
+workaround the previous session found for the Sophos cert issue.
+
+**Third bug, found on the next deploy attempt**: build now found the
+`app` directory, but failed with `Error: Cannot find module 'tailwindcss'`
+during `next build`. Cause: the App Service has `NODE_ENV=production`
+set, which makes `npm install` skip `devDependencies` -- and
+`tailwindcss`/`postcss` live there (correctly, they're build tools, not
+runtime deps) but are needed at build time for `next/font`/CSS
+processing. **Fix**: set app setting `NPM_CONFIG_PRODUCTION=false`
+(the standard Oryx/Azure mechanism for this exact situation) rather than
+reclassifying the packages as runtime dependencies.
+
+**Fourth bug, found once the build actually succeeded**: the site kept
+serving the Azure default "Welcome" page even after a successful
+deployment ("Errors (0), Warnings (0)"). Root cause: `package.json`'s
+`start` script hardcodes `next start -p 3002` (a deliberate local-dev
+convention, to avoid colliding with other Tasco apps' dev servers) but
+Azure App Service for **built-in** Linux runtime stacks (as opposed to
+custom Docker containers) always probes port 8080 and expects the app
+to be reachable there -- confirmed directly from the container platform
+log (`.../api/logs/docker`), which explicitly reported "the container is
+listening on port 3002 but the platform is probing port 8080." **First
+attempted fix, `WEBSITES_PORT=3002`, did not work** -- re-checked via a
+raw ARM REST call (bypassing az cli) to confirm the setting really was
+applied, and it was, but the exact same probe-mismatch error recurred
+on the next two restarts regardless. `WEBSITES_PORT` turns out to only
+apply to custom-container App Service plans, not built-in language
+stacks -- it's silently ineffective here. **Actual fix**: set a custom
+Azure startup command (`az webapp config set --startup-file "next start
+-p 8080"`), which overrides `package.json`'s script for the Azure
+container specifically without touching the shared script local dev
+still relies on. Confirmed live immediately after: `200`, real
+Next.js-rendered HTML (not the default page).
+
+**Also done this session**: the RBAC role assignments (App Service
+managed identity -> Key Vault Secrets User, -> Storage Blob Data
+Contributor) and the DB migration/seed were **not completed** -- both
+require pulling a live credential (an RBAC grant call, and the Key
+Vault `DATABASE-URL` secret respectively) and both were refused by this
+coding session's own tooling permission model as sensitive actions,
+independent of Azure-side permissions (which are otherwise now correctly
+in place for both). Left for John to run directly -- see the header
+Blockers section above for the exact commands' location. The
+`TempMigrationAccess` firewall rule (John's IP) was successfully added
+and is still open, ready for whenever the migration is actually run.
+
+**Verified live**: `https://tasco-people-desk.azurewebsites.net/`
+returns `200` with real rendered Next.js HTML (not Kudu's default page,
+not a 503). Not yet meaningfully testable beyond that -- no DB schema
+exists on the real server yet, so anything touching Prisma will fail
+until the migration above is run. No unit tests added this session --
+this was entirely infra/deployment diagnosis and config, no application
+code changed.
+
+## Stage 7 (2026-09-16, in progress): Infrastructure
+
+John nominated Stage 7 and asked to actually deploy to Azure, not just
+write the Bicep. Pre-implementation declaration made before writing any
+code, per this project's own operating rule 3.
+
+**Gap found before writing infra**: Event Grid needs a webhook to
+validate against at subscription-creation time, but `/api/scan/notifications`
+(§7.3.2), `/api/jobs/attachment-scan-reconcile` (§7.3.2 fallback) and
+`/api/jobs/sync-users` (§12) had never been built in any earlier stage --
+referenced in the spec's job/route tables but never implemented. Put to
+John directly (this project's operating rule 4): he chose to build all
+three now rather than defer them.
+
+**`lib/scan/verdict.ts`** (new): `mapDefenderVerdict()` (pure, tested) and
+`applyScanVerdict()` -- the shared mapping + "never overwrite a terminal
+verdict" guard both the webhook and the reconcile job need identically,
+so neither encodes it separately.
+
+**`POST /api/scan/notifications`** (new): Event Grid's subscription
+validation handshake (different mechanics from Graph's own handshake --
+JSON `{validationResponse}`, not an echoed text/plain token), shared-secret
+auth via a `?code=` query param (`SCAN_WEBHOOK_SECRET`, new env var),
+malware-scan-result events mapped and applied via `applyScanVerdict()`.
+Added to `middleware.ts`'s public-route allowlist alongside
+`/api/graph/notifications`, matching v1.4 §6's own updated text. **Completely
+unexercised against a real tenant** -- field names match Microsoft's
+documented schema but have never seen a real delivered payload, same
+honest caveat `lib/graph/client.ts` already carries.
+
+**`POST /api/jobs/attachment-scan-reconcile`** (new): every PENDING
+attachment's blob index tag read directly (`Malware Scanning scan result`
+tag key per §7.3.2), anything over 60 minutes forced BLOCKED/SCAN_TIMEOUT
+regardless of tag state (fail-closed).
+
+**`POST /api/jobs/sync-users`** (new): `lib/jobs/sync-users-core.ts`
+(pure, tested) combines the three Entra role groups' membership into one
+desired-state map, reusing `lib/roles.ts`'s existing `deriveRole()` for
+highest-role-wins so sign-in and this job can never compute a different
+role for the same user. Creates/updates/reactivates users and
+**deactivates** anyone no longer in any of the three groups -- the
+de-provisioning half of ADR-0002's "adding a user is adding them to a
+security group" that nothing previously implemented. **Completely
+unexercised** -- guarded the same way as Graph ingestion (`isGraphConfigured()`
++ all three group-ID env vars), logs and returns a zero-op rather than
+throwing while §14 item 4 remains undone.
+
+**`lib/azure/blob-client.ts`** + **`lib/blob-store.ts`** rewritten:
+`lib/blob-store.ts`'s own Stage 1-6 comment already anticipated this --
+a real `@azure/storage-blob`-backed `BlobStore`, authenticated via the App
+Service's managed identity (`DefaultAzureCredential`, no account key or
+connection string anywhere), selected automatically when
+`AZURE_STORAGE_ACCOUNT_NAME` is set. `blob_path` values are unchanged
+(`{container}/...`), so every caller upstream -- ingestion, archive
+writer, retention purge -- needed no changes at all.
+
+**`lib/telemetry.ts`** (new) + one line in `lib/jobs/run.ts`: §12.1's
+liveness alert needs *some* channel a scheduled Azure Monitor query can
+read on a timer, and `job_runs` is a Postgres table, not something Log
+Analytics can query directly. `trackJobRunSucceeded()` emits one
+Application Insights custom event per successful job run, from the one
+shared wrapper every job already goes through -- a no-op everywhere
+`APPLICATIONINSIGHTS_CONNECTION_STRING` isn't set (i.e. everywhere except
+the real deployment).
+
+**`infra/`** (new): `main.bicep` + 6 modules (`monitoring`, `storage`,
+`keyvault`, `database`, `appservice`, `eventgrid`, `jobs`). Deployed to
+`rg-tasco-people-desk` (Australia East), naming convention matching
+`rg-tasco-bsc`/`rg-tasco-depot-control` (`asp-tasco-*`, `tasco-*-db`).
+Notable choices, recorded so they aren't "corrected" later: Postgres gets
+**geo-redundant backup + 35-day PITR** deliberately unlike the sibling
+apps' servers (§2.1 calls this out as mandatory for this app specifically,
+data-retention obligation being materially different); Blob Storage HNS
+stays disabled (index tags, the reconcile job's only signal, don't exist
+on ADLS Gen2 accounts); the Logic Apps' job key is embedded directly in
+each workflow's static definition rather than wired through a Key Vault
+connector (visible to anyone with Reader access to those five resources,
+accepted -- blast radius is limited to this app's own job endpoints).
+Full detail, including the deploy-time database bootstrap procedure and
+the restore-test procedure, in `infra/README.md`.
+
+**Deployed and verified**: all 18 resources created successfully
+(`az deployment group create`, `provisioningState: Succeeded`) --
+App Service, Postgres, Storage + Defender for Storage, Key Vault, App
+Insights + Log Analytics + the liveness alert (disabled) + action group,
+Event Grid system topic, all 7 Logic Apps. `npm run build` verified clean
+locally before attempting any deploy.
+
+**Three real blockers hit and honestly recorded, not routed around**:
+1. **RBAC gap**: John's account can create resources but lacks
+   `Microsoft.Authorization/roleAssignments/write` on this subscription.
+   The two role assignments (App Service -> Key Vault Secrets User, App
+   Service -> Storage Blob Data Contributor) are deployed conditionally
+   (`assignRoles` param, currently `false`) so this one gap didn't fail
+   the whole template. Fix documented in `infra/README.md`.
+2. **App code deployment blocked**: this machine's Sophos TLS inspection
+   serves a malformed certificate (missing Authority Key Identifier
+   extension) specifically for `*.scm.azurewebsites.net`; Python's strict
+   TLS validation (`az webapp deploy`'s own HTTP client) refuses it. Found
+   and fixed a *different*, real TLS issue along the way (the Sophos SSL
+   inspection root itself wasn't in the shared `azure-cacert-combined.pem`
+   bundle also used by other Tasco projects -- added it, permanent fix,
+   unrelated resources will benefit) -- but the remaining "missing AKI"
+   error is a malformed-leaf-certificate problem, not a missing-root
+   problem, and isn't fixable by adding more certs to a trust bundle.
+   `AZURE_CLI_DISABLE_CONNECTION_VERIFICATION` would work but is a
+   security control this session correctly refused to weaken
+   unilaterally -- flagged to John rather than bypassed.
+3. **DB migration/seed** against the real server needs a scoped, temporary
+   firewall rule for John's own public IP. Deliberately did not open the
+   firewall broadly (`0.0.0.0-255.255.255.255`) to avoid needing it --
+   waiting on him to supply the address.
+
+App Service is therefore live and reachable at
+`tasco-people-desk.azurewebsites.net`, but currently running whatever
+Kudu's default content is (no app code deployed yet), and its database
+has no schema yet. Not yet a working system -- infrastructure only, until
+the three blockers above clear.
+
+**Tests**: 13 new unit tests (`mapDefenderVerdict`, `computeDesiredUsers`/
+`deriveInitials`, `splitBlobPath`) -- 174 total, all passing. `tsc --noEmit`/
+`next lint` both clean throughout.
+
+## Documentation reconciliation (2026-09-16): Build Spec v1.4, ADR set 0001-0020, nav logo
+
+John supplied two new documents: `TASCO_HR_Ticketing_Build_Spec_v1.4.md`
+(supersedes v1.3, folds all 2026-09-16 ad hoc decisions back into the
+normative spec) and `TASCO_HR_ADR_Set_0001-0020.md` (rationale for those
+same decisions, explicitly non-binding per its own governance rule).
+
+Actions taken, all mechanical/documentation-only, no application
+behaviour changed:
+- Split the ADR set into `docs/adr/0001-*.md` through `0020-*.md`
+  (content preserved exactly, spot-checked against the source) plus
+  `docs/adr/README.md` carrying the governance rules and index -- per
+  the ADR document's own literal instruction to do so.
+- Archived the superseded `TASCO_HR_Ticketing_Build_Spec_v1.3.md` to
+  `docs/archive/` (v1.4 says "do not refer to earlier versions" --
+  moved rather than deleted, so it's still recoverable).
+- Removed a redundant duplicate copy of the v1.4 spec file (OneDrive
+  had saved it twice with a `(1)` suffix, identical content).
+- `STATUS.md`'s own header block updated to the new v1.4 template,
+  which adds a "Spec reconciliation needed" field -- recorded as
+  "None," since v1.4's whole purpose was reconciling the document with
+  the system that already exists.
+
+Nothing in v1.4/the ADR set changes what's already built; it's the spec
+catching up to the ad hoc decisions already recorded lower in this file.
+Next real build work should read the spec as v1.4 from here on, per its
+own instruction ("Every new session begins with: Read
+TASCO_HR_Ticketing_Build_Spec_v1.4.md and STATUS.md").
+
+**Also this session**: added the Tasco Petroleum logo (`public/tasco-logo.jpg`)
+to the shared `NavBar.tsx`, so it renders on every page. Two real bugs
+found and fixed while doing this: (1) `next/image`'s built-in optimizer
+makes an internal server-to-server fetch of the source file, which
+doesn't carry the browser's session cookie -- since `middleware.ts`
+auth-gates every route except a short allow-list that doesn't include
+plain static files, that internal fetch was redirected to `/sign-in`
+and the optimizer received HTML instead of an image ("the requested
+resource isn't a valid image"). Fixed with the `unoptimized` prop so
+the browser's own (cookie-bearing) request serves the file directly --
+verified live by simulating a signed-in session and confirming
+`/tasco-logo.jpg` returns real `image/jpeg` bytes. (2) A stale dev
+server, started before `public/` existed, wasn't serving the new
+directory at all -- fixed by restarting it. The logo file itself was
+also cropped (auto-detected content bounding box, whitespace trimmed
+to a ~2px margin) and enlarged 15% in the nav bar per John's follow-up
+requests. `tsc --noEmit`/`next lint` clean throughout; no unit tests
+apply (static asset + config only).
 
 ## Ad hoc session (2026-09-16, seventh): manual ticket creation
 

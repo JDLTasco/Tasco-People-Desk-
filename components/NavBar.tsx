@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { canManageAdminSettings, canViewAuditLog } from "@/lib/rbac";
@@ -12,6 +13,9 @@ export default async function NavBar() {
 
   return (
     <nav className="main-nav no-print">
+      <span className="nav-logo">
+        <Image src="/tasco-logo.jpg" alt="Tasco Petroleum" width={531} height={272} priority unoptimized />
+      </span>
       <span className="nav-brand">Tasco People Desk</span>
       <Link href="/pool">Pool</Link>
       <Link href="/my-tickets">My tickets</Link>

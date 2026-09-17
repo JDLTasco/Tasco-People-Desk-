@@ -71,6 +71,18 @@ p:last-child { margin-bottom: 0; }
 .main-nav a:hover {
   color: #fff;
 }
+.nav-logo {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 0;
+}
+.nav-logo img {
+  height: 46px;
+  width: auto;
+}
 .nav-brand {
   font-weight: 700;
   font-size: 1rem;

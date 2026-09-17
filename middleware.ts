@@ -3,12 +3,13 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { CORRELATION_ID_HEADER, getOrCreateCorrelationId } from "@/lib/correlation";
 
-// §6: "Middleware protects every route except /api/graph/notifications
-// (validated by clientState), /api/jobs/* (validated by X-Job-Key), and the
-// health endpoint." NextAuth's own /api/auth/* must also stay open -- it IS
-// the sign-in flow -- as must the sign-in and no-access pages themselves,
-// or nobody could ever reach them to sign in.
-const PUBLIC_API_PREFIXES = ["/api/auth", "/api/graph/notifications", "/api/jobs", "/api/health"];
+// §6 (v1.4): "Middleware protects every route except /api/graph/notifications
+// (validated by clientState), /api/scan/notifications (validated per
+// §7.3.2), /api/jobs/* (validated by X-Job-Key), and the health endpoint."
+// NextAuth's own /api/auth/* must also stay open -- it IS the sign-in flow
+// -- as must the sign-in and no-access pages themselves, or nobody could
+// ever reach them to sign in.
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/graph/notifications", "/api/scan/notifications", "/api/jobs", "/api/health"];
 const PUBLIC_PAGES = new Set(["/sign-in", "/auth/no-access"]);
 
 export async function middleware(request: NextRequest) {

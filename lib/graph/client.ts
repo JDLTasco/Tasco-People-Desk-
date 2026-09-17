@@ -31,6 +31,12 @@ export interface OutboundEmail {
   referencesInternetMessageIds?: string[];
 }
 
+export interface GraphGroupMember {
+  entraObjectId: string;
+  displayName: string;
+  upn: string;
+}
+
 export interface GraphClient {
   getMessage(messageId: string): Promise<NormalizedMessage>;
   /** §7.2: delta query against the inbox. Pass the previous run's deltaLink to resume; omit for a full initial sync. */
@@ -39,6 +45,8 @@ export interface GraphClient {
   renewSubscription(subscriptionId: string): Promise<{ expiresAt: Date }>;
   /** §7.4: sends from the shared HR mailbox via Graph's sendMail action. Throws on any non-2xx response -- the caller (lib/email/send.ts) owns retry/backoff. */
   sendMail(email: OutboundEmail): Promise<void>;
+  /** §12 `sync-users`: direct (non-transitive) members of one of the three role groups (§3). Paginates internally. */
+  listGroupMembers(groupId: string): Promise<GraphGroupMember[]>;
 }
 
 interface GraphMessageResource {
@@ -179,6 +187,20 @@ export class GraphApiClient implements GraphClient {
       body: JSON.stringify({ expirationDateTime }),
     });
     return { expiresAt: new Date(data.expirationDateTime) };
+  }
+
+  async listGroupMembers(groupId: string): Promise<GraphGroupMember[]> {
+    const members: GraphGroupMember[] = [];
+    let path: string | null = `/groups/${groupId}/members?$select=id,displayName,userPrincipalName`;
+    while (path) {
+      const data: { value: { id: string; displayName?: string; userPrincipalName?: string }[]; "@odata.nextLink"?: string } =
+        await this.graphFetch(path.startsWith("http") ? path.replace("https://graph.microsoft.com/v1.0", "") : path);
+      for (const m of data.value) {
+        members.push({ entraObjectId: m.id, displayName: m.displayName ?? "", upn: m.userPrincipalName ?? "" });
+      }
+      path = data["@odata.nextLink"] ?? null;
+    }
+    return members;
   }
 
   async sendMail(email: OutboundEmail): Promise<void> {
