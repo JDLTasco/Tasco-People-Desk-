@@ -46,13 +46,9 @@ The deploying account (`john.deluca@tascopetroleum.com.au`) has rights to create
 
 Event Grid validates a webhook subscription by calling it at creation time. `/api/scan/notifications` didn't exist on the very first deploy of this template (the App Service was still running whatever it starts with before code is deployed), so `createScanEventSubscription` defaults to `false` and the subscription resource is skipped.
 
-Once the app code is live and `/api/scan/notifications` is confirmed reachable, redeploy with `createScanEventSubscription=true` to add it.
+Once the app code is live and `/api/scan/notifications` is confirmed reachable, redeploy with `createScanEventSubscription=true` to add it. **Done 2026-09-19** via a direct `az eventgrid system-topic event-subscription create` call (not a template redeploy — see the Blockers/parameters note in STATUS.md for why), validated live.
 
-**Also needed, and also an RBAC action (same gap as above):** Defender for Storage's own service principal needs the **EventGrid Data Sender** role on `egt-tasco-people-desk` to publish scan results to it. Find its object ID with:
-```
-az ad sp list --display-name "Microsoft Defender for Storage" --query "[].id" -o tsv
-```
-then grant it the same way as the two role assignments above, scoped to the Event Grid system topic.
+**No separate RBAC grant is needed for Defender for Storage to publish to this topic** — corrected 2026-09-19, previous text here was wrong. `EventGrid Data Sender` only applies to Event Grid *Namespace* resources (the newer MQTT/HTTP pub-sub resource type); it isn't assignable against a classic System Topic and doesn't show up in the Portal's role picker for one, which is what surfaced the mistake. A system topic tied to a storage account is published to by the Storage resource provider itself via its own built-in trust relationship — no discretionary RBAC grant exists in this model. Nothing further is needed here beyond the event subscription already created above.
 
 ## Database bootstrap (one-off, run once after first deploy)
 
