@@ -38,6 +38,14 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     siteConfig: {
       linuxFxVersion: 'NODE|20-lts'
+      // Built-in Linux stacks always probe port 8080 regardless of
+      // package.json's own `start` script (which stays on 3002 for local
+      // dev, to avoid colliding with sibling Tasco apps) -- WEBSITES_PORT
+      // is silently ineffective for non-container stacks, this is the
+      // real mechanism. Declared here so a template redeploy can't
+      // silently drop it and take the live site back to serving Azure's
+      // default page (found live, Stage 7, 2026-09-16).
+      appCommandLine: 'next start -p 8080'
       alwaysOn: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
