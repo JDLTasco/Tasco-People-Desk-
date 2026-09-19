@@ -25,6 +25,8 @@ const IGNORE = [
   "**/*.pem",
   "**/*.tsbuildinfo",
   "deploy.zip",
+  "weblogs.zip",
+  "scratch_deploy_log.txt",
 ];
 
 const outPath = resolve(process.argv[2] ?? "deploy.zip");
