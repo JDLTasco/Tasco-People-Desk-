@@ -11,6 +11,8 @@ interface PatchBody {
   role?: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
   isActive?: boolean;
   displayName?: string;
+  upn?: string;
+  entraObjectId?: string;
 }
 
 // §3: ADMIN only. Role changes are one of §6's seven step-up-gated
@@ -32,11 +34,52 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!target || target.entraObjectId === SYSTEM_ENTRA_OBJECT_ID) return notFound();
 
   const body = (await request.json().catch(() => null)) as PatchBody | null;
-  if (!body || (body.role === undefined && body.isActive === undefined && body.displayName === undefined)) {
-    return badRequest("role, isActive, and/or displayName is required");
+  if (
+    !body ||
+    (body.role === undefined &&
+      body.isActive === undefined &&
+      body.displayName === undefined &&
+      body.upn === undefined &&
+      body.entraObjectId === undefined)
+  ) {
+    return badRequest("role, isActive, displayName, and/or upn+entraObjectId is required");
   }
   if (body.displayName !== undefined && !body.displayName.trim()) {
     return badRequest("displayName cannot be blank");
+  }
+  // upn and entraObjectId must be re-pointed together, never independently:
+  // editing just the email on a row that's already keyed to a real Entra
+  // account would be silently overwritten on that person's next real
+  // sign-in (lib/auth.ts's jwt callback upserts by entraObjectId, not
+  // upn), and setting an entraObjectId without the matching real upn would
+  // link the wrong identity. This is how a dev-mock/placeholder row (§16
+  // Stages 1-3, or a manually created user per POST's own placeholder-ID
+  // comment) gets pointed at a real person's actual Entra account ahead of
+  // their first real sign-in, so that sign-in updates this same row
+  // (preserving its id and everything keyed to it -- ticket assignments,
+  // audit history) instead of creating a separate duplicate.
+  if ((body.upn === undefined) !== (body.entraObjectId === undefined)) {
+    return badRequest("upn and entraObjectId must be set together, not independently");
+  }
+  if (body.upn !== undefined && !body.upn.trim()) {
+    return badRequest("upn cannot be blank");
+  }
+  if (body.entraObjectId !== undefined && !body.entraObjectId.trim()) {
+    return badRequest("entraObjectId cannot be blank");
+  }
+
+  const identityChanged =
+    body.entraObjectId !== undefined &&
+    (body.entraObjectId.trim() !== target.entraObjectId || body.upn!.trim() !== target.upn);
+
+  if (identityChanged) {
+    if (!hasFreshStepUp(session)) {
+      return forbidden("Step-up re-authentication required to relink a user's Entra identity");
+    }
+    const collision = await prisma.user.findUnique({ where: { entraObjectId: body.entraObjectId!.trim() } });
+    if (collision && collision.id !== target.id) {
+      return badRequest("That Entra Object ID is already linked to a different user");
+    }
   }
 
   if (body.role !== undefined && body.role !== target.role) {
@@ -49,7 +92,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const activeChanged = body.isActive !== undefined && body.isActive !== target.isActive;
   const displayNameChanged = body.displayName !== undefined && body.displayName.trim() !== target.displayName;
 
-  if (!roleChanged && !activeChanged && !displayNameChanged) {
+  if (!roleChanged && !activeChanged && !displayNameChanged && !identityChanged) {
     return NextResponse.json({ user: target });
   }
 
@@ -59,6 +102,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       role: body.role,
       isActive: body.isActive,
       displayName: displayNameChanged ? body.displayName!.trim() : undefined,
+      upn: identityChanged ? body.upn!.trim() : undefined,
+      entraObjectId: identityChanged ? body.entraObjectId!.trim() : undefined,
     },
   });
 
@@ -97,6 +142,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       entityId: target.id,
       beforeJson: { displayName: target.displayName },
       afterJson: { displayName: updated.displayName },
+    });
+  }
+  if (identityChanged) {
+    await writeAuditLog({
+      correlationId,
+      actorId: session.user.id,
+      action: "USER_IDENTITY_RELINKED",
+      entity: "user",
+      entityId: target.id,
+      beforeJson: { upn: target.upn, entraObjectId: target.entraObjectId },
+      afterJson: { upn: updated.upn, entraObjectId: updated.entraObjectId },
     });
   }
 

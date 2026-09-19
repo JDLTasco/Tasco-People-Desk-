@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import OutcomeDispatchModal from "./outcome-dispatch-modal";
 import MergeTicketForm from "./merge-ticket-form";
 
@@ -135,6 +136,25 @@ export default function TicketActions({
       {error && (
         <p role="alert" className="banner banner-error">
           {error}
+          {/* §6's step-up flow has no real trigger anywhere in the UI --
+              nothing ever calls signIn("azure-ad-step-up"), so every
+              step-up-gated action (this one included) has been unreachable
+              for a real Entra sign-in until this button existed (found
+              2026-09-19, building the admin user-identity-relink feature).
+              The message text itself is the signal, not a separate flag --
+              every step-up 403 from the API is worded "Step-up
+              re-authentication required for ...". */}
+          {error.startsWith("Step-up re-authentication required") && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={() => signIn("azure-ad-step-up", { callbackUrl: window.location.href })}
+              >
+                Re-authenticate
+              </button>
+            </>
+          )}
         </p>
       )}
 

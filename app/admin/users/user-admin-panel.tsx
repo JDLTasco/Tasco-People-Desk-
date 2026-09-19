@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 type Role = "ADMIN" | "HR_LEAD" | "HR_OFFICER";
 
@@ -18,7 +19,10 @@ interface AdminUser {
 
 const ROLES: Role[] = ["ADMIN", "HR_LEAD", "HR_OFFICER"];
 
-async function patchUser(id: string, body: { role?: Role; isActive?: boolean; displayName?: string }) {
+async function patchUser(
+  id: string,
+  body: { role?: Role; isActive?: boolean; displayName?: string; upn?: string; entraObjectId?: string },
+) {
   const res = await fetch(`/api/admin/users/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -41,20 +45,26 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
+  // Re-pointing upn+entraObjectId is a distinct, rarer operation from the
+  // display-name edit above -- see the API route's own comment on why the
+  // two fields must move together (this is how a dev-mock/placeholder
+  // user gets linked to a real person's actual Entra account ahead of
+  // their first real sign-in).
+  const [editingIdentityId, setEditingIdentityId] = useState<string | null>(null);
+  const [editingUpn, setEditingUpn] = useState("");
+  const [editingEntraObjectId, setEditingEntraObjectId] = useState("");
+
   async function run(action: () => Promise<{ ok: boolean; status: number; data: { error?: string } }>) {
     setBusy(true);
     setError(null);
     const result = await action();
     setBusy(false);
     if (!result.ok) {
-      setError(
-        result.status === 403
-          ? "Step-up re-authentication required for a role change -- sign out and back in with \"Simulate step-up\" checked, then retry."
-          : result.data?.error ?? `Request failed (${result.status})`,
-      );
+      setError(result.data?.error ?? `Request failed (${result.status})`);
       return;
     }
     setEditingId(null);
+    setEditingIdentityId(null);
     router.refresh();
   }
 
@@ -63,6 +73,22 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
       {error && (
         <p role="alert" className="banner banner-error">
           {error}
+          {/* §6's step-up flow had no real trigger anywhere in the UI --
+              nothing ever called signIn("azure-ad-step-up"), so role
+              changes and identity relinks (both step-up-gated) were
+              unreachable for a real Entra sign-in until this button
+              existed (found 2026-09-19). */}
+          {error.startsWith("Step-up re-authentication required") && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={() => signIn("azure-ad-step-up", { callbackUrl: window.location.href })}
+              >
+                Re-authenticate
+              </button>
+            </>
+          )}
         </p>
       )}
 
@@ -119,7 +145,64 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
                 )}
               </td>
               <td>{u.initials}</td>
-              <td>{u.upn}</td>
+              <td>
+                {editingIdentityId === u.id ? (
+                  <span style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                    <input
+                      value={editingUpn}
+                      onChange={(e) => setEditingUpn(e.target.value)}
+                      placeholder="Real UPN / email"
+                      disabled={busy}
+                    />
+                    <input
+                      value={editingEntraObjectId}
+                      onChange={(e) => setEditingEntraObjectId(e.target.value)}
+                      placeholder="Real Entra Object ID"
+                      disabled={busy}
+                    />
+                    <span style={{ display: "flex", gap: "0.4rem" }}>
+                      <button
+                        type="button"
+                        disabled={busy || !editingUpn.trim() || !editingEntraObjectId.trim()}
+                        onClick={() =>
+                          run(() =>
+                            patchUser(u.id, {
+                              upn: editingUpn.trim(),
+                              entraObjectId: editingEntraObjectId.trim(),
+                            }),
+                          )
+                        }
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={busy}
+                        onClick={() => setEditingIdentityId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                    {u.upn}
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() => {
+                        setEditingIdentityId(u.id);
+                        setEditingUpn(u.upn);
+                        setEditingEntraObjectId(u.entraObjectId);
+                      }}
+                    >
+                      Link to real account
+                    </button>
+                  </span>
+                )}
+              </td>
               <td>
                 <select
                   disabled={busy}
