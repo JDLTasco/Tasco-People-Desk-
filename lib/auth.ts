@@ -133,21 +133,35 @@ export const authOptions: NextAuthOptions = {
           // prior test used the dev-mock provider, which doesn't go
           // through this branch at all -- found via the first-ever real
           // Azure AD sign-in, 2026-09-19.
-          const groups = ((profile as { groups?: string[] } | undefined)?.groups) ?? [];
+          const azureProfile = profile as { groups?: string[]; oid?: string } | undefined;
+          const groups = azureProfile?.groups ?? [];
           const role = deriveRole(groups, roleGroupMappingFromEnv());
           // signIn callback above already redirected away when role is
           // null -- this should be unreachable, but never fabricate a role.
           if (!role) return token;
 
+          // Second bug uncovered by fixing the first: the built-in
+          // AzureADProvider's default profile() only returns
+          // { id: profile.sub, name, email, image } -- no entraObjectId,
+          // despite the cast on `u` above claiming one exists. This branch
+          // was unreachable before today (the groups bug always returned
+          // early first), so `u.entraObjectId` being undefined never threw
+          // until now. `oid` is Entra's standard, stable, tenant-scoped
+          // object ID claim (unlike `sub`, which is a per-app pairwise
+          // identifier) -- read it directly off the id token profile
+          // instead of trusting the unbacked cast.
+          const entraObjectId = azureProfile?.oid;
+          if (!entraObjectId) return token;
+
           const dbUser = await prisma.user.upsert({
-            where: { entraObjectId: u.entraObjectId },
+            where: { entraObjectId },
             update: {
               upn: u.email ?? "",
               displayName: u.name ?? u.email ?? "",
               role,
             },
             create: {
-              entraObjectId: u.entraObjectId,
+              entraObjectId,
               upn: u.email ?? "",
               displayName: u.name ?? u.email ?? "",
               initials: (u.name ?? "??").slice(0, 2).toUpperCase(),
