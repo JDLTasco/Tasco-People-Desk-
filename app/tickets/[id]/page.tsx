@@ -131,7 +131,10 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         {ticket.messages.map((m) => (
           <article key={m.id} className="item-card">
             <div>
-              <strong>[{m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]</strong> {m.fromName} ({m.fromAddress})
+              <strong>
+                [{m.messageType === "MANUAL" ? "MANUAL ENTRY" : m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]
+              </strong>{" "}
+              {m.fromName} ({m.fromAddress})
               -- {(m.receivedAt ?? m.sentAt)?.toLocaleString()}
             </div>
             <div>{m.subject}</div>

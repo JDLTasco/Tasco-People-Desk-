@@ -62,6 +62,7 @@
         <xs:restriction base="xs:string">
           <xs:enumeration value="EMAIL_IN"/>
           <xs:enumeration value="EMAIL_OUT"/>
+          <xs:enumeration value="MANUAL_ENTRY"/>
           <xs:enumeration value="INTERNAL_NOTE"/>
         </xs:restriction>
       </xs:simpleType>

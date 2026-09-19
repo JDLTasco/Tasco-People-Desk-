@@ -36,6 +36,7 @@ function ticket(overrides: Partial<ArchiveTicket> = {}): ArchiveTicket {
     messages: [
       {
         direction: "INBOUND",
+        messageType: "ORIGINAL",
         receivedAt: new Date("2026-06-15T00:00:00Z"),
         sentAt: null,
         fromName: "Jane Requester",
@@ -44,6 +45,7 @@ function ticket(overrides: Partial<ArchiveTicket> = {}): ArchiveTicket {
       },
       {
         direction: "OUTBOUND",
+        messageType: "ALLOCATION",
         receivedAt: null,
         sentAt: new Date("2026-06-15T02:00:00Z"),
         fromName: null,
@@ -138,6 +140,28 @@ describe("renderTicketTxt (§10 archive artefact)", () => {
     const txt = renderTicketTxt(ticket({ mergedIntoTicket: { ticketNo: "260601000099" } as never }));
     assert.match(txt, /Merged into:\s+260601000099/);
   });
+
+  // §15: "A manually created ticket's first message is labelled [MANUAL
+  // ENTRY], not [EMAIL IN], in both the live view and the archive."
+  it("labels a manually created ticket's first message MANUAL ENTRY, not EMAIL IN", () => {
+    const txt = renderTicketTxt(
+      ticket({
+        messages: [
+          {
+            direction: "INBOUND",
+            messageType: "MANUAL",
+            receivedAt: new Date("2026-06-15T00:00:00Z"),
+            sentAt: null,
+            fromName: "Jane Requester",
+            fromAddress: "jane@example.com",
+            bodyText: "Filed on the requester's behalf.",
+          },
+        ] as never,
+      }),
+    );
+    assert.match(txt, /\[MANUAL ENTRY\]/);
+    assert.ok(!txt.includes("[EMAIL IN]"));
+  });
 });
 
 describe("renderTicketXml (§10 archive artefact)", () => {
@@ -165,5 +189,24 @@ describe("renderTicketXml (§10 archive artefact)", () => {
     const xml = renderTicketXml(ticket());
     assert.match(xml, /<entry type="EMAIL_IN" edited="false">/);
     assert.match(xml, /<entry type="INTERNAL_NOTE" edited="true">/);
+  });
+
+  it("represents a manually created ticket's first message as MANUAL_ENTRY, matching the XSD's added enum value", () => {
+    const xml = renderTicketXml(
+      ticket({
+        messages: [
+          {
+            direction: "INBOUND",
+            messageType: "MANUAL",
+            receivedAt: new Date("2026-06-15T00:00:00Z"),
+            sentAt: null,
+            fromName: "Jane Requester",
+            fromAddress: "jane@example.com",
+            bodyText: "Filed on the requester's behalf.",
+          },
+        ] as never,
+      }),
+    );
+    assert.match(xml, /<entry type="MANUAL_ENTRY" edited="false">/);
   });
 });

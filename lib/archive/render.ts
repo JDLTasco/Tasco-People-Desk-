@@ -9,16 +9,25 @@ function fmt(d: Date | null | undefined): string {
 
 interface ThreadEntry {
   timestamp: Date;
-  label: "EMAIL IN" | "EMAIL OUT" | "INTERNAL NOTE";
+  label: "EMAIL IN" | "EMAIL OUT" | "MANUAL ENTRY" | "INTERNAL NOTE";
   author: string;
   content: string;
   edited: boolean;
 }
 
+// §15's own acceptance test: a manually created ticket's first message is
+// labelled MANUAL ENTRY, not EMAIL IN, in both the live view and the
+// archive -- message_type is the authoritative signal, direction alone
+// (both are INBOUND) can't distinguish it from real inbound email.
+function messageLabel(m: ArchiveTicket["messages"][number]): ThreadEntry["label"] {
+  if (m.messageType === "MANUAL") return "MANUAL ENTRY";
+  return m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT";
+}
+
 function buildThread(ticket: ArchiveTicket): ThreadEntry[] {
   const messageEntries: ThreadEntry[] = ticket.messages.map((m) => ({
     timestamp: (m.direction === "INBOUND" ? m.receivedAt : m.sentAt) ?? new Date(0),
-    label: m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT",
+    label: messageLabel(m),
     author: m.direction === "INBOUND" ? `${m.fromName ?? ""} <${m.fromAddress}>`.trim() : m.fromAddress,
     content: m.bodyText ?? "",
     edited: false,
