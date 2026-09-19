@@ -118,12 +118,22 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, profile }) {
       if (user && account) {
         const u = user as typeof user & { entraObjectId: string; initials: string; mockStepUp?: boolean };
 
         if (account.provider === "azure-ad" || account.provider === "azure-ad-step-up") {
-          const groups = ((account as { profile?: { groups?: string[] } }).profile?.groups) ?? [];
+          // profile is its own callback parameter, not a property of
+          // account -- NextAuth's Account type has no .profile field.
+          // Real bug, not just a type-cast smell: account.profile was
+          // always undefined, so groups was always [], deriveRole always
+          // returned null, and this callback always silently no-opped
+          // without ever setting token.role/userId/entraObjectId for a
+          // real Azure AD sign-in. Never caught before because every
+          // prior test used the dev-mock provider, which doesn't go
+          // through this branch at all -- found via the first-ever real
+          // Azure AD sign-in, 2026-09-19.
+          const groups = ((profile as { groups?: string[] } | undefined)?.groups) ?? [];
           const role = deriveRole(groups, roleGroupMappingFromEnv());
           // signIn callback above already redirected away when role is
           // null -- this should be unreachable, but never fabricate a role.
