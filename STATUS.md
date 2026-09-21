@@ -8,6 +8,37 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Step-up smoke test PASSED end to end; real bug found in today's own AU-date-format fix (2026-09-21, continued)
+
+**Step-up confirmed fully working after the redirect-URI fix**: John set
+legal hold on ticket `260921103201`, re-authenticated for real against
+Azure AD, retried, and it succeeded -- the "Re-authenticate" round trip
+works end to end against real Azure AD for the first time ever. §6's
+step-up mechanism is now genuinely confirmed live, not just built.
+
+**While confirming it, John caught a real bug in this session's own
+earlier AU-date-format fix**: the legal-hold banner showed "set by John
+De Luca on 21/09/2026, 06:10 am" when the real local time was 16:10
+(4:10pm) AEST. `formatAuDateTime()` (added earlier today) set the
+`en-AU` *locale* (fixing digit order) but never set an explicit
+`timeZone` -- with none given, `Intl` converts to whatever timezone the
+*runtime* is in, which on Azure App Service is UTC, not Melbourne. So
+every date shown live today was correctly DD/MM/YYYY-ordered but up to
+10-11 hours off in the actual clock time -- a real, worse-than-cosmetic
+regression this session's own fix introduced, caught immediately by
+John's own live use rather than sitting unnoticed. **Fixed**: added
+`timeZone: "Australia/Melbourne"` to `lib/format-date.ts`'s
+`DATE_TIME_OPTIONS` (the same IANA-zone approach `lib/timezone.ts`
+already used correctly, DST-safe). Strengthened the existing test suite
+to actually catch this class of bug going forward -- the original test
+only asserted the date's digit order, never the actual hour, so it
+passed the whole time despite the bug; new test asserts the full exact
+string including the wall-clock hour. 179/179 tests (178 + 1 new),
+`tsc` clean. **Not yet deployed** -- needs the same Cloud Shell deploy as
+everything else today; the live site is still showing wrong times until
+this ships. John's test legal hold on `260921103201` also still needs
+clearing (no lasting harm, just a loose end).
+
 ## Real bug found via the step-up smoke test: missing Entra redirect URI (2026-09-21, continued)
 
 **John ran the step-up smoke test this session's earlier entry asked for**
