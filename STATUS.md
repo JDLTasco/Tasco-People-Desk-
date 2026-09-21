@@ -34,10 +34,11 @@ to actually catch this class of bug going forward -- the original test
 only asserted the date's digit order, never the actual hour, so it
 passed the whole time despite the bug; new test asserts the full exact
 string including the wall-clock hour. 179/179 tests (178 + 1 new),
-`tsc` clean. **Not yet deployed** -- needs the same Cloud Shell deploy as
-everything else today; the live site is still showing wrong times until
-this ships. John's test legal hold on `260921103201` also still needs
-clearing (no lasting harm, just a loose end).
+`tsc` clean. **Deployed and confirmed live** (2026-09-21T06:25:09Z via Cloud Shell,
+same pattern as every other deploy today) -- `/api/health` ok, plan
+scaled back to B1. Dates should now show correct AEST/AEDT wall-clock
+time. John's test legal hold on `260921103201` still needs clearing --
+no lasting harm, just a loose end, flagged not forgotten.
 
 ## Real bug found via the step-up smoke test: missing Entra redirect URI (2026-09-21, continued)
 
