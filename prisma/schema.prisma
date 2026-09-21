@@ -57,6 +57,12 @@ enum CloseReason {
   // NOT_A_REQUEST (manual, bypasses notifications, no category), a
   // distinct reason purely for reporting/filtering clarity.
   AUTOCLOSE
+  // Added directly with John, 2026-09-21 (not in the original spec): the
+  // requester no longer wants the matter actioned -- same shape as
+  // NOT_A_REQUEST/AUTOCLOSE (no outcome email, no category), a distinct
+  // value so "the requester pulled it" is countable separately from
+  // "it was never a real HR matter" in reporting.
+  WITHDRAWN
   // Set on the ticket that stops being the prominent case number when two
   // tickets are merged -- see Ticket.mergedIntoTicketId's own comment.
   MERGED

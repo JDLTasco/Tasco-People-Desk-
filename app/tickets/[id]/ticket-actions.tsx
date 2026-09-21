@@ -278,58 +278,70 @@ export default function TicketActions({
         )}
       </div>
 
-      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-        {status === "NEW" && (
-          <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/claim`, {}))}>
-            Claim
-          </button>
-        )}
+      <div style={{ marginBottom: "1rem" }}>
+        <h3>Action</h3>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {status === "NEW" && (
+            <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/claim`, {}))}>
+              Claim
+            </button>
+          )}
 
-        {status === "ALLOCATED" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
-          <button
-            disabled={busy}
-            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/start-action`, { version }))}
-          >
-            Start action
-          </button>
-        )}
+          {status === "ALLOCATED" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
+            <button
+              disabled={busy}
+              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/start-action`, { version }))}
+            >
+              Start action
+            </button>
+          )}
 
-        {status === "IN_ACTION" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
-          <OutcomeDispatchModal
-            ticketId={ticketId}
-            version={version}
-            ticketNo={ticketNo}
-            displaySubject={displaySubject}
-            requesterEmail={requesterEmail}
-            initialCcRecipients={ccRecipients}
-            notes={notes}
-            attachments={attachments}
-          />
-        )}
+          {status === "IN_ACTION" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
+            <OutcomeDispatchModal
+              ticketId={ticketId}
+              version={version}
+              ticketNo={ticketNo}
+              displaySubject={displaySubject}
+              requesterEmail={requesterEmail}
+              initialCcRecipients={ccRecipients}
+              notes={notes}
+              attachments={attachments}
+            />
+          )}
 
-        {status === "OUTCOME" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
-          <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close`, { version }))}>
-            Close
-          </button>
-        )}
+          {status === "OUTCOME" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
+            <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close`, { version }))}>
+              Close -- Resolved
+            </button>
+          )}
 
-        {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
-          <button
-            disabled={busy}
-            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version }))}
-          >
-            &quot;Not a request&quot; close
-          </button>
-        )}
+          {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+            <button
+              disabled={busy}
+              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-withdrawn`, { version }))}
+            >
+              Close -- Withdrawn
+            </button>
+          )}
 
-        {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
-          <button
-            disabled={busy}
-            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }))}
-          >
-            Autoclose (spam / no action needed)
-          </button>
-        )}
+          {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+            <button
+              disabled={busy}
+              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version }))}
+            >
+              Close -- Not a request
+            </button>
+          )}
+
+          {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+            <button
+              disabled={busy}
+              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }))}
+            >
+              Close -- Autoclose (spam / no action needed)
+            </button>
+          )}
+        </div>
       </div>
 
       {canEditMetadata && (status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION" || status === "OUTCOME") && (

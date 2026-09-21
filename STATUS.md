@@ -8,6 +8,61 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Action section grouped + new "Withdrawn" close reason (2026-09-21, continued)
+
+**John: "we need an action section where the operator can determine an
+action including a button to close the ticket after it has been resolved -
+maybe action - closed - Resolved. Closed - withdrawn, and whatever else you
+think."** Two parts, confirmed via AskUserQuestion first since this touches
+a fixed spec enum (`close_reason`) and the project's own rule 4 says stop
+for clarification rather than invent business logic:
+
+1. **UI grouping** (no ambiguity, just built it): the lifecycle-action
+   buttons (Claim/Start action/draft outcome/Close/"Not a request"/
+   Autoclose) were sitting in one unlabeled flex row -- wrapped in a new
+   `<h3>Action</h3>` section, and the four closing buttons relabeled
+   consistently as `Close -- Resolved` / `Close -- Withdrawn` /
+   `Close -- Not a request` / `Close -- Autoclose (...)`.
+2. **New `WITHDRAWN` close reason** -- confirmed with John it should be the
+   exact same shape as the existing `NOT_A_REQUEST`/`AUTOCLOSE` pattern (no
+   outcome email, available from `NEW`/`ALLOCATED`/`IN_ACTION`, no category
+   required, any role) rather than inventing new rules, and confirmed no
+   other reasons are wanted right now. New Postgres migration
+   (`20260921044724_add_withdrawn_close_reason`, `ALTER TYPE close_reason
+   ADD VALUE 'WITHDRAWN'` -- an enum addition, no new table, so the earlier
+   Stage-4 `app_role`-grants gap doesn't apply here). New
+   `POST /api/tickets/[id]/close-withdrawn`, a straight structural copy of
+   `close-autoclose/route.ts` with a new `TICKET_CLOSED_WITHDRAWN` audit
+   action. `lib/archive/render.ts` needed no change -- it already
+   interpolates `closeReason` generically rather than switching on specific
+   values, so `WITHDRAWN` renders correctly in `ticket.txt`/`ticket.xml` for
+   free. `app/instructions/page.tsx` updated in its three relevant spots
+   (lifecycle list, walkthrough, permission matrix) to match.
+
+**One deliberate scope decision, not asked but flagged here**: unlike
+`NOT_A_REQUEST`/`AUTOCLOSE`, a `WITHDRAWN` closure is **not** added to
+`lib/tickets/queries.ts`'s archive-search default-exclusion toggles -- a
+withdrawn ticket was a real HR interaction (unlike spam/non-matters), so it
+stays visible in the default archive search view same as `RESOLVED`. Worth
+confirming with John if he wants it hidden by default too.
+
+**Live-verified against the dev server**: fetched the ticket page HTML and
+confirmed the `Action` heading and all four relabeled buttons render;
+called `close-withdrawn` directly and confirmed the ticket landed
+`CLOSED`/`WITHDRAWN`, the `TICKET_CLOSED_WITHDRAWN` audit row and status-
+history row both wrote correctly; reverted the test ticket back to `NEW`
+afterward (its one `TICKET_CLOSED_WITHDRAWN` audit row was left in place --
+append-only, same as every other test session this date). 176/176 unit
+tests unchanged (no new pure logic -- this route is a structural copy of an
+already-tested pattern), `tsc --noEmit` clean.
+
+**Not yet deployed live** -- same as everything else built today, this
+needs an explicit deploy (git push alone does not ship it -- see the entry
+above), and this one additionally needs the Postgres migration applied to
+the real Azure database before the new route will work there (`npx prisma
+migrate deploy` against `DATABASE_URL`, the migration-role connection
+string, not `APP_DATABASE_URL`).
+
 ## Attachment upload + download features actually deployed live (2026-09-21, continued)
 
 **John reported he still couldn't see the manual-upload feature on the live

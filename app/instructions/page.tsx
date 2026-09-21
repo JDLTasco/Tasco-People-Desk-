@@ -58,8 +58,9 @@ export default async function InstructionsPage() {
           </li>
           <li>
             <strong>CLOSED</strong> -- the matter is finished. A ticket can also reach CLOSED directly from an
-            earlier status via &quot;Not a request&quot; close (spam, wrong address, genuinely not an HR matter) or
-            Autoclose (similar, kept as a separate reason purely so the two can be told apart in reporting).
+            earlier status via &quot;Not a request&quot; close (spam, wrong address, genuinely not an HR matter),
+            Autoclose (similar, kept as a separate reason purely so the two can be told apart in reporting), or
+            Withdrawn (the requester no longer wants it actioned).
           </li>
           <li>
             <strong>ARCHIVED</strong> -- happens automatically, some time after closure, via an overnight job (an
@@ -186,6 +187,7 @@ export default async function InstructionsPage() {
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the requester-facing resolution, tick any requester-visible notes you want included, review the exact email that will send, and confirm.</li>
           <li>Close the ticket.</li>
           <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
+          <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>
         </ol>
       </section>
 
@@ -206,7 +208,7 @@ export default async function InstructionsPage() {
             <tr><td>Edit ticket metadata, category, business unit, priority</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
-            <tr><td>&quot;Not a request&quot; close / Autoclose</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>&quot;Not a request&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Set / clear confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if granted or assigned</td></tr>
             <tr><td>Set / clear legal hold</td><td>Yes</td><td>No</td><td>No</td></tr>
