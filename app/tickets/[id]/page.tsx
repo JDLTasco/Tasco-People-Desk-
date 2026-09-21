@@ -5,6 +5,7 @@ import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { canActOnAssignedTicket } from "@/lib/rbac";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
+import AttachmentForm from "./attachment-form";
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -156,11 +157,13 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                 {a.scanStatus === "BLOCKED" && `blocked (${a.blockReason})`}
                 {a.scanStatus === "MALICIOUS" && "malicious"}
                 {a.scanStatus === "SKIPPED" && "skipped (inline image)"}
+                {a.source === "UPLOAD" && ` -- uploaded by ${a.uploadedBy?.displayName ?? "(unknown)"}`}
                 {/* Download isn't wired yet -- needs real Blob Storage, Stage 7. */}
               </li>
             ))}
           </ul>
         )}
+        <AttachmentForm ticketId={ticket.id} />
       </section>
 
       <section className="section-card">

@@ -32,7 +32,10 @@ export const TICKET_DETAIL_INCLUDE = {
     orderBy: { createdAt: "asc" as const },
     include: { actor: { select: { id: true, displayName: true, initials: true } } },
   },
-  attachments: { orderBy: { createdAt: "asc" as const } },
+  attachments: {
+    orderBy: { createdAt: "asc" as const },
+    include: { uploadedBy: { select: { displayName: true } } },
+  },
   accessGrants: { select: { userId: true } },
   mergedIntoTicket: { select: { id: true, ticketNo: true } },
   mergedFromTickets: { select: { id: true, ticketNo: true } },

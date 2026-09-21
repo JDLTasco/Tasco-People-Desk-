@@ -8,6 +8,89 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Staff manual-upload attachments built; Entra user-add blocked on directory role (2026-09-21)
+
+**John asked how attachments get added to a ticket -- there was no UI for
+it.** Traced it: attachments only ever arrive one way (inbound email via
+Graph ingestion, `source = EMAIL`, `lib/ingestion/process-message.ts`). The
+build spec (§13, `ticket_attachments.source` = EMAIL / UPLOAD,
+`uploaded_by`) always called for a second path -- staff manually attaching a
+file to a ticket -- and the schema/Prisma model already had the columns for
+it, but no route or UI component existed anywhere in the codebase. Confirmed
+by grep, not assumed.
+
+**Built it**, reusing the email path's pieces unchanged rather than a
+parallel implementation: new `POST /api/tickets/[id]/attachments/route.ts`
+(`app/api/tickets/[id]/attachments/route.ts`) takes multipart form-data,
+runs the file through the same `lib/ingestion/attachments.ts`
+`validateAttachment()` (size/extension/magic-byte checks) email attachments
+already use, computes SHA-256, writes to the same `blobStore` at
+`attachments/{ticketId}/manual/{uuid}/{filename}` (a random segment in place
+of email's `message_id`, since an upload has none), and creates the
+`ticket_attachments` row with `source: UPLOAD` and `uploaded_by` set to the
+actor. A `BLOCKED` result gets the same treatment the email path already
+gives it -- a system note on the ticket plus an `ATTACHMENT_BLOCKED` audit
+row -- so "nothing is silently lost" (§7.3.1) holds for both paths
+identically; a successful upload gets its own new `TICKET_ATTACHMENT_UPLOADED`
+audit action (the email path doesn't audit-log a successful attachment
+individually, relying on its parent message's own record -- a manual upload
+has no such parent event, so it needs one). Because the malware-scan
+reconcile job (`app/api/jobs/attachment-scan-reconcile/route.ts`) already
+queries `ticket_attachments` by `scan_status` with no `source` filter, a
+manually uploaded file joins the exact same Defender scan pipeline with
+nothing new to wire.
+
+Access is gated with `loadTicketForViewer()` -- the same confidential-ACL
+check (§9) the export route uses, 404 not 403 for a ticket this user can't
+see. This is stricter than `notes/route.ts`'s bare existence check; chosen
+deliberately for this new write path rather than copying that existing (and
+arguably under-gated) convention.
+
+New client component `app/tickets/[id]/attachment-form.tsx` (file input +
+upload button, mirrors `note-form.tsx`'s structure) wired into the
+Attachments section of `app/tickets/[id]/page.tsx`; that section's list now
+also shows `-- uploaded by {name}` for `UPLOAD`-source rows (`lib/tickets/
+detail.ts`'s `TICKET_DETAIL_INCLUDE` extended to include `uploadedBy`).
+
+**Live-verified against the local dev server and local Docker Postgres**
+(no unit tests added -- this project's own convention is pure-`lib/`-only
+unit coverage, verified live otherwise, and `validateAttachment()` itself is
+unchanged and already fully covered): signed in via the `dev-mock` provider
+as a seeded ADMIN, POSTed a clean `.txt` (landed `PENDING`, correct
+`blob_path`, file confirmed written to `.local-blob-store`) and an `.exe`
+(landed `BLOCKED`/`EXECUTABLE_EXTENSION`, system note + `ATTACHMENT_BLOCKED`
+audit row both confirmed written), then fetched the ticket page and
+confirmed both attachments, the uploader name, and the new upload form all
+render. `npx tsc --noEmit` clean, full suite 176/176 unchanged. Test rows
+and blob files cleaned up afterward (the two `ATTACHMENT_BLOCKED`/
+`TICKET_ATTACHMENT_UPLOADED` audit rows were left in place -- `audit_log` is
+append-only at the database, no DELETE grant for `app_role`, by design).
+**Not yet exercised against real Azure Blob Storage / Defender scanning in
+this session** -- same gap as the email path, see Failing/pending row above.
+
+**Separately, same session: tried to add a new real user (Evan Newell,
+`evan.newell@tascopetroleum.com.au`, requested role ADMIN by John) and hit a
+new class of permission gap.** Looked up his real Entra Object ID via `az ad
+user show` (found), then tried `az ad group member add` to put him in
+`HR-Ticketing-Admins` -- failed, "Insufficient privileges." John then tried
+the same add himself via the Entra admin center portal -- also failed.
+Checked who actually holds the needed directory role: `HR-Ticketing-Admins`
+has no Owners set, so only a **Global Administrator** can add a member, and
+`az rest` against Graph's `directoryRoles` confirmed the only Global Admins
+in this tenant are IT-side accounts (Service Admin, Evan Admin, Guy Admin,
+Phil Admin, `itmildura`/Michael, asi Hein) -- the same Michael who granted
+John's earlier Azure RBAC gap (Key Vault Administrator/Contributor,
+2026-09-19). This is a **different, Entra-directory-level** permission class
+from that earlier one (Azure subscription RBAC), not the same gap
+recurring. Not yet resolved -- Michael needs to either add Evan to the group
+himself, or grant a standing Groups Administrator role so this doesn't need
+him each time. Once Evan is in the group, his `User` row still needs
+creating via Admin -> Users with his real `entraObjectId`
+(`2435ce6d-63ff-42ab-a233-4faec0d8158d`) so his first real sign-in matches
+this row directly rather than needing the identity-relink feature
+afterward -- handed to John as a manual step since no browser tool was
+available this session (declined the Chrome extension).
+
 ## Second jwt-callback bug, real sign-in confirmed, identity relinking + step-up trigger built (2026-09-19, continued)
 
 Re-signing in after the first jwt-callback fix (previous entry) failed
