@@ -8,6 +8,40 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Today's work (Action section/Withdrawn, closing email/AU dates/wording) deployed live (2026-09-21, continued)
+
+**Migrations applied and app redeployed via Azure Cloud Shell, same
+workaround as earlier today.** One new wrinkle found and worked around:
+`TempMigrationAccess` (John's IP, added back in Stage 7) is **gone** from
+the Postgres Flexible Server's firewall rules -- only
+`AllowAllAzureServicesAndResourcesWithinAzureIps` remains, which covers
+Cloud Shell's own IP range but not a direct connection from this machine
+or John's own network. Rather than re-open a firewall rule for John's
+(changing) IP, ran the migration from Cloud Shell too: built a small
+14KB `prisma-migrate.zip` (just `prisma/schema.prisma` +
+`prisma/migrations/`, no need for the full app or `node_modules`),
+uploaded it, then `export DATABASE_URL=$(az keyvault secret show
+--name DATABASE-URL --vault-name kv-tasco-people-desk --query value -o
+tsv)` followed by `npx prisma@6.19.3 migrate deploy` -- both pending
+migrations (`add_withdrawn_close_reason`, `add_closed_resolved_message_type`)
+applied cleanly, confirmed via Prisma's own success output. The
+`DATABASE_URL` secret never left Cloud Shell at any point.
+
+App deploy (`az webapp deploy` with the freshly rebuilt `deploy.zip`,
+same Cloud Shell session) reported `HTTP_504`/`GatewayTimeout` -- **the
+same already-documented red herring this project's history warns about**
+(the CLI's own HTTP client gives up waiting; it does not mean the
+server-side deploy failed). Confirmed via Azure's deployment-history REST
+API directly rather than trusting the CLI: the deploy was still
+`status: 1` (in progress) immediately after the 504, and reached
+`status: 4`/`complete: true` about 5 minutes later
+(`2026-09-21T05:41:38Z`). Confirmed live via `/api/health` ->
+`{"status":"ok"}`. App Service Plan scaled back to B1.
+
+**Everything built today is now live**: the Action section + Withdrawn
+close reason, the automatic Close -- Resolved confirmation email, the
+Australian date format fix, and the updated Allocation email wording.
+
 ## Automated closing email, Australian date format everywhere, Allocation email wording (2026-09-21, continued)
 
 **John, three requests in one message**: (1) send an automatic email when
