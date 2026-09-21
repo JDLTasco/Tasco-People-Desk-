@@ -8,6 +8,44 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Real bug found via the step-up smoke test: missing Entra redirect URI (2026-09-21, continued)
+
+**John ran the step-up smoke test this session's earlier entry asked for**
+(Set legal hold on a real ticket -> 403 + Re-authenticate button -> click
+it). Got a real Azure AD error instead of a sign-in prompt:
+`AADSTS50011: The redirect URI 'https://hr.tascopetroleum.com.au/api/
+auth/callback/azure-ad-step-up' ... does not match the redirect URIs
+configured for the application`.
+
+**Real, previously-undiscovered gap, same class as the two jwt-callback
+bugs found 2026-09-19** -- another thing that could only ever surface via
+a real Azure AD round-trip, never dev-mock. `lib/auth.ts` registers
+`azure-ad` and `azure-ad-step-up` as two NextAuth providers sharing the
+*same* Entra app registration (`clientId`/`clientSecret`/`tenantId`
+identical), differing only in NextAuth's own provider `id` -- but each
+provider id gets its own callback path
+(`/api/auth/callback/<id>`), and only `/api/auth/callback/azure-ad` was
+ever added as a redirect URI on the app registration. The step-up
+provider's own callback path was never registered, so a real step-up
+attempt has been failing at the Entra layer since day one of Stage 2 --
+never caught because this session's smoke test is the very first time
+anyone has actually clicked the (also previously-missing until
+2026-09-19) Re-authenticate button against real Azure AD.
+
+**Fixed directly, no handoff needed this time**: `az ad app show --id
+ea790fc8-aaad-4cf2-a66b-11d9c61c0d7e --query web.redirectUris` confirmed
+only the one redirect URI existed; `az ad app update ... --web-redirect-uris`
+added `https://hr.tascopetroleum.com.au/api/auth/callback/azure-ad-step-up`
+alongside the existing one, confirmed live via a re-read. Unlike the
+Entra *group membership* gap found earlier this session (needs Global
+Administrator, neither John nor I have it), **updating an app
+registration's own redirect URIs only needed the Graph permissions this
+session's `az` login already has** -- worth remembering these are
+different permission classes, not assuming one implies the other.
+
+Asked John to retry the Re-authenticate click now that the fix is live --
+result not yet confirmed, see next entry once he reports back.
+
 ## Today's work (Action section/Withdrawn, closing email/AU dates/wording) deployed live (2026-09-21, continued)
 
 **Migrations applied and app redeployed via Azure Cloud Shell, same
