@@ -8,6 +8,50 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Attachment download route built (2026-09-21, continued)
+
+**Flagged as a known related gap after the upload feature above, then built
+the same session.** The ticket page's Attachments list has said "Download
+isn't wired yet -- needs real Blob Storage, Stage 7" since Stage 3 (before
+attachments even existed for real); Stage 7 has been live since 2026-09-19,
+so nothing was actually still blocking it.
+
+New `GET /api/tickets/[id]/attachments/[attachmentId]/route.ts`. Gated the
+same way as the upload route (`loadTicketForViewer`, 404 not 403 for a
+confidential ticket the viewer can't see) plus an explicit
+`attachment.ticketId !== viewable.id` check so an attachment id from a
+*different* ticket 404s instead of leaking cross-ticket, live-verified.
+**Fail-closed exactly per §7.3.1**: only `scanStatus === "CLEAN"` is
+downloadable -- `PENDING`/`BLOCKED`/`MALICIOUS` return 409 (`conflict()`,
+same helper the legal-hold-blocks-delete route already uses) with the
+reason in the body; `SKIPPED` (inline signature images, never actually
+scanned) is held to the same fail-closed rule even though the spec text
+doesn't name it individually, since it was never a real verdict either.
+Served as `Content-Type: application/octet-stream` with
+`Content-Disposition: attachment` regardless of the file's real type --
+matches how `blob-client.ts`'s `AzureBlobStore.save()` already always
+writes the blob's own content-type metadata, and avoids a scanned-but-
+still-attacker-authored file (an HTML/SVG payload, say) ever rendering
+inline in the viewer's browser. Ticket page's attachment list now links the
+filename to this route only when `CLEAN`, plain text otherwise.
+
+**Live-verified against the dev server**, not just reasoned through:
+uploaded a real file (lands `PENDING`), confirmed the download route
+refuses it 409 with the correct body; flipped `scan_status` to `CLEAN`
+directly in the DB (simulating a real scan verdict, since Defender/Event
+Grid aren't exercised in local dev) and confirmed a 200 with the exact
+original bytes and correct headers; confirmed a nonexistent attachment id
+404s; confirmed an attachment id that's real but belongs to a *different*
+ticket also 404s (not just theorized -- fetched it through the wrong
+ticket's URL and watched it fail); confirmed the ticket page's rendered
+HTML actually contains the real `href` once `CLEAN`. `tsc --noEmit` clean
+(one real fix needed: `Response`'s `BodyInit` typing didn't accept a bare
+`Buffer` the way the pre-existing export route's `Buffer.concat(...)` does
+-- wrapped in `new Uint8Array(...)`, no behavior change). 176/176 unit
+tests unchanged -- no new pure logic, this is orchestration over
+already-tested pieces. Test DB rows and local blob files cleaned up
+afterward.
+
 ## Staff manual-upload attachments built; Entra user-add blocked on directory role (2026-09-21)
 
 **John asked how attachments get added to a ticket -- there was no UI for

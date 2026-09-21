@@ -151,14 +151,18 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           <ul>
             {ticket.attachments.map((a) => (
               <li key={a.id}>
-                {a.filename} ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}
+                {a.scanStatus === "CLEAN" ? (
+                  <a href={`/api/tickets/${ticket.id}/attachments/${a.id}`}>{a.filename}</a>
+                ) : (
+                  a.filename
+                )}{" "}
+                ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}
                 {a.scanStatus === "PENDING" && "scanning"}
                 {a.scanStatus === "CLEAN" && "clean"}
                 {a.scanStatus === "BLOCKED" && `blocked (${a.blockReason})`}
                 {a.scanStatus === "MALICIOUS" && "malicious"}
                 {a.scanStatus === "SKIPPED" && "skipped (inline image)"}
                 {a.source === "UPLOAD" && ` -- uploaded by ${a.uploadedBy?.displayName ?? "(unknown)"}`}
-                {/* Download isn't wired yet -- needs real Blob Storage, Stage 7. */}
               </li>
             ))}
           </ul>
