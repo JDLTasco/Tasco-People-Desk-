@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { canViewAuditLog } from "@/lib/rbac";
 import { getLegalHoldTickets } from "@/lib/tickets/queries";
+import { formatAuDateTime } from "@/lib/format-date";
 
 const TWELVE_MONTHS_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -53,7 +54,7 @@ export default async function LegalHoldsPage() {
                   </td>
                   <td>{h.legalHoldReason}</td>
                   <td>{h.legalHoldSetBy?.displayName ?? "(unknown)"}</td>
-                  <td>{h.legalHoldSetAt?.toLocaleString() ?? "(unknown)"}</td>
+                  <td>{h.legalHoldSetAt ? formatAuDateTime(h.legalHoldSetAt) : "(unknown)"}</td>
                   <td>{overdue ? "OVER 12 MONTHS -- REVIEW" : `${Math.floor(ageMs / (24 * 60 * 60 * 1000))} days`}</td>
                 </tr>
               );

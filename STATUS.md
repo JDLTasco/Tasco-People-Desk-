@@ -8,6 +8,80 @@
 - Blockers / required operator actions: **(updated 2026-09-19, later same day)** (1) **RBAC role assignments: DONE.** (2) **DB migration/seed/app_role password: DONE.** (3) **Event Grid scan-results subscription: DONE.** (4) **§14 Track A (DNS/cert) and Track B (Entra app reg + groups): DONE, wired live this session** — see header. (5) **`main.bicep` has no saved parameters file** — unchanged risk, see prior note: do not run a full `az deployment group create` against this template without addressing this first; prefer targeted CLI calls (as used again this session for the Azure AD app settings). (6) **John's own Azure account data-plane RBAC gap: DONE, resolved same session.** Michael granted `Key Vault Administrator` + `Contributor` and `Storage Blob Data Contributor` at subscription scope; re-verified live (secret set/delete round-trip, container list via `--auth-mode login`). No further RBAC action needed anywhere in this deployment. (7) **DONE: `groupMembershipClaims` set, John's account confirmed in `HR-Ticketing-Admins`.** (8) **DONE: real sign-in confirmed working end to end** (both jwt-callback bugs, see header) — John signed in and landed as ADMIN. (9) **DONE: MANUAL ENTRY label gap fixed** (§15 acceptance test, was failing) — deployed live. (10) **DONE: deploy reliability root-caused** (OOM on B1/B2, B3 works — see header); no code issue. (11) **DONE: step-up trigger wired** (see header) — but not yet smoke-tested against real Azure AD, see Failing/pending row. (12) **DONE: dev-mock users RJ/LF/DN/RGL relinked to their real Entra identities** (Roxanne Jones/Lisa Ferguson/Dianne Nichols/Ross Lake) via the new Admin -> Users identity-relink feature — each verified against real Entra group membership first. (13) Still unconfirmed: whether §14's underlying mailbox migration (`HR_MAILBOX_ID`, Graph ingestion) is actually done — separate from the app registration/groups/DNS work confirmed done this session. (14) Still deferred by John's own choice: the legal-hold/retention-purge §15 tests remain unverified against real matching data — wait for Stage 9 rather than planting fixture data in production now.
 - Recommended next command or task: **smoke-test at least one step-up-gated action live** (e.g. legal hold set/clear, or a user role change) to confirm the new "Re-authenticate" button's `signIn("azure-ad-step-up")` round-trip actually works end to end against real Azure AD — this is the one thing built this session that hasn't been live-verified yet. Also have Roxanne/Lisa/Dianne/Ross each try a real sign-in to confirm the identity relink worked (lands them on their existing account/role, not a fresh duplicate). After that: confirm mailbox/Graph ingestion readiness (Blockers item 13) and set `HR_MAILBOX_ID`/`GRAPH_WEBHOOK_CLIENT_STATE` if ready; re-verify Stage 7's Durability acceptance tests against real data; exercise the attachment-scanning pipeline end-to-end for the first time; when Stage 9 is nominated, plan the legal-hold/retention-purge fixture test; decide whether to permanently bump the App Service Plan tier given the deploy-reliability finding.
 
+## Automated closing email, Australian date format everywhere, Allocation email wording (2026-09-21, continued)
+
+**John, three requests in one message**: (1) send an automatic email when
+a ticket is closed as Resolved; (2) fix date display to Australian format
+(DD/MM/YYYY) across the dashboard/ticket views, explicitly keeping the
+ticket-number date convention untouched; (3) amend the Allocation email's
+"you will receive a further update once this matter has been resolved"
+line to say updates/questions come once the matter has been investigated.
+
+1. **New "Close -- Resolved" confirmation email.** Distinct from the
+   existing OUTCOME email (which already carries the actual resolution
+   content, sent earlier when the ticket moves IN_ACTION -> OUTCOME) --
+   this is a short standardised closing notice sent at the point of final
+   closure: "The HR team considers this matter resolved. If you would like
+   more information, or believe this matter has not been resolved, please
+   reach out to the team and quote this ticket number." New
+   `MessageType.CLOSED_RESOLVED` enum value + migration
+   (`20260921050004_add_closed_resolved_message_type`), new
+   `renderClosedResolvedEmail()` in `lib/email/templates.ts`,
+   `TicketEmailType` widened in `lib/email/send.ts`, wired into
+   `app/api/tickets/[id]/close/route.ts` (same recipients as the OUTCOME
+   email -- requester + cc_recipients -- same fail-safe posture: applied
+   to the DB first via optimistic locking, a delivery failure is a
+   recorded/bannered outcome, never a reason to roll the closure back).
+   Instructions page's walkthrough updated to mention it.
+
+2. **Australian date format (DD/MM/YYYY) enforced everywhere a date is
+   displayed**, replacing every bare `.toLocaleString()` call across the
+   app (8 files: the ticket-detail page, the shared `TicketListTable`
+   dashboard component used by Pool/My Tickets/All Open/Overdue/Closed,
+   and 5 admin screens). **Real root cause, not cosmetic**: a bare
+   `.toLocaleString()` with no locale argument on the *server* (the ticket
+   detail page is a Server Component) uses Node's own default ICU locale
+   (en-US) regardless of who's viewing it -- ticket-detail dates were
+   actually rendering MM/DD/YYYY server-side the whole time, independent
+   of any individual viewer's browser settings. Client-rendered tables
+   (Pool etc.) were at the mercy of each staff member's own browser/OS
+   locale instead -- inconsistent, not guaranteed AU either. Fixed with
+   one new shared, tested helper, `lib/format-date.ts`'s
+   `formatAuDateTime()` (`Intl.DateTimeFormat`/`toLocaleString("en-AU",
+   {...})` with explicit `day/month/year: 2-digit/2-digit/numeric,
+   hour/minute: 2-digit, hour12: true}` options), 2 new unit tests
+   (asserts an unambiguous day-21 date renders `21/09/2026`, not
+   `09/21/2026`). **Deliberately does NOT touch `lib/timezone.ts`** --
+   that module computes the Australia/Melbourne wall-clock date used to
+   *generate* a ticket number (`YYMMDDHHMM`, a stored value), a completely
+   separate concern from display formatting; confirmed by reading it
+   before touching anything, not assumed safe. 178/178 tests (176 + 2
+   new), `tsc` clean.
+
+3. **Allocation email wording changed** ("you will receive further
+   updates and questions once this matter has been investigated" in place
+   of "a further update once this matter has been resolved") --
+   one-line change in `renderAllocationEmail()`; no test asserted the old
+   exact wording, confirmed by checking before editing.
+
+**Live-verified against the dev server**: fetched Pool and the ticket
+detail page and regex-matched real `DD/MM/YYYY, H:MM am/pm` strings in the
+rendered HTML (1 on Pool, 6 on the ticket page); forced the test ticket to
+`OUTCOME` directly in the DB, called `close`, and confirmed the
+`CLOSED_RESOLVED` `ticket_messages` row rendered with the exact requested
+wording, correct subject (`... -- Closed`), tracking note and footer, and
+3 `email_log` `FAILED` attempts recorded with the expected "Graph is not
+configured" dev-environment reason (not a real failure -- the send/retry/
+persistence machinery itself worked correctly end to end; it will actually
+deliver once Graph is live). Test ticket and rows reverted/cleaned up
+afterward.
+
+**Not yet deployed live** -- same as everything else built today, needs an
+explicit deploy, and this one additionally needs the new
+`CLOSED_RESOLVED` migration applied to the real Azure Postgres
+(`npx prisma migrate deploy` against `DATABASE_URL`) before the close
+route will work there without erroring.
+
 ## Action section grouped + new "Withdrawn" close reason (2026-09-21, continued)
 
 **John: "we need an action section where the operator can determine an

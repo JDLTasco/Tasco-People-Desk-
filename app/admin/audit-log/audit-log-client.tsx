@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatAuDateTime } from "@/lib/format-date";
 
 interface Entry {
   id: string;
@@ -85,7 +86,7 @@ export default function AuditLogClient() {
             <tbody>
               {entries.map((e) => (
                 <tr key={e.id}>
-                  <td>{new Date(e.createdAt).toLocaleString()}</td>
+                  <td>{formatAuDateTime(e.createdAt)}</td>
                   <td>{e.ticket?.ticketNo ?? ""}</td>
                   <td>{e.action}</td>
                   <td>

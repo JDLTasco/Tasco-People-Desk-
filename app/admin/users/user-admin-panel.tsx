@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import { formatAuDateTime } from "@/lib/format-date";
 
 type Role = "ADMIN" | "HR_LEAD" | "HR_OFFICER";
 
@@ -221,7 +222,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
                   {u.isActive ? "Active" : "Archived"}
                 </span>
               </td>
-              <td>{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "never"}</td>
+              <td>{u.lastLoginAt ? formatAuDateTime(u.lastLoginAt) : "never"}</td>
               <td>
                 <button
                   type="button"

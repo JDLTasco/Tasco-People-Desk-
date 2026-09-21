@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
+import { formatAuDateTime } from "@/lib/format-date";
 import type { TicketListRow } from "@/lib/tickets/queries";
 
 export default function TicketListTable({ tickets }: { tickets: TicketListRow[] }) {
@@ -45,7 +46,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
               <td>{t.businessUnit?.name ?? <em>none</em>}</td>
               <td>{t.assignee ? `${t.assignee.displayName} (${t.assignee.initials})` : <em>unassigned</em>}</td>
               <td className={overdue ? "overdue" : undefined}>
-                {due.toLocaleString()} {overdue && "-- OVERDUE"}
+                {formatAuDateTime(due)} {overdue && "-- OVERDUE"}
               </td>
             </tr>
           );

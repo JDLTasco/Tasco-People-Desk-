@@ -91,6 +91,13 @@ enum MessageType {
   // manually composing correspondence outside the three defined triggers).
   SLA_ESCALATION
   MANUAL
+  // Added directly with John, 2026-09-21 (not in the original spec): a
+  // short standardised confirmation sent when a ticket is closed via
+  // "Close -- Resolved" (OUTCOME -> CLOSED), distinct from the OUTCOME
+  // email itself -- the outcome email carries the actual resolution
+  // content; this is a separate closing notice sent at the point of
+  // final closure.
+  CLOSED_RESOLVED
 
   @@map("message_type")
 }

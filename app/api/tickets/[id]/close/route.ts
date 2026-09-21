@@ -5,17 +5,23 @@ import { badRequest, conflict, forbidden, notFound } from "@/lib/http-errors";
 import { validateTransition } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
+import { renderClosedResolvedEmail } from "@/lib/email/templates";
+import { sendTicketEmail } from "@/lib/email/send";
+import { threadingForTicket } from "@/lib/email/threading";
 
 interface Body {
   version: number;
 }
 
-// §4: OUTCOME -> CLOSED, "matter resolved," sets closed_at. Reachable in
-// practice only once a ticket has gone through the Stage 5 dispatch-preview
-// flow to reach OUTCOME in the first place -- that flow doesn't exist yet,
-// so this route is exercised against fixture data for now, not real
-// traffic. Built now because the transition itself has no dependency on
-// email being sent (§4's own table lists no guard here beyond role).
+// §4: OUTCOME -> CLOSED, "matter resolved," sets closed_at. Added directly
+// with John, 2026-09-21 (not in the original spec): also sends a short
+// standardised closing-confirmation email to the requester + cc_recipients
+// -- distinct from the OUTCOME email, which already carried the actual
+// resolution content sent when the ticket moved IN_ACTION -> OUTCOME. Same
+// posture as every other outbound send in this app: applied to the DB
+// first via optimistic locking, and only once that succeeds does the email
+// attempt happen; a delivery failure is a recorded, bannered outcome (see
+// lib/email/send.ts), never a reason to roll the closure back.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
   if (ctx instanceof Response) return ctx;
@@ -54,6 +60,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
     actorId: session.user.id,
     correlationId,
   });
+
+  const rendered = renderClosedResolvedEmail({ ticketNo: ticket.ticketNo, displaySubject: ticket.subject });
+  const sendResult = await sendTicketEmail({
+    ticketId: ticket.id,
+    messageType: "CLOSED_RESOLVED",
+    toRecipients: [ticket.requesterEmail],
+    ccRecipients: ticket.ccRecipients,
+    subject: rendered.subject,
+    bodyText: rendered.bodyText,
+    bodyHtml: rendered.bodyHtml,
+    correlationId,
+    sentById: session.user.id,
+    threading: await threadingForTicket(ticket.id),
+  });
+
   await writeAuditLog({
     correlationId,
     actorId: session.user.id,
@@ -62,8 +83,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
     entityId: ticket.id,
     ticketId: ticket.id,
     beforeJson: { status: ticket.status },
-    afterJson: { status: "CLOSED", closeReason: "RESOLVED" },
+    afterJson: { status: "CLOSED", closeReason: "RESOLVED", emailSent: sendResult.ok, emailAttempts: sendResult.attempts },
   });
 
-  return NextResponse.json({ ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }) });
+  return NextResponse.json({
+    ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }),
+    emailSent: sendResult.ok,
+  });
 }

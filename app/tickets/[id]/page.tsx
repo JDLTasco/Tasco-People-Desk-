@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { canActOnAssignedTicket } from "@/lib/rbac";
+import { formatAuDateTime } from "@/lib/format-date";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
@@ -30,13 +31,13 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           LEGAL HOLD -- RETENTION PURGE SUSPENDED
           <br />
           Reason: {ticket.legalHoldReason} -- set by {ticket.legalHoldSetBy?.displayName ?? "(unknown)"} on{" "}
-          {ticket.legalHoldSetAt?.toLocaleString()}
+          {ticket.legalHoldSetAt ? formatAuDateTime(ticket.legalHoldSetAt) : ""}
         </p>
       )}
       {ticket.isConfidential && (
         <p className="banner banner-confidential">
           🔒 Confidential -- set by {ticket.confidentialSetBy?.displayName ?? "(unknown)"} on{" "}
-          {ticket.confidentialSetAt?.toLocaleString()}
+          {ticket.confidentialSetAt ? formatAuDateTime(ticket.confidentialSetAt) : ""}
         </p>
       )}
       {ticket.mergedIntoTicket && (
@@ -77,18 +78,18 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           {ticket.assignee ? `${ticket.assignee.displayName} (${ticket.assignee.initials})` : <em>unassigned</em>}
         </div>
         <div className={overdue ? "overdue" : undefined}>
-          <strong>Due:</strong> {due.toLocaleString()}
+          <strong>Due:</strong> {formatAuDateTime(due)}
           {ticket.targetDueAt && (
             <>
               {" "}
-              (target: {ticket.targetDueAt.toLocaleString()}, reason: {ticket.targetDueReason})
+              (target: {formatAuDateTime(ticket.targetDueAt)}, reason: {ticket.targetDueReason})
             </>
           )}
           {overdue && " -- OVERDUE"}
         </div>
         <div>
           <strong>First viewed:</strong>{" "}
-          {ticket.firstViewedAt ? `${ticket.firstViewedAt.toLocaleString()} by ${ticket.firstViewedBy?.displayName}` : "not yet"}
+          {ticket.firstViewedAt ? `${formatAuDateTime(ticket.firstViewedAt)} by ${ticket.firstViewedBy?.displayName}` : "not yet"}
         </div>
       </section>
 
@@ -136,7 +137,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                 [{m.messageType === "MANUAL" ? "MANUAL ENTRY" : m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]
               </strong>{" "}
               {m.fromName} ({m.fromAddress})
-              -- {(m.receivedAt ?? m.sentAt)?.toLocaleString()}
+              -- {(m.receivedAt ?? m.sentAt) ? formatAuDateTime((m.receivedAt ?? m.sentAt)!) : ""}
             </div>
             <div>{m.subject}</div>
             <div style={{ whiteSpace: "pre-wrap" }}>{m.bodyText}</div>
@@ -177,7 +178,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           <article key={n.id} className="item-card">
             <div>
               <strong>[{n.visibility === "REQUESTER_VISIBLE" ? "NOTE -- REQUESTER-VISIBLE" : "INTERNAL NOTE"}]</strong>{" "}
-              {n.author.displayName} ({n.author.initials}) -- {n.createdAt.toLocaleString()}{" "}
+              {n.author.displayName} ({n.author.initials}) -- {formatAuDateTime(n.createdAt)}{" "}
               {n.supersedesNoteId && <em>(edited)</em>}
             </div>
             <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>
@@ -192,7 +193,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         <ul>
           {ticket.statusHistory.map((h) => (
             <li key={h.id}>
-              {h.createdAt.toLocaleString()}: {h.fromStatus ?? "(created)"} -&gt; {h.toStatus} by {h.actor.displayName}
+              {formatAuDateTime(h.createdAt)}: {h.fromStatus ?? "(created)"} -&gt; {h.toStatus} by {h.actor.displayName}
               {h.reason && ` -- ${h.reason}`}
             </li>
           ))}

@@ -60,7 +60,7 @@ export function renderAllocationEmail(input: AllocationEmailInput): RenderedEmai
   const intro =
     `Your request has been allocated to ${input.assigneeDisplayName} in HR.\n\n` +
     `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}\nExpected response timeframe: ${timeframe}\n\n` +
-    `You will receive a further update once this matter has been resolved.`;
+    `You will receive further updates and questions once this matter has been investigated.`;
   return {
     subject,
     bodyText: `${intro}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`,
@@ -94,6 +94,29 @@ export function renderOutcomeEmail(input: OutcomeEmailInput): RenderedEmail {
   const bodyText = `${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`;
   const bodyHtml = `${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`;
   return { subject, bodyText, bodyHtml };
+}
+
+export interface ClosedResolvedEmailInput {
+  ticketNo: string;
+  displaySubject: string;
+}
+
+// Added directly with John, 2026-09-21 (not in the original spec): a
+// short standardised confirmation sent when a ticket is closed via
+// "Close -- Resolved," separate from the OUTCOME email -- that email
+// already carried the actual resolution content; this is just the
+// formal closing notice, sent at the point of final closure.
+export function renderClosedResolvedEmail(input: ClosedResolvedEmailInput): RenderedEmail {
+  const subject = `[${input.ticketNo}] ${input.displaySubject} -- Closed`;
+  const intro =
+    `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}\n\n` +
+    `The HR team considers this matter resolved. If you would like more information, or believe this matter ` +
+    `has not been resolved, please reach out to the team and quote this ticket number.`;
+  return {
+    subject,
+    bodyText: `${intro}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`,
+    bodyHtml: `${htmlParagraphs(intro)}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`,
+  };
 }
 
 export interface EscalationEmailInput {

@@ -185,7 +185,7 @@ export default async function InstructionsPage() {
           <li>Click <strong>Start action</strong> once you begin working it.</li>
           <li>Use <strong>internal notes</strong> to record progress -- mark a note &quot;requester-visible&quot; only if you want it available later as an option in the outcome email.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the requester-facing resolution, tick any requester-visible notes you want included, review the exact email that will send, and confirm.</li>
-          <li>Close the ticket.</li>
+          <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
           <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>
         </ol>

@@ -1,6 +1,7 @@
 import { getSession } from "@/lib/session";
 import { canSoftDeleteTicket } from "@/lib/rbac";
 import { getDeletedTickets } from "@/lib/tickets/queries";
+import { formatAuDateTime } from "@/lib/format-date";
 
 // §10 "Deletion": "Removed from all views except an ADMIN 'Deleted' view."
 export default async function DeletedTicketsPage() {
@@ -42,7 +43,7 @@ export default async function DeletedTicketsPage() {
                   <td>{t.ticketNo}</td>
                   <td>{t.subject}</td>
                   <td>{t.deletedBy?.displayName ?? "(unknown)"}</td>
-                  <td>{t.deletedAt?.toLocaleString() ?? ""}</td>
+                  <td>{t.deletedAt ? formatAuDateTime(t.deletedAt) : ""}</td>
                   <td>{t.deleteReason}</td>
                 </tr>
               ))}

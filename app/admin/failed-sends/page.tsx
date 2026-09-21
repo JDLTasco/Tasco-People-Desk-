@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { canManageAdminSettings } from "@/lib/rbac";
 import { getFailedSends } from "@/lib/email/failed-sends";
+import { formatAuDateTime } from "@/lib/format-date";
 
 // §7.4: "Failed sends ... surface as ... an entry in the ADMIN failed-sends
 // view." Read-only -- the spec defines no retry/resend action, only
@@ -49,7 +50,7 @@ export default async function FailedSendsPage() {
                 <td>{f.messageType}</td>
                 <td>{f.toRecipients.join(", ")}</td>
                 <td>{f.attempts}</td>
-                <td>{f.lastAttemptAt.toLocaleString()}</td>
+                <td>{formatAuDateTime(f.lastAttemptAt)}</td>
                 <td>{f.lastError}</td>
               </tr>
             ))}
