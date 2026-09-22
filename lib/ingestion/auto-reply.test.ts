@@ -15,9 +15,19 @@ describe("isAutoReply", () => {
     assert.equal(isAutoReply([{ name: "Auto-Submitted", value: "no" }]), false);
   });
 
-  it("true whenever X-Auto-Response-Suppress is present, regardless of value", () => {
-    assert.equal(isAutoReply([{ name: "X-Auto-Response-Suppress", value: "All" }]), true);
-    assert.equal(isAutoReply([{ name: "X-Auto-Response-Suppress", value: "" }]), true);
+  it("false for X-Auto-Response-Suppress alone (Outlook sets this on ordinary outbound mail, not just real auto-replies -- confirmed against real traffic in the 2026-09-23 mailbox smoke test)", () => {
+    assert.equal(isAutoReply([{ name: "X-Auto-Response-Suppress", value: "DR, OOF, AutoReply" }]), false);
+    assert.equal(isAutoReply([{ name: "X-Auto-Response-Suppress", value: "All" }]), false);
+  });
+
+  it("true when both headers are present (Auto-Submitted still decides it)", () => {
+    assert.equal(
+      isAutoReply([
+        { name: "X-Auto-Response-Suppress", value: "All" },
+        { name: "Auto-Submitted", value: "auto-replied" },
+      ]),
+      true,
+    );
   });
 
   it("false when neither header is present", () => {
