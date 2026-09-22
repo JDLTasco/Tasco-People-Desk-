@@ -28,14 +28,21 @@ export async function POST(request: Request) {
     // No body / not JSON -- default to 24h.
   }
 
-  const outcome = await runJob("mailbox-manual-import", async (correlationId) => {
-    const tenantId = process.env.AZURE_AD_TENANT_ID;
-    const clientId = process.env.AZURE_AD_CLIENT_ID;
-    const clientSecret = process.env.AZURE_AD_CLIENT_SECRET;
-    if (!tenantId || !clientId || !clientSecret) {
-      throw new Error("AZURE_AD_TENANT_ID/CLIENT_ID/CLIENT_SECRET must be set for a manual import");
-    }
+  const tenantId = process.env.AZURE_AD_TENANT_ID;
+  const clientId = process.env.AZURE_AD_CLIENT_ID;
+  const clientSecret = process.env.AZURE_AD_CLIENT_SECRET;
+  if (!tenantId || !clientId || !clientSecret) {
+    return NextResponse.json({ error: "AZURE_AD_TENANT_ID/CLIENT_ID/CLIENT_SECRET must be set for a manual import" }, { status: 500 });
+  }
 
+  // Fire-and-forget, same convention as the real webhook
+  // (app/api/graph/notifications) -- a full mailbox import (real Graph
+  // fetches + attachment blob writes per message) can easily exceed the
+  // platform's ~230s front-end gateway timeout, confirmed 2026-09-23 when a
+  // synchronous run got its response truncated mid-transfer. Poll job_runs
+  // (job_name = 'mailbox-manual-import') for the real outcome rather than
+  // trusting this response.
+  void runJob("mailbox-manual-import", async (correlationId) => {
     const client = new GraphApiClient(tenantId, clientId, clientSecret, SMOKE_TEST_MAILBOX);
     const sinceIso = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
     const messages = await client.listInboxSince(sinceIso);
@@ -72,5 +79,5 @@ export async function POST(request: Request) {
     return { mailbox: SMOKE_TEST_MAILBOX, sinceHours, processed: messages.length, created, threaded, suppressed, ignored, duplicate, createdTicketNos };
   });
 
-  return NextResponse.json(outcome);
+  return NextResponse.json({ accepted: true, sinceHours, note: "Processing in the background -- poll job_runs (job_name='mailbox-manual-import') for the result." }, { status: 202 });
 }

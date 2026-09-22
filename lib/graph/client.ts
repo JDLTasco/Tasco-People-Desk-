@@ -168,17 +168,29 @@ export class GraphApiClient implements GraphClient {
   }
 
   async listInboxSince(sinceIso: string): Promise<NormalizedMessage[]> {
-    const messages: NormalizedMessage[] = [];
+    // Listed as id-only, then fetched one at a time via getMessage() --
+    // a single combined $expand=attachments list call over a whole day's
+    // messages can produce a many-MB response that real-world testing
+    // (2026-09-23 mailbox smoke test) showed is not reliably deliverable
+    // in one shot ("Unterminated string in JSON", a truncated response
+    // body). Many small requests are slower but far more robust than one
+    // huge one.
+    const ids: string[] = [];
     const filter = encodeURIComponent(`receivedDateTime ge ${sinceIso}`);
     let path: string | null =
       `/users/${encodeURIComponent(this.mailboxId)}/mailFolders/inbox/messages` +
-      `?$filter=${filter}&$select=${MESSAGE_SELECT}&$expand=attachments&$top=50`;
+      `?$filter=${filter}&$select=id&$top=50`;
     while (path) {
-      const data: { value: GraphMessageResource[]; "@odata.nextLink"?: string } = await this.graphFetch(
+      const data: { value: { id: string }[]; "@odata.nextLink"?: string } = await this.graphFetch(
         path.startsWith("http") ? path.replace("https://graph.microsoft.com/v1.0", "") : path,
       );
-      messages.push(...data.value.map(normalizeGraphMessage));
+      ids.push(...data.value.map((m) => m.id));
       path = data["@odata.nextLink"] ?? null;
+    }
+
+    const messages: NormalizedMessage[] = [];
+    for (const id of ids) {
+      messages.push(await this.getMessage(id));
     }
     return messages;
   }
