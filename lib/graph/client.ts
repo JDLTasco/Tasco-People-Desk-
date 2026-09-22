@@ -41,6 +41,8 @@ export interface GraphClient {
   getMessage(messageId: string): Promise<NormalizedMessage>;
   /** §7.2: delta query against the inbox. Pass the previous run's deltaLink to resume; omit for a full initial sync. */
   listInboxDelta(deltaLink?: string): Promise<DeltaResult>;
+  /** One-off, time-filtered read for a manual/operator-triggered import (not the real-time §7.2 delta poller, and does not touch graph_delta_state) -- see app/api/jobs/mailbox-manual-import/route.ts. */
+  listInboxSince(sinceIso: string): Promise<NormalizedMessage[]>;
   createSubscription(notificationUrl: string, clientState: string): Promise<SubscriptionResult>;
   renewSubscription(subscriptionId: string): Promise<{ expiresAt: Date }>;
   /** §7.4: sends from the shared HR mailbox via Graph's sendMail action. Throws on any non-2xx response -- the caller (lib/email/send.ts) owns retry/backoff. */
@@ -163,6 +165,22 @@ export class GraphApiClient implements GraphClient {
       messages: data.value.map(normalizeGraphMessage),
       deltaLink: data["@odata.deltaLink"] ?? "",
     };
+  }
+
+  async listInboxSince(sinceIso: string): Promise<NormalizedMessage[]> {
+    const messages: NormalizedMessage[] = [];
+    const filter = encodeURIComponent(`receivedDateTime ge ${sinceIso}`);
+    let path: string | null =
+      `/users/${encodeURIComponent(this.mailboxId)}/mailFolders/inbox/messages` +
+      `?$filter=${filter}&$select=${MESSAGE_SELECT}&$expand=attachments&$top=50`;
+    while (path) {
+      const data: { value: GraphMessageResource[]; "@odata.nextLink"?: string } = await this.graphFetch(
+        path.startsWith("http") ? path.replace("https://graph.microsoft.com/v1.0", "") : path,
+      );
+      messages.push(...data.value.map(normalizeGraphMessage));
+      path = data["@odata.nextLink"] ?? null;
+    }
+    return messages;
   }
 
   async createSubscription(notificationUrl: string, clientState: string): Promise<SubscriptionResult> {
