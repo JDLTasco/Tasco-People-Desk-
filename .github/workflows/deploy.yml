@@ -1,0 +1,122 @@
+# Stage 8 (§16) CI/CD: every push to main is tested, built and deployed to
+# the live App Service -- a git push now ships to production by itself, no
+# Cloud Shell step. Built here on GitHub's runner rather than by Oryx on the
+# App Service, which only built reliably on a temporarily scaled-up B3 plan
+# (the build shares RAM with the running app; see STATUS.md). Runners are
+# also outside Tasco's network, so none of the Sophos/gateway workarounds in
+# §2.2 apply here.
+#
+# Auth is OIDC (§2 CI/CD row): GitHub proves "I am a workflow on main of
+# JDLTasco/Tasco-People-Desk-" to Entra, which trusts that via a federated
+# credential on the deploy identity -- no password or publish profile is
+# stored in GitHub. The three AZURE_* secrets are identifiers, not keys.
+#
+# Database migrations are NOT run here: the startup command below applies
+# them (`prisma migrate deploy`, forward-only, §0.1.7) each time the app
+# starts, using the DATABASE_URL the App Service already resolves from Key
+# Vault -- so the migration-role secret never leaves Azure.
+
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # lets azure/login request the OIDC token
+  contents: read
+
+# Never run two production deploys at once; a newer push waits its turn.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  APP_NAME: tasco-people-desk
+  RESOURCE_GROUP: rg-tasco-people-desk
+  HEALTH_URL: https://hr.tascopetroleum.com.au/api/health
+  # Mirrors appCommandLine in infra/modules/appservice.bicep -- keep the two
+  # identical. Direct node paths rather than node_modules/.bin shims, which
+  # don't survive being zipped reliably.
+  STARTUP_COMMAND: node node_modules/prisma/build/index.js migrate deploy && node node_modules/next/dist/bin/next start -p 8080
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 20 matches the App Service runtime (NODE|20-lts). The runner's
+      # Linux/OpenSSL 3 platform also matches the App Service's Debian
+      # bookworm image, so Prisma's native engines built here run there.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      # Node 20's test runner doesn't expand globs itself, and sh's `**`
+      # only matches one directory level -- list the files explicitly.
+      - name: Unit tests
+        run: node --import tsx --test $(find lib -name '*.test.ts')
+
+      # next build also type-checks and lints. NEXT_PUBLIC_* values are
+      # inlined into the browser bundle at build time, so they must be
+      # present here, not just as App Service settings. The tenant ID is
+      # not a secret (§0.1.8).
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_AZURE_AD_TENANT_ID: 4c3e104b-5608-49e2-abbc-0b80db009955
+
+      # Drop build-only tooling. prisma (the CLI) is a production dependency
+      # because the startup command runs migrations with it.
+      - run: npm prune --omit=dev
+
+      - name: Package
+        run: zip -r -q release.zip . -x '.git/*' '.github/*' '.next/cache/*'
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # The package is already built, so Oryx must not rebuild it, and the
+      # startup command must run migrations first. Only writes a setting if
+      # it differs, since every write restarts the app.
+      - name: Ensure App Service config
+        run: |
+          current_cmd=$(az webapp config show -g "$RESOURCE_GROUP" -n "$APP_NAME" --query appCommandLine -o tsv)
+          if [ "$current_cmd" != "$STARTUP_COMMAND" ]; then
+            echo "Updating startup command"
+            az webapp config set -g "$RESOURCE_GROUP" -n "$APP_NAME" --startup-file "$STARTUP_COMMAND" --output none
+          fi
+          current_build=$(az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+            --query "[?name=='SCM_DO_BUILD_DURING_DEPLOYMENT'].value | [0]" -o tsv)
+          if [ "$current_build" != "false" ]; then
+            echo "Turning off Oryx remote build"
+            az webapp config appsettings set -g "$RESOURCE_GROUP" -n "$APP_NAME" \
+              --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false --output none
+          fi
+
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.APP_NAME }}
+          package: release.zip
+
+      # The deploy step returning isn't proof the site is up -- the app
+      # still has to restart and apply any migrations. Wait for a real 200.
+      - name: Wait for health check
+        run: |
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$HEALTH_URL" || true)
+            echo "Attempt $i: HTTP $code"
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 15
+          done
+          echo "Site did not report healthy within 10 minutes -- check App Service log stream."
+          exit 1
