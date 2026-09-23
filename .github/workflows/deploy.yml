@@ -86,7 +86,7 @@ jobs:
           app-name: ${{ env.APP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: release.zip
-     
+          clean: true
       # The deploy step returning isn't proof the site is up -- the app
       # still has to restart and apply any migrations. Wait for a real 200.
       - name: Wait for health check
