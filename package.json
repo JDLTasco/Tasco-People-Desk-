@@ -25,6 +25,7 @@
     "html-to-text": "^10.0.1",
     "next": "14.2.35",
     "next-auth": "^4.24.15",
+    "prisma": "6.19.3",
     "react": "^18",
     "react-dom": "^18"
   },
@@ -36,7 +37,6 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
-    "prisma": "6.19.3",
     "tailwindcss": "^3.4.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.13",

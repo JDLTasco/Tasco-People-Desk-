@@ -45,14 +45,20 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
       // real mechanism. Declared here so a template redeploy can't
       // silently drop it and take the live site back to serving Azure's
       // default page (found live, Stage 7, 2026-09-16).
-      appCommandLine: 'next start -p 8080'
+      // Stage 8: migrations run first on every start (forward-only,
+      // §0.1.7), then Next.js. Direct node paths because the package is
+      // pre-built by GitHub Actions and .bin shims don't survive zipping.
+      // Keep identical to STARTUP_COMMAND in .github/workflows/deploy.yml.
+      appCommandLine: 'node node_modules/prisma/build/index.js migrate deploy && node node_modules/next/dist/bin/next start -p 8080'
       alwaysOn: true
       minTlsVersion: '1.2'
       ftpsState: 'Disabled'
       appSettings: [
         { name: 'NODE_ENV', value: 'production' }
         { name: 'WEBSITE_NODE_DEFAULT_VERSION', value: '~20' }
-        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'true' }
+        // Stage 8: GitHub Actions deploys an already-built package, so
+        // Oryx must not rebuild it on the App Service.
+        { name: 'SCM_DO_BUILD_DURING_DEPLOYMENT', value: 'false' }
         { name: 'NEXTAUTH_URL', value: nextAuthUrl }
         { name: 'AZURE_STORAGE_ACCOUNT_NAME', value: storageAccountName }
         { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
