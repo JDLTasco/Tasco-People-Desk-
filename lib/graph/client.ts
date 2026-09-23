@@ -1,3 +1,4 @@
+import { emailHtmlToText } from "../email/html-to-text";
 import type { NormalizedMessage } from "./message-types";
 
 export interface DeltaResult {
@@ -71,7 +72,12 @@ interface GraphMessageResource {
   }[];
 }
 
+// bodyText is populated at ingestion (lib/email/html-to-text.ts's
+// emailHtmlToText -- see its own doc comment for the real bug this fixes,
+// 2026-09-23) -- bodyHtml is still kept verbatim for the archive/
+// outcome-email paths that want the original markup.
 function normalizeGraphMessage(msg: GraphMessageResource): NormalizedMessage {
+  const bodyHtml = msg.body?.content ?? "";
   return {
     graphMessageId: msg.id,
     internetMessageId: msg.internetMessageId,
@@ -81,8 +87,8 @@ function normalizeGraphMessage(msg: GraphMessageResource): NormalizedMessage {
     toRecipients: (msg.toRecipients ?? []).map((r) => r.emailAddress?.address ?? "").filter(Boolean),
     ccRecipients: (msg.ccRecipients ?? []).map((r) => r.emailAddress?.address ?? "").filter(Boolean),
     subject: msg.subject ?? "",
-    bodyHtml: msg.body?.content ?? "",
-    bodyText: "", // sanitised/derived at render time (§7.3) -- not needed from Graph directly
+    bodyHtml,
+    bodyText: emailHtmlToText(bodyHtml),
     receivedAt: new Date(msg.receivedDateTime),
     internetMessageHeaders: msg.internetMessageHeaders ?? [],
     attachments: (msg.attachments ?? [])

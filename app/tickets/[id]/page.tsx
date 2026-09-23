@@ -4,6 +4,7 @@ import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { canActOnAssignedTicket } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
+import { messageDisplayText } from "@/lib/email/html-to-text";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
@@ -141,7 +142,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
               -- {(m.receivedAt ?? m.sentAt) ? formatAuDateTime((m.receivedAt ?? m.sentAt)!) : ""}
             </div>
             <div>{m.subject}</div>
-            <div style={{ whiteSpace: "pre-wrap" }}>{m.bodyText}</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>{messageDisplayText(m)}</div>
           </article>
         ))}
       </section>

@@ -2,6 +2,7 @@
 // builders -- no I/O, no Prisma types beyond ArchiveTicket's shape -- so
 // both are independently unit-testable against fixture data.
 import type { ArchiveTicket } from "./load";
+import { messageDisplayText } from "../email/html-to-text";
 
 function fmt(d: Date | null | undefined): string {
   return d ? d.toISOString() : "(not set)";
@@ -29,7 +30,7 @@ function buildThread(ticket: ArchiveTicket): ThreadEntry[] {
     timestamp: (m.direction === "INBOUND" ? m.receivedAt : m.sentAt) ?? new Date(0),
     label: messageLabel(m),
     author: m.direction === "INBOUND" ? `${m.fromName ?? ""} <${m.fromAddress}>`.trim() : m.fromAddress,
-    content: m.bodyText ?? "",
+    content: messageDisplayText(m),
     edited: false,
   }));
   const noteEntries: ThreadEntry[] = ticket.notes.map((n) => ({

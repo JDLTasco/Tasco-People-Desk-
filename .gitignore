@@ -35,8 +35,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# scripts/build-deploy-zip.mjs output -- a build artifact, never committed
+# scripts/build-deploy-zip.mjs / build-migrate-zip.mjs output -- build artifacts, never committed
 deploy.zip
+prisma-migrate.zip
 
 # az webapp log download output / scratch diagnostics -- never committed
 weblogs.zip
