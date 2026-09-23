@@ -78,36 +78,15 @@ jobs:
 
       - name: Package
         run: zip -r -q release.zip . -x '.git/*' '.github/*' '.next/cache/*'
-
-      - uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # The package is already built, so Oryx must not rebuild it, and the
-      # startup command must run migrations first. Only writes a setting if
-      # it differs, since every write restarts the app.
-      - name: Ensure App Service config
-        run: |
-          current_cmd=$(az webapp config show -g "$RESOURCE_GROUP" -n "$APP_NAME" --query appCommandLine -o tsv)
-          if [ "$current_cmd" != "$STARTUP_COMMAND" ]; then
-            echo "Updating startup command"
-            az webapp config set -g "$RESOURCE_GROUP" -n "$APP_NAME" --startup-file "$STARTUP_COMMAND" --output none
-          fi
-          current_build=$(az webapp config appsettings list -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-            --query "[?name=='SCM_DO_BUILD_DURING_DEPLOYMENT'].value | [0]" -o tsv)
-          if [ "$current_build" != "false" ]; then
-            echo "Turning off Oryx remote build"
-            az webapp config appsettings set -g "$RESOURCE_GROUP" -n "$APP_NAME" \
-              --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false --output none
-          fi
-
+# TEMPORARY (2026-09-24): publish-profile auth, same as Tasco BSC,
+      # until IT grants the OIDC deploy identity Website Contributor.
+      # Stores a deploy credential in GitHub -- recorded spec deviation.
       - uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.APP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: release.zip
-
+     
       # The deploy step returning isn't proof the site is up -- the app
       # still has to restart and apply any migrations. Wait for a real 200.
       - name: Wait for health check
