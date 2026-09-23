@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { canManageAdminSettings, canViewAuditLog } from "@/lib/rbac";
 import SignOutButton from "./SignOutButton";
+import ThemeToggle from "./ThemeToggle";
+import RefreshButton from "./RefreshButton";
 
 // §13's view list. Archive Search (full-text over archive artefacts,
 // Stage 6) isn't linked yet -- Closed here is a lighter-weight history
@@ -34,6 +36,8 @@ export default async function NavBar() {
       <span className="nav-spacer">
         {session.user.name} ({session.user.role})
       </span>
+      <RefreshButton />
+      <ThemeToggle />
       <SignOutButton />
     </nav>
   );

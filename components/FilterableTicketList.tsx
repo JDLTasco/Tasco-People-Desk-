@@ -112,7 +112,7 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
           </button>
         )}
       </div>
-      <p style={{ fontSize: "0.85rem", color: "#666" }}>
+      <p className="text-muted">
         {filtered.length} of {tickets.length} ticket{tickets.length === 1 ? "" : "s"}
       </p>
       <TicketListTable tickets={filtered} />

@@ -21,6 +21,57 @@
   --tasco-amber-pale: #fff3cd;
   --ink: #1a1a1a;
   --border: #e2e2e2;
+  --bg: #fff;
+  --surface: #fff;
+  --surface-alt: #fafbfd;
+  --input-border: #ccc;
+  --label-color: #444;
+  --muted: #666;
+  --chip-allocated-bg: #eef2ff;
+  --chip-allocated-ink: #3730a3;
+  --chip-closed-bg: #f0f0f0;
+  --chip-closed-ink: #555;
+  --chip-archived-bg: #f0f0f0;
+  --chip-archived-ink: #888;
+  --chip-outcome-bg: #f3e8ff;
+  --chip-outcome-ink: #6b21a8;
+  color-scheme: light;
+}
+
+/* Dark theme (§13, added 2026-09-23): toggled via ThemeToggle setting
+   data-theme on <html>, persisted per-browser in localStorage -- not a
+   forced default, since this app is shared by 5 HR staff and not everyone
+   wants it. Every background/ink value above is overridden here rather
+   than relying on a blanket filter, so real content (chips, banners,
+   brand colours) stays legible and on-brand instead of just inverted. */
+:root[data-theme="dark"] {
+  --tasco-navy: #6d94d1;
+  --tasco-navy-hover: #8aabdd;
+  --tasco-navy-light: #b9c9e6;
+  --tasco-navy-pale: #1c2733;
+  --tasco-red: #f2867f;
+  --tasco-red-pale: #3a2020;
+  --tasco-green: #6fcf8e;
+  --tasco-green-pale: #1c3324;
+  --tasco-amber: #e3ac5f;
+  --tasco-amber-pale: #3a2e15;
+  --ink: #e6e8eb;
+  --border: #3a3f48;
+  --bg: #14171c;
+  --surface: #1c2027;
+  --surface-alt: #20252d;
+  --input-border: #4a5058;
+  --label-color: #aab0b8;
+  --muted: #9098a3;
+  --chip-allocated-bg: #23283f;
+  --chip-allocated-ink: #b3bdf5;
+  --chip-closed-bg: #2a2e34;
+  --chip-closed-ink: #b8bec6;
+  --chip-archived-bg: #24272c;
+  --chip-archived-ink: #8a9099;
+  --chip-outcome-bg: #2c2138;
+  --chip-outcome-ink: #cfa9f0;
+  color-scheme: dark;
 }
 
 * {
@@ -29,9 +80,14 @@
 
 body {
   color: var(--ink);
-  background: #fff;
+  background: var(--bg);
   font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   margin: 0;
+}
+
+.text-muted {
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 a {
@@ -139,7 +195,7 @@ th {
   letter-spacing: 0.04em;
 }
 tr:hover td {
-  background: #fafbfd;
+  background: var(--surface-alt);
 }
 
 /* Forms */
@@ -147,10 +203,12 @@ input,
 select,
 textarea {
   padding: 0.45rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--input-border);
   border-radius: 5px;
   font-size: 0.9rem;
   font-family: inherit;
+  background: var(--surface);
+  color: var(--ink);
 }
 input:focus,
 select:focus,
@@ -161,7 +219,7 @@ textarea:focus {
 }
 label {
   font-size: 0.85rem;
-  color: #444;
+  color: var(--label-color);
 }
 
 /* Buttons */
@@ -183,7 +241,7 @@ button:disabled {
   cursor: default;
 }
 button.secondary {
-  background: #fff;
+  background: var(--surface);
   color: var(--tasco-navy);
 }
 button.secondary:hover:not(:disabled) {
@@ -200,11 +258,11 @@ button.secondary:hover:not(:disabled) {
   white-space: nowrap;
 }
 .chip-status-NEW { background: var(--tasco-navy-pale); color: var(--tasco-navy); }
-.chip-status-ALLOCATED { background: #eef2ff; color: #3730a3; }
+.chip-status-ALLOCATED { background: var(--chip-allocated-bg); color: var(--chip-allocated-ink); }
 .chip-status-IN_ACTION { background: var(--tasco-amber-pale); color: var(--tasco-amber); }
-.chip-status-OUTCOME { background: #f3e8ff; color: #6b21a8; }
-.chip-status-CLOSED { background: #f0f0f0; color: #555; }
-.chip-status-ARCHIVED { background: #f0f0f0; color: #888; }
+.chip-status-OUTCOME { background: var(--chip-outcome-bg); color: var(--chip-outcome-ink); }
+.chip-status-CLOSED { background: var(--chip-closed-bg); color: var(--chip-closed-ink); }
+.chip-status-ARCHIVED { background: var(--chip-archived-bg); color: var(--chip-archived-ink); }
 
 .chip-priority-P1 { background: var(--tasco-red-pale); color: var(--tasco-red); }
 .chip-priority-P2 { background: var(--tasco-amber-pale); color: var(--tasco-amber); }
@@ -251,7 +309,8 @@ button.secondary:hover:not(:disabled) {
   z-index: 100;
 }
 .modal {
-  background: #fff;
+  background: var(--surface);
+  color: var(--ink);
   max-width: 40rem;
   width: 100%;
   margin-top: 0;
@@ -285,14 +344,14 @@ button.secondary:hover:not(:disabled) {
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
 }
 .item-card {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.6rem 0.75rem;
   margin-bottom: 0.5rem;
-  background: #fafbfd;
+  background: var(--surface-alt);
 }
 .meta-grid {
   display: flex;
@@ -319,7 +378,7 @@ button.secondary:hover:not(:disabled) {
   width: 100%;
   max-width: 440px;
   margin: 2rem;
-  background: #fff;
+  background: var(--surface);
   border-radius: 10px;
   box-shadow: 0 4px 24px rgba(27, 58, 107, 0.12);
   overflow: hidden;
@@ -343,14 +402,34 @@ button.secondary:hover:not(:disabled) {
   padding: 1.5rem;
 }
 
-/* Print */
+/* Nav icon buttons (theme toggle, refresh) */
+.nav-icon-btn {
+  background: transparent;
+  border: 1px solid var(--tasco-navy-light);
+  color: var(--tasco-navy-light);
+  padding: 0.3rem 0.55rem;
+  font-size: 0.85rem;
+  border-radius: 5px;
+  line-height: 1;
+}
+.nav-icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* Print -- always light, regardless of the active on-screen theme */
 @media print {
   .main-nav,
   .no-print {
     display: none !important;
   }
+  :root {
+    color-scheme: light;
+  }
   body {
     font-size: 11px;
+    background: #fff !important;
+    color: #1a1a1a !important;
   }
   table {
     font-size: 10px;
