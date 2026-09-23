@@ -207,6 +207,7 @@ model User {
   messagesSent            TicketMessage[]      @relation("MessageSentBy")
   notesAuthored           TicketNote[]         @relation("NoteAuthor")
   attachmentsUploaded     TicketAttachment[]   @relation("AttachmentUploadedBy")
+  attachmentsRemoved      TicketAttachment[]   @relation("AttachmentRemovedBy")
   statusHistoryActed      TicketStatusHistory[] @relation("StatusHistoryActor")
   ticketAccessGranted     TicketAccess[]       @relation("TicketAccessGrantedBy")
   ticketAccessGrants      TicketAccess[]       @relation("TicketAccessUser")
@@ -389,10 +390,20 @@ model TicketAttachment {
   blockReason         String?          @map("block_reason")
   uploadedById        String?          @map("uploaded_by") @db.Uuid
   createdAt           DateTime         @default(now()) @map("created_at")
+  // Soft-delete only, same posture as Ticket.isDeleted -- the row and its
+  // blob artefact are never actually removed by this action (only the
+  // retention-purge job hard-deletes), so a removal is always reversible
+  // and always leaves a trail. Added 2026-09-23 so officers can clear out
+  // decorative inline images and correct mistaken uploads without losing
+  // the audit record of what was there and who took it off.
+  removedAt           DateTime?        @map("removed_at")
+  removedById         String?          @map("removed_by") @db.Uuid
+  removeReason        String?          @map("remove_reason")
 
   ticket     Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   message    TicketMessage? @relation(fields: [messageId], references: [id])
   uploadedBy User?          @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+  removedBy  User?          @relation("AttachmentRemovedBy", fields: [removedById], references: [id])
 
   @@index([ticketId])
   @@map("ticket_attachments")

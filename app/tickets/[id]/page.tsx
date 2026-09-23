@@ -7,6 +7,7 @@ import { formatAuDateTime } from "@/lib/format-date";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
+import AttachmentRemoveForm from "./attachment-remove-form";
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -162,8 +163,15 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                 {a.scanStatus === "CLEAN" && "clean"}
                 {a.scanStatus === "BLOCKED" && `blocked (${a.blockReason})`}
                 {a.scanStatus === "MALICIOUS" && "malicious"}
+                {/* SKIPPED (inline signature/footer images) are no longer stored at all
+                    (2026-09-23) -- this branch is dead for anything ingested from now on,
+                    kept only so any already-stored SKIPPED row from before the fix still
+                    renders sensibly instead of blank. */}
                 {a.scanStatus === "SKIPPED" && "skipped (inline image)"}
                 {a.source === "UPLOAD" && ` -- uploaded by ${a.uploadedBy?.displayName ?? "(unknown)"}`}
+                {canEditMetadata && !ticket.isLegalHold && (
+                  <AttachmentRemoveForm ticketId={ticket.id} attachmentId={a.id} filename={a.filename} />
+                )}
               </li>
             ))}
           </ul>

@@ -33,6 +33,7 @@ export const TICKET_DETAIL_INCLUDE = {
     include: { actor: { select: { id: true, displayName: true, initials: true } } },
   },
   attachments: {
+    where: { removedAt: null },
     orderBy: { createdAt: "asc" as const },
     include: { uploadedBy: { select: { displayName: true } } },
   },

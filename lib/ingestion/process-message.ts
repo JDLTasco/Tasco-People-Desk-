@@ -35,6 +35,17 @@ async function storeAttachments(
 ): Promise<void> {
   for (const att of message.attachments) {
     const validation = validateAttachment(att);
+
+    // SKIPPED (§7.3.1's "inline images under 10KB. Ignored") means exactly
+    // that -- ignored, not stored-but-hidden. Found 2026-09-23: this loop
+    // used to store and create a ticket_attachments row for these anyway
+    // (just labelled SKIPPED), so every email signature/footer logo still
+    // cluttered the ticket's attachments panel. "Nothing is silently lost"
+    // (the reason BLOCKED attachments *are* still stored) doesn't apply
+    // here -- a decorative inline image was never something a human
+    // attached in the first place, there's nothing of substance to lose.
+    if (validation.scanStatus === "SKIPPED") continue;
+
     const sha256 = createHash("sha256").update(att.content).digest("hex");
     // Stored regardless of outcome -- "nothing is silently lost" (§7.3.1)
     // applies to blocked attachments too; scan_status/download-ability

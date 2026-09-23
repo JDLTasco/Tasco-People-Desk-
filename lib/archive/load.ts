@@ -23,7 +23,7 @@ export const ARCHIVE_TICKET_INCLUDE = {
     orderBy: { createdAt: "asc" as const },
     include: { actor: { select: { displayName: true } } },
   },
-  attachments: { orderBy: { createdAt: "asc" as const } },
+  attachments: { where: { removedAt: null }, orderBy: { createdAt: "asc" as const } },
 } as const;
 
 export type ArchiveTicket = NonNullable<Awaited<ReturnType<typeof loadTicketForArchive>>>;
