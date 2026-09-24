@@ -42,7 +42,9 @@ John: attachments can't be viewed or opened. **Root cause (checked live, not ass
 
 **Code change so existing attachments can recover**: `canApplyVerdict()` in `lib/scan/verdict.ts` -- PENDING accepts any verdict (unchanged); **BLOCKED/SCAN_TIMEOUT may now be replaced by a later *real* Defender verdict** (never by another timeout). MALICIOUS, CLEAN, SCAN_UNAVAILABLE and every other block reason stay final; still fail-closed (only a real CLEAN makes a file downloadable); every change audit-logged with its true before-state. `attachment-scan-reconcile` now also re-checks SCAN_TIMEOUT attachments' blob index tags and only times out PENDING ones. Without this, every attachment that already timed out would have stayed locked forever even after scanning was enabled. 194/194 tests (4 new), tsc/lint clean.
 
-**Still to do after John enables scanning**: rescan the blobs already stored (on-upload scanning only covers new uploads), then confirm attachments flip to CLEAN on the reconcile job's next 15-minute run.
+**Enabling blocked, same day**: John's Cloud Shell PUT to `defenderForStorageSettings/current` returned `malwareScanning.onUpload.isEnabled: false` with `operationStatus.code: MissingPermissions` -- Defender must create a role assignment for its scanner, and John's RBAC Administrator grant is ABAC-limited to KV Secrets User/Officer + Storage Blob Data Contributor (same restriction that blocked the deploy SP's Website Contributor). Settings otherwise saved (`isEnabled: true`, `overrideSubscriptionLevelSettings: true`), scanning still off. **Now with Michael (IT)**, combined into one request with the Website Contributor grant. Until then: open attachments from the hrtickets@ mailbox in Outlook.
+
+**Still to do after scanning is enabled**: rescan the blobs already stored (on-upload scanning only covers new uploads), then confirm attachments flip to CLEAN on the reconcile job's next 15-minute run.
 
 ## Second mailbox manual import, last 24h (2026-09-24)
 
