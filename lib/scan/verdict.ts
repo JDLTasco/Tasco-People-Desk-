@@ -33,6 +33,25 @@ export function mapDefenderVerdict(raw: string): RawScanVerdict | null {
 }
 
 /**
+ * Whether a newly arrived verdict may replace the attachment's current
+ * status. PENDING always may. The one terminal status that may be replaced
+ * is BLOCKED/SCAN_TIMEOUT, and only by a real Defender verdict (never by
+ * another timeout): a timeout means "no answer arrived in time", not "this
+ * file is unsafe" -- found live 2026-09-24, when Defender malware scanning
+ * had never been switched on, so every real attachment timed out and could
+ * never be opened even after scanning was enabled. MALICIOUS, CLEAN and
+ * SCAN_UNAVAILABLE are real verdicts and stay final. Still fail-closed: the
+ * file only becomes downloadable if the real verdict is CLEAN.
+ */
+export function canApplyVerdict(
+  current: { scanStatus: ScanStatus; blockReason: string | null },
+  verdict: RawScanVerdict,
+): boolean {
+  if (current.scanStatus === "PENDING") return true;
+  return current.scanStatus === "BLOCKED" && current.blockReason === "SCAN_TIMEOUT" && verdict !== "SCAN_TIMEOUT";
+}
+
+/**
  * Applies a scan verdict to the attachment at `blobPath`, if it exists and
  * is still `PENDING`. "Fail closed... never default to CLEAN" (§7.3.2) cuts
  * both ways here: a terminal verdict already recorded is never overwritten
@@ -45,7 +64,7 @@ export async function applyScanVerdict(
   correlationId: string,
 ): Promise<{ applied: boolean; attachmentId?: string }> {
   const attachment = await prisma.ticketAttachment.findFirst({ where: { blobPath } });
-  if (!attachment || attachment.scanStatus !== "PENDING") {
+  if (!attachment || !canApplyVerdict(attachment, verdict)) {
     return { applied: false };
   }
 
@@ -63,7 +82,7 @@ export async function applyScanVerdict(
     entity: "ticket_attachment",
     entityId: attachment.id,
     ticketId: attachment.ticketId,
-    beforeJson: { scanStatus: "PENDING" },
+    beforeJson: { scanStatus: attachment.scanStatus, blockReason: attachment.blockReason },
     afterJson: { scanStatus, blockReason, verdict },
   });
 

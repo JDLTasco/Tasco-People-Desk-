@@ -18,7 +18,12 @@ export async function POST(request: Request) {
   if (authError) return authError;
 
   const outcome = await runJob("attachment-scan-reconcile", async (correlationId) => {
-    const pending = await prisma.ticketAttachment.findMany({ where: { scanStatus: "PENDING" } });
+    // Also re-checks timed-out attachments: a real Defender verdict that
+    // arrives after the 60-minute timeout still counts (see
+    // canApplyVerdict() in lib/scan/verdict.ts).
+    const pending = await prisma.ticketAttachment.findMany({
+      where: { OR: [{ scanStatus: "PENDING" }, { scanStatus: "BLOCKED", blockReason: "SCAN_TIMEOUT" }] },
+    });
 
     let resolved = 0;
     let timedOut = 0;
@@ -28,7 +33,7 @@ export async function POST(request: Request) {
     for (const attachment of pending) {
       const ageMinutes = (Date.now() - attachment.createdAt.getTime()) / 60_000;
       try {
-        if (ageMinutes > TIMEOUT_MINUTES) {
+        if (attachment.scanStatus === "PENDING" && ageMinutes > TIMEOUT_MINUTES) {
           const result = await applyScanVerdict(attachment.blobPath, "SCAN_TIMEOUT", correlationId);
           if (result.applied) {
             timedOut++;

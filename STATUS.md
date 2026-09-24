@@ -34,6 +34,16 @@
 
 **Known limitation**: `/api/health` returning 200 doesn't prove the *new* code is live (see the "loose end" note in the mailbox-smoke-test entry below) -- the deploy step's own success is the stronger signal; the health check only proves the site came back up after migrations.
 
+## Attachments can't be opened: Defender malware scanning was never enabled (2026-09-24)
+
+John: attachments can't be viewed or opened. **Root cause (checked live, not assumed):** `defenderForStorageSettings/current` on `tascopeopledeskstorage` shows `isEnabled: true` but `malwareScanning.onUpload.isEnabled: false`, and the subscription's `StorageAccounts` Defender pricing tier is **Free**. No scan ever runs, so no verdict ever arrives; every real attachment sat PENDING, then became BLOCKED/SCAN_TIMEOUT after 60 minutes (§7.3.2 fail-closed), and the ticket page only offers download for CLEAN. Working as designed -- the dependency it relies on was just never switched on (Stage 7's infra deployed Defender without on-upload scanning). Workaround meanwhile: open attachments from the original email in the hrtickets@ shared mailbox.
+
+**John chose (AskUserQuestion) to turn on Defender scanning** over "Outlook only" or "skip scanning". Enabling it is an Azure resource change (§0.1.5, operator-only) -- handed to John as a Cloud Shell command.
+
+**Code change so existing attachments can recover**: `canApplyVerdict()` in `lib/scan/verdict.ts` -- PENDING accepts any verdict (unchanged); **BLOCKED/SCAN_TIMEOUT may now be replaced by a later *real* Defender verdict** (never by another timeout). MALICIOUS, CLEAN, SCAN_UNAVAILABLE and every other block reason stay final; still fail-closed (only a real CLEAN makes a file downloadable); every change audit-logged with its true before-state. `attachment-scan-reconcile` now also re-checks SCAN_TIMEOUT attachments' blob index tags and only times out PENDING ones. Without this, every attachment that already timed out would have stayed locked forever even after scanning was enabled. 194/194 tests (4 new), tsc/lint clean.
+
+**Still to do after John enables scanning**: rescan the blobs already stored (on-upload scanning only covers new uploads), then confirm attachments flip to CLEAN on the reconcile job's next 15-minute run.
+
 ## Second mailbox manual import, last 24h (2026-09-24)
 
 John asked to import the last 24h of `hrtickets@` mail again, first run on the new auto-deployed build. Triggered from Cloud Shell (job key read from Key Vault there, never left Azure): `job_runs` `SUCCEEDED`, `items_processed: 28`, 00:15:20 -> 00:16:51 UTC. **13 new tickets** (`260923112201` .. `260924095201`, all NEW, untouched); the other 15 messages were threaded/duplicate/suppressed/ignored (only the total is stored in `job_runs`, not the breakdown). `HR_MAILBOX_ID` still unset -- nothing sent. **Flagged to John, not acted on**: 5 of the 13 are automated Home Affairs "ImmiAccount" notifications (candidate for a DOMAIN suppression rule + Autoclose), and "October is Mental Health Month" looks like an all-staff broadcast. 30 real tickets now in the live system (17 from 2026-09-23 + these 13).
