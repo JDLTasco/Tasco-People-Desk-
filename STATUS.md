@@ -34,6 +34,10 @@
 
 **Known limitation**: `/api/health` returning 200 doesn't prove the *new* code is live (see the "loose end" note in the mailbox-smoke-test entry below) -- the deploy step's own success is the stronger signal; the health check only proves the site came back up after migrations.
 
+## Second mailbox manual import, last 24h (2026-09-24)
+
+John asked to import the last 24h of `hrtickets@` mail again, first run on the new auto-deployed build. Triggered from Cloud Shell (job key read from Key Vault there, never left Azure): `job_runs` `SUCCEEDED`, `items_processed: 28`, 00:15:20 -> 00:16:51 UTC. **13 new tickets** (`260923112201` .. `260924095201`, all NEW, untouched); the other 15 messages were threaded/duplicate/suppressed/ignored (only the total is stored in `job_runs`, not the breakdown). `HR_MAILBOX_ID` still unset -- nothing sent. **Flagged to John, not acted on**: 5 of the 13 are automated Home Affairs "ImmiAccount" notifications (candidate for a DOMAIN suppression rule + Autoclose), and "October is Mental Health Month" looks like an all-staff broadcast. 30 real tickets now in the live system (17 from 2026-09-23 + these 13).
+
 ## Mailbox smoke test: found hrtickets@ already exists, found+fixed a real auto-reply false-positive bug that silently discarded all real mail (2026-09-23)
 
 **John asked to ingest the last 24h of real mail from `humanresources@tascopetroleum.com.au` for a smoke test, explicitly without letting any email go out** (most of the underlying tasks are likely already resolved in real life). Investigation before writing anything:
