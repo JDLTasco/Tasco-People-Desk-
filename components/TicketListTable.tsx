@@ -47,7 +47,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
               </td>
               <td>{t.category?.name ?? <em>none</em>}</td>
               <td>{t.businessUnit?.name ?? <em>none</em>}</td>
-              <td>{t.assignee ? `${t.assignee.displayName} (${t.assignee.initials})` : <em>unassigned</em>}</td>
+              <td>{t.assignee ? t.assignee.displayName : <em>unassigned</em>}</td>
               <td className={overdue ? "overdue" : undefined}>
                 {formatAuDateTime(due)} {overdue && "-- OVERDUE"}
               </td>

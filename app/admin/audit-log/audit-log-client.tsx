@@ -90,7 +90,7 @@ export default function AuditLogClient() {
                   <td>{e.ticket?.ticketNo ?? ""}</td>
                   <td>{e.action}</td>
                   <td>
-                    {e.actor.displayName} ({e.actor.initials})
+                    {e.actor.displayName}
                   </td>
                   <td>
                     {e.entity} {e.entityId}

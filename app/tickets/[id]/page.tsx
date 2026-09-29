@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
+import { validateReopen } from "@/lib/tickets/reopen";
 import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
@@ -84,7 +85,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         </div>
         <div>
           <strong>Assignee:</strong>{" "}
-          {ticket.assignee ? `${ticket.assignee.displayName} (${ticket.assignee.initials})` : <em>unassigned</em>}
+          {ticket.assignee ? ticket.assignee.displayName : <em>unassigned</em>}
         </div>
         <div className={overdue ? "overdue" : undefined}>
           <strong>Due:</strong> {formatAuDateTime(due)}
@@ -130,6 +131,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
         isConfidential={ticket.isConfidential}
         isLegalHold={ticket.isLegalHold}
+        canReopen={validateReopen(ticket).ok}
       />
 
       <p className="no-print">
@@ -195,7 +197,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           <article key={n.id} className="item-card">
             <div>
               <strong>[{n.visibility === "REQUESTER_VISIBLE" ? "NOTE -- REQUESTER-VISIBLE" : "INTERNAL NOTE"}]</strong>{" "}
-              {n.author.displayName} ({n.author.initials}) -- {formatAuDateTime(n.createdAt)}{" "}
+              {n.author.displayName} --{formatAuDateTime(n.createdAt)}{" "}
               {n.supersedesNoteId && <em>(edited)</em>}
             </div>
             <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>

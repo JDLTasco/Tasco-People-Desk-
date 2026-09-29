@@ -46,7 +46,7 @@ export default async function InstructionsPage() {
             <strong>ALLOCATED</strong> -- a person now owns it. The requester automatically gets an email confirming
             this, with the ticket number, &quot;Expected response: as soon as practical&quot;, and a note asking them
             to keep the ticket number in the subject line when they reply (see &quot;Replying to a requester&quot;
-            below). You can choose the ticket&apos;s priority right next to the Claim / Assign button.
+            below). Set the priority in the Metadata panel first -- pressing Claim or Assign saves it for you.
           </li>
           <li>
             <strong>IN_ACTION</strong> -- the assignee has started working it. <strong>A category must be set
@@ -80,7 +80,7 @@ export default async function InstructionsPage() {
             Withdrawn (the requester no longer wants it actioned).
           </li>
           <li>
-            <strong>ARCHIVED</strong> -- happens automatically, some time after closure, via an overnight job (an
+            <strong>ARCHIVED</strong> -- happens automatically 30 days after closure, via an overnight job (an
             ADMIN can also trigger it on demand). See &quot;Closed vs. Archived&quot; below -- they are genuinely
             different things.
           </li>
@@ -115,8 +115,10 @@ export default async function InstructionsPage() {
           <li><strong>P3</strong> -- 30 days</li>
         </ul>
         <p>
-          Priority can be set when claiming or assigning a ticket, and changed at any time from the Metadata panel
-          by any HR staff member -- changing it automatically recalculates the SLA clock.
+          Priority is set in the Metadata panel by any HR staff member, at any time -- changing it automatically
+          recalculates the SLA clock. There is one <strong>Save changes</strong> button for priority, category,
+          business unit and target due date, and pressing any Action button (Claim, Start action, Close, etc.) also
+          saves whatever you&apos;ve changed there first.
         </p>
         <p>
           Separately, a <strong>target due date</strong> can be set on any ticket for a specific external
@@ -162,12 +164,14 @@ export default async function InstructionsPage() {
         <h2>Closed vs. Archived -- these are not the same thing</h2>
         <p>
           <strong>CLOSED</strong> is the normal end of a ticket&apos;s working life. It&apos;s still a completely
-          live, visible record -- an ADMIN can even reverse it back to an earlier status if it was closed by
-          mistake.
+          live, visible record. For <strong>30 days</strong> after closing, any staff member can
+          <strong>Reopen</strong> it (a reason is required). It goes back to its assignee as IN ACTION (or
+          ALLOCATED if it has no category yet), or back to the Pool if it was never assigned. A ticket that was
+          merged into another can&apos;t be reopened -- work on the ticket it was merged into instead.
         </p>
         <p>
-          <strong>ARCHIVED</strong> happens later, automatically. An overnight job (or an ADMIN, on demand) picks
-          up CLOSED tickets and writes them out to permanent, durable files containing the full correspondence,
+          <strong>ARCHIVED</strong> happens later, automatically. An overnight job picks up tickets closed more
+          than 30 days ago (an ADMIN can also archive on demand) and writes them out to permanent, durable files containing the full correspondence,
           notes, and metadata -- this is what actually starts the 7-year retention clock, and it&apos;s what makes
           a ticket read-only in the portal for everyone except ADMIN from that point on.
         </p>
@@ -197,7 +201,7 @@ export default async function InstructionsPage() {
         <h2>Step-by-step: handling a ticket end to end</h2>
         <ol>
           <li>Check the <a href="/pool">Pool</a> for unassigned tickets, or check <a href="/my-tickets">My tickets</a> for what&apos;s already yours.</li>
-          <li>Claim a ticket (or have it assigned to you by an HR_LEAD/ADMIN) -- pick its priority in the dropdown next to the button.</li>
+          <li>Set its priority in the Metadata panel, then Claim it (or have it assigned to you by an HR_LEAD/ADMIN) -- Claim saves the priority too.</li>
           <li>Read the request properly, then set its real <strong>Priority</strong> and <strong>Category</strong> in the Metadata panel -- category is mandatory before you can start action.</li>
           <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress) and a <strong>target due date</strong> if there&apos;s a specific external deadline.</li>
           <li>Click <strong>Start action</strong> once you begin working it.</li>
@@ -229,6 +233,7 @@ export default async function InstructionsPage() {
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>&quot;Not a request&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Reopen a closed ticket (within 30 days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Set / clear confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if granted or assigned</td></tr>
             <tr><td>Set / clear legal hold</td><td>Yes</td><td>No</td><td>No</td></tr>

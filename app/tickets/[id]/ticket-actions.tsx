@@ -38,6 +38,8 @@ interface Props {
   attachments: OutcomeAttachment[];
   isConfidential: boolean;
   isLegalHold: boolean;
+  /** CLOSED within the last 30 days and not merged away -- see lib/tickets/reopen.ts. */
+  canReopen: boolean;
 }
 
 interface SimpleUser {
@@ -48,6 +50,12 @@ interface SimpleUser {
 interface SimpleLookup {
   id: string;
   name: string;
+}
+
+function toLocalInputValue(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 async function postJson(url: string, body: unknown) {
@@ -82,6 +90,7 @@ export default function TicketActions({
   attachments,
   isConfidential,
   isLegalHold,
+  canReopen,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -95,35 +104,73 @@ export default function TicketActions({
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState(businessUnitId ?? "");
   const [reverseTo, setReverseTo] = useState("");
   const [reverseReason, setReverseReason] = useState("");
-  // §8: target_due_at is an ISO string sliced to the datetime-local input's
-  // expected "YYYY-MM-DDTHH:mm" shape; targetDueReason is mandatory
-  // whenever a date is set (enforced server-side too -- see PATCH /api/tickets/[id]).
-  const [targetDue, setTargetDue] = useState(targetDueAt ? targetDueAt.slice(0, 16) : "");
+  // §8: target_due_at shown in the datetime-local input's "YYYY-MM-DDTHH:mm"
+  // shape, in the browser's own time zone (it used to be the raw UTC slice,
+  // so it read 10 hours off in Melbourne). Filled in after mount so the
+  // server render (UTC) can't disagree with the browser's. targetDueReason
+  // is mandatory whenever a date is set (enforced server-side too -- see
+  // PATCH /api/tickets/[id]).
+  const originalDue = targetDueAt ? toLocalInputValue(targetDueAt) : "";
+  const [targetDue, setTargetDue] = useState("");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setTargetDue(originalDue);
+    setMounted(true);
+  }, [originalDue]);
   const [targetDueReasonText, setTargetDueReasonText] = useState(targetDueReason ?? "");
   const [legalHoldReasonText, setLegalHoldReasonText] = useState("");
   const [deleteReasonText, setDeleteReasonText] = useState("");
-  // Priority chosen at claim/assign time (2026-09-29) -- defaults to the
-  // ticket's current (usually auto-classified P3) priority.
-  const [allocationPriority, setAllocationPriority] = useState<"P1" | "P2" | "P3">(priority);
   const [responseNote, setResponseNote] = useState("");
+  const [reopenReason, setReopenReason] = useState("");
 
   // IN_ACTION and its two response sub-steps (see lib/tickets/transitions.ts).
   const isWorking = status === "IN_ACTION" || status === "AWAITING_RESPONSE" || status === "RESPONSE_RECEIVED";
   const canCloseEarly = status === "NEW" || status === "ALLOCATED" || isWorking;
   const isAssigneeOrLead = isAssignedTicket || role === "ADMIN" || role === "HR_LEAD";
 
-  const prioritySelect = (
-    <label>
-      Priority:{" "}
-      <select value={allocationPriority} onChange={(e) => setAllocationPriority(e.target.value as "P1" | "P2" | "P3")}>
-        {["P1", "P2", "P3"].map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
+  // Only the fields actually changed are sent, so an unchanged form never
+  // writes an empty audit row (2026-09-29: one Save button for all details,
+  // and every action button saves pending changes first).
+  function pendingChanges(): Record<string, unknown> {
+    const changes: Record<string, unknown> = {};
+    if (canEditMetadata) {
+      if (selectedPriority !== priority) changes.priority = selectedPriority;
+      if ((selectedCategory || null) !== categoryId) changes.categoryId = selectedCategory || null;
+      if ((selectedBusinessUnit || null) !== businessUnitId) changes.businessUnitId = selectedBusinessUnit || null;
+    }
+    if (mounted && targetDue !== originalDue || (targetDue && targetDueReasonText !== (targetDueReason ?? ""))) {
+      changes.targetDueAt = targetDue ? new Date(targetDue).toISOString() : null;
+      changes.targetDueReason = targetDue ? targetDueReasonText : null;
+    }
+    return changes;
+  }
+  const hasPendingChanges = Object.keys(pendingChanges()).length > 0;
+
+  type ApiResult = { ok: boolean; status: number; data: { error?: string; ticket?: { version: number } } };
+
+  // Saves pending changes (if any) and returns the ticket's new version,
+  // or the failed result so the caller can stop before running its action.
+  async function saveChanges(): Promise<{ version: number } | ApiResult> {
+    const changes = pendingChanges();
+    if (Object.keys(changes).length === 0) return { version };
+    const res = await fetch(`/api/tickets/${ticketId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version, ...changes }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, status: res.status, data };
+    return { version: data.ticket?.version ?? version + 1 };
+  }
+
+  /** Runs an action button: saves any pending detail changes first, then the action itself with the fresh version. */
+  function runWithSave(action: (currentVersion: number) => Promise<ApiResult>) {
+    return run(async () => {
+      const saved = await saveChanges();
+      if ("ok" in saved) return saved;
+      return action(saved.version);
+    });
+  }
 
   useEffect(() => {
     fetch("/api/users")
@@ -182,9 +229,10 @@ export default function TicketActions({
         </p>
       )}
 
-      {canEditMetadata && (
-        <div style={{ marginBottom: "1rem" }}>
-          <h3>Metadata</h3>
+      <div style={{ marginBottom: "1rem" }}>
+        <h3>Metadata</h3>
+        {canEditMetadata && (
+          <p>
           <label>
             Priority:{" "}
             <select value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value as "P1" | "P2" | "P3")}>
@@ -216,35 +264,14 @@ export default function TicketActions({
                 </option>
               ))}
             </select>
-          </label>{" "}
-          <button
-            disabled={busy}
-            onClick={() =>
-              run(async () => {
-                const res = await fetch(`/api/tickets/${ticketId}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    version,
-                    priority: selectedPriority,
-                    categoryId: selectedCategory || null,
-                    businessUnitId: selectedBusinessUnit || null,
-                  }),
-                });
-                const data = await res.json().catch(() => ({}));
-                return { ok: res.ok, status: res.status, data };
-              })
-            }
-          >
-            Save metadata
-          </button>
-        </div>
-      )}
+          </label>
+          </p>
+        )}
 
-      {/* Editable by any signed-in staff member, not just the assignee/HR_LEAD/ADMIN --
-          broadened at John's request (2026-09-16), see STATUS.md. */}
-      <div style={{ marginBottom: "1rem" }}>
-        <h3>Target due date (§8 -- optional, for a specific external deadline)</h3>
+        {/* Target due date (§8 -- optional, for a specific external deadline).
+            Editable by any signed-in staff member -- broadened at John's
+            request (2026-09-16), see STATUS.md. */}
+        <p>
         <label>
           Target due:{" "}
           <input type="datetime-local" value={targetDue} onChange={(e) => setTargetDue(e.target.value)} />
@@ -258,26 +285,6 @@ export default function TicketActions({
             style={{ width: "16rem" }}
           />
         </label>{" "}
-        <button
-          disabled={busy || (targetDue !== "" && !targetDueReasonText.trim())}
-          onClick={() =>
-            run(async () => {
-              const res = await fetch(`/api/tickets/${ticketId}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  version,
-                  targetDueAt: targetDue ? new Date(targetDue).toISOString() : null,
-                  targetDueReason: targetDue ? targetDueReasonText : null,
-                }),
-              });
-              const data = await res.json().catch(() => ({}));
-              return { ok: res.ok, status: res.status, data };
-            })
-          }
-        >
-          Save target due date
-        </button>{" "}
         {targetDue && (
           <button
             type="button"
@@ -286,41 +293,34 @@ export default function TicketActions({
             onClick={() => {
               setTargetDue("");
               setTargetDueReasonText("");
-              run(async () => {
-                const res = await fetch(`/api/tickets/${ticketId}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ version, targetDueAt: null, targetDueReason: null }),
-                });
-                const data = await res.json().catch(() => ({}));
-                return { ok: res.ok, status: res.status, data };
-              });
             }}
           >
-            Clear
+            Clear date
           </button>
         )}
+        </p>
+        <button
+          disabled={busy || !hasPendingChanges || (targetDue !== "" && !targetDueReasonText.trim())}
+          onClick={() => runWithSave(async () => ({ ok: true, status: 200, data: {} }))}
+        >
+          Save changes
+        </button>
+        {hasPendingChanges && <em> Unsaved changes -- also saved automatically when you press any Action button.</em>}
       </div>
 
       <div style={{ marginBottom: "1rem" }}>
         <h3>Action</h3>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {status === "NEW" && (
-            <span>
-              {prioritySelect}{" "}
-              <button
-                disabled={busy}
-                onClick={() => run(() => postJson(`/api/tickets/${ticketId}/claim`, { priority: allocationPriority }))}
-              >
-                Claim
-              </button>
-            </span>
+            <button disabled={busy} onClick={() => runWithSave(() => postJson(`/api/tickets/${ticketId}/claim`, {}))}>
+              Claim
+            </button>
           )}
 
           {status === "ALLOCATED" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
             <button
               disabled={busy}
-              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/start-action`, { version }))}
+              onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/start-action`, { version: v }))}
             >
               Start action
             </button>
@@ -330,7 +330,9 @@ export default function TicketActions({
             <button
               disabled={busy}
               onClick={() =>
-                run(() => postJson(`/api/tickets/${ticketId}/response-status`, { version, toStatus: "AWAITING_RESPONSE" }))
+                runWithSave((v) =>
+                  postJson(`/api/tickets/${ticketId}/response-status`, { version: v, toStatus: "AWAITING_RESPONSE" }),
+                )
               }
             >
               Mark awaiting response
@@ -340,7 +342,9 @@ export default function TicketActions({
           {(status === "AWAITING_RESPONSE" || status === "RESPONSE_RECEIVED") && isAssigneeOrLead && (
             <button
               disabled={busy}
-              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/response-status`, { version, toStatus: "IN_ACTION" }))}
+              onClick={() =>
+                runWithSave((v) => postJson(`/api/tickets/${ticketId}/response-status`, { version: v, toStatus: "IN_ACTION" }))
+              }
             >
               Back to in action
             </button>
@@ -360,7 +364,7 @@ export default function TicketActions({
           )}
 
           {status === "OUTCOME" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
-            <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close`, { version }))}>
+            <button disabled={busy} onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close`, { version: v }))}>
               Close -- Resolved
             </button>
           )}
@@ -368,7 +372,7 @@ export default function TicketActions({
           {canCloseEarly && (
             <button
               disabled={busy}
-              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-withdrawn`, { version }))}
+              onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close-withdrawn`, { version: v }))}
             >
               Close -- Withdrawn
             </button>
@@ -377,7 +381,7 @@ export default function TicketActions({
           {canCloseEarly && (
             <button
               disabled={busy}
-              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version }))}
+              onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version: v }))}
             >
               Close -- Not a request
             </button>
@@ -386,10 +390,30 @@ export default function TicketActions({
           {canCloseEarly && (
             <button
               disabled={busy}
-              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }))}
+              onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version: v }))}
             >
               Close -- Autoclose (spam / no action needed)
             </button>
+          )}
+
+          {/* Reopen within 30 days of closing (2026-09-29) -- any staff member, reason required. */}
+          {canReopen && (
+            <span>
+              <input
+                placeholder="Reason for reopening (required)"
+                value={reopenReason}
+                onChange={(e) => setReopenReason(e.target.value)}
+                style={{ width: "18rem" }}
+              />{" "}
+              <button
+                disabled={busy || !reopenReason.trim()}
+                onClick={() =>
+                  runWithSave((v) => postJson(`/api/tickets/${ticketId}/reopen`, { version: v, reason: reopenReason }))
+                }
+              >
+                Reopen
+              </button>
+            </span>
           )}
         </div>
       </div>
@@ -410,9 +434,9 @@ export default function TicketActions({
             <button
               disabled={busy || !responseNote.trim()}
               onClick={() =>
-                run(async () => {
+                runWithSave(async (v) => {
                   const result = await postJson(`/api/tickets/${ticketId}/response-status`, {
-                    version,
+                    version: v,
                     toStatus: "RESPONSE_RECEIVED",
                     note: responseNote,
                   });
@@ -442,16 +466,13 @@ export default function TicketActions({
               .filter((u) => u.id !== userId)
               .map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.displayName} ({u.initials})
+                  {u.displayName}
                 </option>
               ))}
           </select>{" "}
-          {prioritySelect}{" "}
           <button
             disabled={busy || !selectedAssignee}
-            onClick={() =>
-              run(() => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee, priority: allocationPriority }))
-            }
+            onClick={() => runWithSave(() => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee }))}
           >
             Assign
           </button>
@@ -467,13 +488,15 @@ export default function TicketActions({
               .filter((u) => u.id !== userId)
               .map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.displayName} ({u.initials})
+                  {u.displayName}
                 </option>
               ))}
           </select>{" "}
           <button
             disabled={busy || !selectedAssignee}
-            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee, version }))}
+            onClick={() =>
+              runWithSave((v) => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee, version: v }))
+            }
           >
             Reassign
           </button>

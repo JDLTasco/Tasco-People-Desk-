@@ -29,7 +29,7 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
   const priorityOptions = useMemo(() => uniqueSorted(tickets.map((t) => t.priority)), [tickets]);
   const businessUnitOptions = useMemo(() => uniqueSorted(tickets.map((t) => t.businessUnit?.name)), [tickets]);
   const assigneeOptions = useMemo(
-    () => uniqueSorted(tickets.map((t) => (t.assignee ? `${t.assignee.displayName} (${t.assignee.initials})` : undefined))),
+    () => uniqueSorted(tickets.map((t) => (t.assignee ? t.assignee.displayName : undefined))),
     [tickets],
   );
 

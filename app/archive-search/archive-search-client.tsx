@@ -100,7 +100,7 @@ export default function ArchiveSearchClient({ canBulkExport }: Props) {
                     <td>{t.requesterName}</td>
                     <td>{t.category?.name ?? ""}</td>
                     <td>{t.businessUnit?.name ?? ""}</td>
-                    <td>{t.assignee ? `${t.assignee.displayName} (${t.assignee.initials})` : ""}</td>
+                    <td>{t.assignee ? t.assignee.displayName : ""}</td>
                   </tr>
                 ))}
               </tbody>

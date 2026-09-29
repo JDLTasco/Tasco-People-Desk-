@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkJobKey } from "@/lib/jobs/auth";
 import { runJob } from "@/lib/jobs/run";
 import { archiveTicket } from "@/lib/archive/writer";
+import { reopenWindowCutoff } from "@/lib/tickets/reopen";
 
 // §10, §12: "On transition to CLOSED, a nightly job (plus on-demand for
 // ADMIN) writes the archive artefacts and sets status ARCHIVED." Runs
@@ -10,12 +11,20 @@ import { archiveTicket } from "@/lib/archive/writer";
 // CLOSED ticket is a candidate regardless of is_deleted -- soft-delete
 // doesn't pause archiving or retention (§10 "Retention": "Soft-deleted
 // tickets are still purged on the same schedule").
+// Operator amendment (John, 2026-09-29): only tickets closed more than
+// REOPEN_WINDOW_DAYS ago are archived, so a closed ticket stays reopenable
+// for that window (see lib/tickets/reopen.ts). A CLOSED ticket with no
+// closed_at (shouldn't exist) is archived rather than held forever.
+// Admin -> Archive now still archives immediately.
 export async function POST(request: Request) {
   const authError = checkJobKey(request);
   if (authError) return authError;
 
   const outcome = await runJob("archive-closed", async () => {
-    const candidates = await prisma.ticket.findMany({ where: { status: "CLOSED" }, select: { id: true } });
+    const candidates = await prisma.ticket.findMany({
+      where: { status: "CLOSED", OR: [{ closedAt: null }, { closedAt: { lt: reopenWindowCutoff() } }] },
+      select: { id: true },
+    });
 
     let archived = 0;
     let failed = 0;
