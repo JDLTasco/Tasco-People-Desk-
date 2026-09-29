@@ -25,6 +25,8 @@
       <xs:enumeration value="NEW"/>
       <xs:enumeration value="ALLOCATED"/>
       <xs:enumeration value="IN_ACTION"/>
+      <xs:enumeration value="AWAITING_RESPONSE"/>
+      <xs:enumeration value="RESPONSE_RECEIVED"/>
       <xs:enumeration value="OUTCOME"/>
       <xs:enumeration value="CLOSED"/>
       <xs:enumeration value="ARCHIVED"/>

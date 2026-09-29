@@ -5,7 +5,31 @@
 
 import type { UserRole } from "../roles";
 
-export type TicketStatus = "NEW" | "ALLOCATED" | "IN_ACTION" | "OUTCOME" | "CLOSED" | "ARCHIVED";
+export type TicketStatus =
+  | "NEW"
+  | "ALLOCATED"
+  | "IN_ACTION"
+  | "AWAITING_RESPONSE"
+  | "RESPONSE_RECEIVED"
+  | "OUTCOME"
+  | "CLOSED"
+  | "ARCHIVED";
+
+/**
+ * Operator amendment (John, 2026-09-29): AWAITING_RESPONSE and
+ * RESPONSE_RECEIVED are sub-steps of IN_ACTION -- work is underway, the
+ * officer is either waiting on the requester or a response has come in.
+ * Anywhere IN_ACTION was accepted (outcome dispatch, closes, merge,
+ * reassignment) these are accepted too.
+ */
+export const WORKING_STATUSES: readonly TicketStatus[] = ["IN_ACTION", "AWAITING_RESPONSE", "RESPONSE_RECEIVED"];
+
+export function isWorkingStatus(status: TicketStatus): boolean {
+  return WORKING_STATUSES.includes(status);
+}
+
+/** Every status that isn't CLOSED/ARCHIVED -- the "open" set used by list views. */
+export const OPEN_STATUSES: TicketStatus[] = ["NEW", "ALLOCATED", ...WORKING_STATUSES, "OUTCOME"];
 
 export interface TransitionContext {
   actorRole: UserRole;
@@ -58,7 +82,24 @@ export function validateTransition(
     return ok();
   }
 
-  if (from === "IN_ACTION" && to === "OUTCOME") {
+  // Response sub-steps (2026-09-29): any staff member may record that the
+  // ticket is waiting on the requester, or that a response came in -- the
+  // whole point is that whoever takes the call can record it, not only
+  // the assignee. Moving back to plain IN_ACTION is the assignee's call.
+  if (to === "AWAITING_RESPONSE" && (from === "IN_ACTION" || from === "RESPONSE_RECEIVED")) {
+    return ok();
+  }
+  if (to === "RESPONSE_RECEIVED" && (from === "IN_ACTION" || from === "AWAITING_RESPONSE")) {
+    return ok();
+  }
+  if (to === "IN_ACTION" && (from === "AWAITING_RESPONSE" || from === "RESPONSE_RECEIVED")) {
+    if (!(ctx.actorRole === "ADMIN" || ctx.actorRole === "HR_LEAD" || ctx.isAssignee)) {
+      return fail(403, "Only the assignee, HR_LEAD, or ADMIN may move this ticket back to IN_ACTION");
+    }
+    return ok();
+  }
+
+  if (isWorkingStatus(from) && to === "OUTCOME") {
     if (!(ctx.actorRole === "ADMIN" || ctx.actorRole === "HR_LEAD" || ctx.isAssignee)) {
       return fail(403, "Only the assignee, HR_LEAD, or ADMIN may send an outcome for this ticket");
     }
@@ -88,9 +129,9 @@ export function validateTransition(
   return fail(400, `Invalid transition: ${from} -> ${to}`);
 }
 
-/** "Not a request" close (§4): from NEW, ALLOCATED, or IN_ACTION only. */
+/** "Not a request" close (§4): from NEW, ALLOCATED, or IN_ACTION (incl. its response sub-steps) only. */
 export function validateNotARequestClose(from: TicketStatus): TransitionResult {
-  if (from === "NEW" || from === "ALLOCATED" || from === "IN_ACTION") {
+  if (from === "NEW" || from === "ALLOCATED" || isWorkingStatus(from)) {
     return ok();
   }
   return fail(400, `"Not a request" close is only valid from NEW, ALLOCATED, or IN_ACTION (current status: ${from})`);
@@ -107,9 +148,8 @@ export function validateNotARequestClose(from: TicketStatus): TransitionResult {
  * matter into a still-open one is ever wanted.
  */
 export function validateMerge(sourceStatus: TicketStatus, targetStatus: TicketStatus): TransitionResult {
-  const MERGEABLE_SOURCE_STATUSES: TicketStatus[] = ["NEW", "ALLOCATED", "IN_ACTION", "OUTCOME"];
-  if (!MERGEABLE_SOURCE_STATUSES.includes(sourceStatus)) {
-    return fail(400, `Cannot merge a ${sourceStatus} ticket -- only NEW, ALLOCATED, IN_ACTION, or OUTCOME tickets can be merged away`);
+  if (!OPEN_STATUSES.includes(sourceStatus)) {
+    return fail(400, `Cannot merge a ${sourceStatus} ticket -- only open (not CLOSED/ARCHIVED) tickets can be merged away`);
   }
   if (targetStatus === "ARCHIVED") {
     return fail(400, "Cannot merge into an archived ticket");
@@ -117,9 +157,9 @@ export function validateMerge(sourceStatus: TicketStatus, targetStatus: TicketSt
   return ok();
 }
 
-/** Reassignment (§4): not a status transition -- ALLOCATED and IN_ACTION tickets only. */
+/** Reassignment (§4): not a status transition -- ALLOCATED and IN_ACTION (incl. its response sub-steps) tickets only. */
 export function validateReassignment(status: TicketStatus): TransitionResult {
-  if (status === "ALLOCATED" || status === "IN_ACTION") {
+  if (status === "ALLOCATED" || isWorkingStatus(status)) {
     return ok();
   }
   return fail(400, `Reassignment is only valid for ALLOCATED or IN_ACTION tickets (current status: ${status})`);
@@ -132,7 +172,16 @@ export function validateReassignment(status: TicketStatus): TransitionResult {
  * re-authentication, and the mandatory reason (all cross-cutting concerns
  * from §6, not state-machine concerns).
  */
-const LIFECYCLE_ORDER: TicketStatus[] = ["NEW", "ALLOCATED", "IN_ACTION", "OUTCOME", "CLOSED", "ARCHIVED"];
+const LIFECYCLE_ORDER: TicketStatus[] = [
+  "NEW",
+  "ALLOCATED",
+  "IN_ACTION",
+  "AWAITING_RESPONSE",
+  "RESPONSE_RECEIVED",
+  "OUTCOME",
+  "CLOSED",
+  "ARCHIVED",
+];
 
 export function validateReversal(from: TicketStatus, to: TicketStatus, categoryId: string | null): TransitionResult {
   const fromIndex = LIFECYCLE_ORDER.indexOf(from);
@@ -142,7 +191,7 @@ export function validateReversal(from: TicketStatus, to: TicketStatus, categoryI
   }
   // "A reversal into IN_ACTION still requires a category" (§4) -- same
   // guard as the forward ALLOCATED -> IN_ACTION transition.
-  if (to === "IN_ACTION" && !categoryId) {
+  if (isWorkingStatus(to) && !categoryId) {
     return fail(400, "category_id must be set before a ticket can move to IN_ACTION");
   }
   return ok();

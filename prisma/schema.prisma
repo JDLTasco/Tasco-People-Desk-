@@ -41,6 +41,11 @@ enum TicketStatus {
   NEW
   ALLOCATED
   IN_ACTION
+  // Operator amendment (John, 2026-09-29): two sub-steps of IN_ACTION --
+  // the officer is waiting on the requester, then a response arrived
+  // (possibly taken by a different staff member, who records it).
+  AWAITING_RESPONSE
+  RESPONSE_RECEIVED
   OUTCOME
   CLOSED
   ARCHIVED
@@ -245,6 +250,11 @@ model Ticket {
 
   firstViewedAt   DateTime? @map("first_viewed_at")
   firstViewedById String?   @map("first_viewed_by") @db.Uuid
+
+  // In-app alert for the assignee (John, 2026-09-29): set when someone
+  // else marks the ticket RESPONSE_RECEIVED, cleared when the assignee
+  // next opens the ticket. Not an optimistic-locking field.
+  responseAlertPending Boolean @default(false) @map("response_alert_pending")
 
   escalationCount  Int       @default(0) @map("escalation_count")
   lastEscalatedAt  DateTime? @map("last_escalated_at")

@@ -1,0 +1,6 @@
+-- AlterEnum
+ALTER TYPE "ticket_status" ADD VALUE 'AWAITING_RESPONSE' BEFORE 'OUTCOME';
+ALTER TYPE "ticket_status" ADD VALUE 'RESPONSE_RECEIVED' BEFORE 'OUTCOME';
+
+-- AlterTable
+ALTER TABLE "tickets" ADD COLUMN "response_alert_pending" BOOLEAN NOT NULL DEFAULT false;

@@ -108,6 +108,51 @@ describe("validateTransition: anything not in the §4 table", () => {
   });
 });
 
+describe("response sub-steps (AWAITING_RESPONSE / RESPONSE_RECEIVED, added 2026-09-29)", () => {
+  const otherOfficer = { ...baseCtx, actorRole: "HR_OFFICER" as const, isAssignee: false };
+
+  it("any staff member, not just the assignee, may mark awaiting response or response received", () => {
+    assert.equal(validateTransition("IN_ACTION", "AWAITING_RESPONSE", otherOfficer).ok, true);
+    assert.equal(validateTransition("AWAITING_RESPONSE", "RESPONSE_RECEIVED", otherOfficer).ok, true);
+    assert.equal(validateTransition("IN_ACTION", "RESPONSE_RECEIVED", otherOfficer).ok, true);
+    assert.equal(validateTransition("RESPONSE_RECEIVED", "AWAITING_RESPONSE", otherOfficer).ok, true);
+  });
+
+  it("moving back to IN_ACTION is assignee/HR_LEAD/ADMIN only", () => {
+    const result = validateTransition("RESPONSE_RECEIVED", "IN_ACTION", otherOfficer);
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 403);
+    assert.equal(validateTransition("RESPONSE_RECEIVED", "IN_ACTION", baseCtx).ok, true);
+    assert.equal(validateTransition("AWAITING_RESPONSE", "IN_ACTION", { ...otherOfficer, actorRole: "HR_LEAD" }).ok, true);
+  });
+
+  it("cannot be reached from before work has started (no category bypass)", () => {
+    assert.equal(validateTransition("ALLOCATED", "AWAITING_RESPONSE", baseCtx).ok, false);
+    assert.equal(validateTransition("NEW", "RESPONSE_RECEIVED", baseCtx).ok, false);
+    assert.equal(validateTransition("OUTCOME", "RESPONSE_RECEIVED", baseCtx).ok, false);
+  });
+
+  it("OUTCOME is reachable from either sub-step, still only via the dispatch preview", () => {
+    for (const from of ["AWAITING_RESPONSE", "RESPONSE_RECEIVED"] as const) {
+      assert.equal(validateTransition(from, "OUTCOME", baseCtx).ok, false, from);
+      assert.equal(validateTransition(from, "OUTCOME", { ...baseCtx, viaDispatchPreview: true }).ok, true, from);
+    }
+  });
+
+  it("closes, reassignment and merge accept the sub-steps like IN_ACTION", () => {
+    for (const s of ["AWAITING_RESPONSE", "RESPONSE_RECEIVED"] as const) {
+      assert.equal(validateNotARequestClose(s).ok, true, s);
+      assert.equal(validateReassignment(s).ok, true, s);
+      assert.equal(validateMerge(s, "IN_ACTION").ok, true, s);
+    }
+  });
+
+  it("a reversal into a sub-step requires a category, same as IN_ACTION", () => {
+    assert.equal(validateReversal("OUTCOME", "RESPONSE_RECEIVED", null).ok, false);
+    assert.equal(validateReversal("OUTCOME", "RESPONSE_RECEIVED", "cat-1").ok, true);
+  });
+});
+
 describe('validateNotARequestClose ("not a request" close)', () => {
   it("allowed from NEW, ALLOCATED, IN_ACTION", () => {
     assert.equal(validateNotARequestClose("NEW").ok, true);

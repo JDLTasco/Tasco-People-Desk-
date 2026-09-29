@@ -12,7 +12,11 @@ export interface RenderedEmail {
   bodyHtml: string;
 }
 
-const TIMEFRAME_LABEL: Record<Priority, string> = { P1: "48 hours", P2: "7 days", P3: "30 days" };
+// Operator amendment (John, 2026-09-29): the allocation email no longer
+// quotes a per-priority SLA timeframe to the requester (P3 read "30 days",
+// which is what nearly every ticket got) -- it just says "as soon as
+// practical". SLA hours still drive internal due dates/escalation.
+const EXPECTED_RESPONSE_TEXT = "Expected response: as soon as practical";
 
 // Outbound HTML is generated here from user-influenced text (subjects,
 // outcome drafts, note bodies) and sent to a real mailbox -- escaped at
@@ -50,16 +54,14 @@ export interface AllocationEmailInput {
   ticketNo: string;
   displaySubject: string;
   assigneeDisplayName: string;
-  priority: Priority;
 }
 
 /** §7.4: "Allocation -- Requester -- Ticket number, display subject, assigned officer display name, expected response timeframe." */
 export function renderAllocationEmail(input: AllocationEmailInput): RenderedEmail {
   const subject = `[${input.ticketNo}] ${input.displaySubject}`;
-  const timeframe = TIMEFRAME_LABEL[input.priority];
   const intro =
     `Your request has been allocated to ${input.assigneeDisplayName} in HR.\n\n` +
-    `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}\nExpected response timeframe: ${timeframe}\n\n` +
+    `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}\n${EXPECTED_RESPONSE_TEXT}\n\n` +
     `You will receive further updates and questions once this matter has been investigated.`;
   return {
     subject,

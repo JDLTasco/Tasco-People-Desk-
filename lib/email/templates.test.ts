@@ -3,29 +3,23 @@ import assert from "node:assert/strict";
 import { renderAllocationEmail, renderOutcomeEmail, renderEscalationEmail } from "./templates";
 
 describe("renderAllocationEmail", () => {
-  it("includes ticket number, subject, assignee name, and the priority's expected timeframe (§7.4)", () => {
+  it("includes ticket number, subject, assignee name, and 'as soon as practical' (§7.4, amended 2026-09-29)", () => {
     const email = renderAllocationEmail({
       ticketNo: "2609151030",
       displaySubject: "Leave request",
       assigneeDisplayName: "Rebecca Johnson",
-      priority: "P1",
     });
     assert.match(email.subject, /2609151030/);
     assert.match(email.bodyText, /2609151030/);
     assert.match(email.bodyText, /Leave request/);
     assert.match(email.bodyText, /Rebecca Johnson/);
-    assert.match(email.bodyText, /48 hours/);
+    assert.match(email.bodyText, /Expected response: as soon as practical/);
   });
 
-  it("uses the correct timeframe label per priority", () => {
-    assert.match(
-      renderAllocationEmail({ ticketNo: "x", displaySubject: "s", assigneeDisplayName: "a", priority: "P2" }).bodyText,
-      /7 days/,
-    );
-    assert.match(
-      renderAllocationEmail({ ticketNo: "x", displaySubject: "s", assigneeDisplayName: "a", priority: "P3" }).bodyText,
-      /30 days/,
-    );
+  it("never quotes an SLA timeframe to the requester", () => {
+    const email = renderAllocationEmail({ ticketNo: "x", displaySubject: "s", assigneeDisplayName: "a" });
+    assert.doesNotMatch(email.bodyText, /48 hours|7 days|30 days|timeframe/);
+    assert.doesNotMatch(email.bodyHtml, /48 hours|7 days|30 days|timeframe/);
   });
 
   it("escapes HTML-significant characters in user-influenced fields", () => {
@@ -33,7 +27,6 @@ describe("renderAllocationEmail", () => {
       ticketNo: "x",
       displaySubject: "<script>alert(1)</script>",
       assigneeDisplayName: "a",
-      priority: "P1",
     });
     assert.ok(!email.bodyHtml.includes("<script>"));
     assert.match(email.bodyHtml, /&lt;script&gt;/);

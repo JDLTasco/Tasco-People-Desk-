@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiContext } from "@/lib/api-context";
 import { badRequest, conflict, notFound } from "@/lib/http-errors";
-import { canActOnAssignedTicket } from "@/lib/rbac";
+import { canEditTicketMetadata } from "@/lib/rbac";
+import { canViewerSeeTicket } from "@/lib/tickets/confidential-access";
 import { writeAuditLog } from "@/lib/audit";
 import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/lib/tickets/detail";
-import { SLA_HOURS } from "@/lib/tickets/sla";
+import { slaDueAtFor } from "@/lib/tickets/sla";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
@@ -42,8 +43,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (ctx instanceof Response) return ctx;
   const { session, correlationId } = ctx;
 
-  const current = await prisma.ticket.findUnique({ where: { id: params.id } });
+  const current = await prisma.ticket.findUnique({ where: { id: params.id }, include: { accessGrants: true } });
   if (!current || current.isDeleted) return notFound();
+  // Now that any HR role may edit any ticket's metadata (2026-09-29), the
+  // §9 confidential gate must be checked here explicitly -- previously the
+  // assignee-only rule implied it for HR_OFFICERs.
+  if (!canViewerSeeTicket(session.user.role, session.user.id, current)) return notFound();
 
   const body = (await request.json()) as PatchBody;
   if (typeof body.version !== "number") {
@@ -55,15 +60,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   // request (2026-09-16, not in the original v1.3 §5 text, which named
   // "the assignee, HR_LEAD or ADMIN" specifically; see STATUS.md).
   // Every other metadata field (subject, priority, category, business
-  // unit, cc) stays under the original assignee-or-lead/admin gate.
+  // unit, cc) was assignee-or-lead/admin until 2026-09-29, when John
+  // opened it to every HR role (see canEditTicketMetadata()).
   const touchesRestrictedFields =
     body.subject !== undefined ||
     body.priority !== undefined ||
     body.ccRecipients !== undefined ||
     body.categoryId !== undefined ||
     body.businessUnitId !== undefined;
-  const isAssignedTicket = current.assignedToId === session.user.id;
-  if (touchesRestrictedFields && !canActOnAssignedTicket(session.user.role, isAssignedTicket)) {
+  if (touchesRestrictedFields && !canEditTicketMetadata(session.user.role)) {
     return badRequest("Not permitted to edit this ticket's metadata");
   }
 
@@ -95,7 +100,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (body.priority !== undefined && body.priority !== current.priority) {
     setField("priority", "priority", body.priority, current.priority);
     // §5: "sla_due_at ... Recalculated whenever priority changes."
-    const newSlaDueAt = new Date(current.receivedAt.getTime() + SLA_HOURS[body.priority] * 60 * 60 * 1000);
+    const newSlaDueAt = slaDueAtFor(current.receivedAt, body.priority);
     setField("slaDueAt", "slaDueAt", newSlaDueAt.toISOString(), current.slaDueAt.toISOString());
   }
 

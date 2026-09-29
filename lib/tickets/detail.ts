@@ -85,6 +85,17 @@ export async function loadTicketForViewer(id: string, userId: string, role: User
     });
   }
 
+  // "Response received" alert (2026-09-29): the assignee opening the
+  // ticket is what acknowledges it. Cleared in the DB only -- the returned
+  // object still carries `true` so this one render can show the banner.
+  // Deliberately doesn't bump `version` (not an edit to the ticket).
+  if (ticket.responseAlertPending && ticket.assignedToId === userId) {
+    await prisma.ticket.updateMany({
+      where: { id: ticket.id, assignedToId: userId },
+      data: { responseAlertPending: false },
+    });
+  }
+
   if (!ticket.firstViewedAt) {
     const result = await prisma.ticket.updateMany({
       where: { id: ticket.id, firstViewedAt: null },
@@ -93,7 +104,11 @@ export async function loadTicketForViewer(id: string, userId: string, role: User
     if (result.count > 0) {
       const refreshed = await prisma.ticket.findUnique({ where: { id }, include: TICKET_DETAIL_INCLUDE });
       if (!refreshed) return null;
-      return { ...refreshed, messages: sortMessagesChronologically(refreshed.messages) };
+      return {
+        ...refreshed,
+        responseAlertPending: ticket.responseAlertPending,
+        messages: sortMessagesChronologically(refreshed.messages),
+      };
     }
   }
   return { ...ticket, messages: sortMessagesChronologically(ticket.messages) };

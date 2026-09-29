@@ -44,12 +44,29 @@ export default async function InstructionsPage() {
           </li>
           <li>
             <strong>ALLOCATED</strong> -- a person now owns it. The requester automatically gets an email confirming
-            this, with the ticket number, expected response time, and a note asking them to keep the ticket number
-            in the subject line when they reply (see &quot;Replying to a requester&quot; below).
+            this, with the ticket number, &quot;Expected response: as soon as practical&quot;, and a note asking them
+            to keep the ticket number in the subject line when they reply (see &quot;Replying to a requester&quot;
+            below). You can choose the ticket&apos;s priority right next to the Claim / Assign button.
           </li>
           <li>
             <strong>IN_ACTION</strong> -- the assignee has started working it. <strong>A category must be set
-            before a ticket can move here</strong> -- there&apos;s no way around this, by design.
+            before a ticket can move here</strong> -- there&apos;s no way around this, by design. While in action, a
+            ticket can also be:
+            <ul>
+              <li>
+                <strong>AWAITING_RESPONSE</strong> -- you&apos;ve asked the requester something and are waiting to
+                hear back. Anyone can set this with <strong>Mark awaiting response</strong>.
+              </li>
+              <li>
+                <strong>RESPONSE_RECEIVED</strong> -- the requester has come back. <strong>Anyone</strong> can record
+                this, e.g. if you take a call about someone else&apos;s ticket: type what they said in the
+                &quot;Response received&quot; box and click <strong>Mark response received</strong> (the text is
+                saved as an internal note). The assignee gets an alert -- a red number next to{" "}
+                <strong>My tickets</strong> and a highlighted row -- until they open the ticket.
+              </li>
+            </ul>
+            The assignee uses <strong>Back to in action</strong> to carry on working it. Use the Status filter on
+            any list to find tickets in either state.
           </li>
           <li>
             <strong>OUTCOME</strong> -- the resolution has been drafted and sent to the requester via the dispatch
@@ -90,15 +107,16 @@ export default async function InstructionsPage() {
             you&apos;ve actually read the request.
           </li>
         </ul>
-        <p>Standard response-time expectations by priority:</p>
+        <p>Internal response-time targets by priority (these drive due dates and overdue alerts; requesters are
+          only told &quot;as soon as practical&quot;):</p>
         <ul>
           <li><strong>P1</strong> -- 2 days</li>
           <li><strong>P2</strong> -- 7 days</li>
           <li><strong>P3</strong> -- 30 days</li>
         </ul>
         <p>
-          Priority can be changed at any time from the Metadata panel (by the assignee, an HR_LEAD, or an ADMIN) --
-          changing it automatically recalculates the SLA clock.
+          Priority can be set when claiming or assigning a ticket, and changed at any time from the Metadata panel
+          by any HR staff member -- changing it automatically recalculates the SLA clock.
         </p>
         <p>
           Separately, a <strong>target due date</strong> can be set on any ticket for a specific external
@@ -128,7 +146,7 @@ export default async function InstructionsPage() {
         <h2>Views -- where to find things</h2>
         <ul>
           <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>
-          <li><strong>My tickets</strong> -- everything assigned to you.</li>
+          <li><strong>My tickets</strong> -- everything assigned to you, closed ones at the bottom. A red number next to it means someone recorded a response on one of your tickets.</li>
           <li><strong>All open</strong> -- every ticket that isn&apos;t CLOSED or ARCHIVED, across all officers.</li>
           <li><strong>Overdue</strong> -- tickets past their effective deadline (SLA or target due, whichever is earlier).</li>
           <li><strong>Closed</strong> -- every CLOSED or ARCHIVED ticket, across all officers, most recent first.</li>
@@ -179,11 +197,12 @@ export default async function InstructionsPage() {
         <h2>Step-by-step: handling a ticket end to end</h2>
         <ol>
           <li>Check the <a href="/pool">Pool</a> for unassigned tickets, or check <a href="/my-tickets">My tickets</a> for what&apos;s already yours.</li>
-          <li>Claim a ticket (or have it assigned to you by an HR_LEAD/ADMIN).</li>
+          <li>Claim a ticket (or have it assigned to you by an HR_LEAD/ADMIN) -- pick its priority in the dropdown next to the button.</li>
           <li>Read the request properly, then set its real <strong>Priority</strong> and <strong>Category</strong> in the Metadata panel -- category is mandatory before you can start action.</li>
           <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress) and a <strong>target due date</strong> if there&apos;s a specific external deadline.</li>
           <li>Click <strong>Start action</strong> once you begin working it.</li>
           <li>Use <strong>internal notes</strong> to record progress -- mark a note &quot;requester-visible&quot; only if you want it available later as an option in the outcome email.</li>
+          <li>If you&apos;re waiting on the requester, click <strong>Mark awaiting response</strong>. When they come back (to you or to a colleague), record it with <strong>Mark response received</strong>.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the requester-facing resolution, tick any requester-visible notes you want included, review the exact email that will send, and confirm.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
@@ -205,7 +224,8 @@ export default async function InstructionsPage() {
           <tbody>
             <tr><td>View pool / self-assign</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Reassign another user&apos;s ticket</td><td>Yes</td><td>Yes</td><td>Own tickets only</td></tr>
-            <tr><td>Edit ticket metadata, category, business unit, priority</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
+            <tr><td>Edit ticket metadata, category, business unit, priority</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
+            <tr><td>Mark awaiting response / response received</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>&quot;Not a request&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>

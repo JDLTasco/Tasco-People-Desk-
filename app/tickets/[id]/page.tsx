@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
-import { canActOnAssignedTicket } from "@/lib/rbac";
+import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
 import TicketActions from "./ticket-actions";
@@ -18,7 +18,8 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   if (!ticket) notFound();
 
   const isAssignedTicket = ticket.assignedToId === session.user.id;
-  const canEditMetadata = canActOnAssignedTicket(session.user.role, isAssignedTicket);
+  const canEditMetadata = canEditTicketMetadata(session.user.role);
+  const canMerge = canActOnAssignedTicket(session.user.role, isAssignedTicket);
   const due = effectiveDueDate(ticket.slaDueAt, ticket.targetDueAt);
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
 
@@ -27,6 +28,12 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       <h1>
         {ticket.ticketNo} -- {ticket.subject}
       </h1>
+
+      {ticket.responseAlertPending && isAssignedTicket && (
+        <p role="alert" className="banner banner-response">
+          🔔 A response was recorded on this ticket by someone else -- see the latest note below.
+        </p>
+      )}
 
       {ticket.isLegalHold && (
         <p className="banner banner-legal-hold">
@@ -110,6 +117,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         businessUnitId={ticket.businessUnitId}
         isAssignedTicket={isAssignedTicket}
         canEditMetadata={canEditMetadata}
+        canMerge={canMerge}
         role={session.user.role}
         userId={session.user.id}
         ticketNo={ticket.ticketNo}

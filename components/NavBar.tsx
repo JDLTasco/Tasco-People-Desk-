@@ -5,6 +5,7 @@ import { canManageAdminSettings, canViewAuditLog } from "@/lib/rbac";
 import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 import RefreshButton from "./RefreshButton";
+import { countResponseAlerts } from "@/lib/tickets/queries";
 
 // §13's view list. Archive Search (full-text over archive artefacts,
 // Stage 6) isn't linked yet -- Closed here is a lighter-weight history
@@ -12,6 +13,9 @@ import RefreshButton from "./RefreshButton";
 export default async function NavBar() {
   const session = await getSession();
   if (!session?.user) return null;
+  // "Response received" alerts (2026-09-29): someone else recorded a
+  // response on one of this user's tickets and they haven't opened it yet.
+  const responseAlerts = await countResponseAlerts(session.user.id);
 
   return (
     <nav className="main-nav no-print">
@@ -20,7 +24,14 @@ export default async function NavBar() {
       </span>
       <span className="nav-brand">Tasco People Desk</span>
       <Link href="/pool">Pool</Link>
-      <Link href="/my-tickets">My tickets</Link>
+      <Link href="/my-tickets">
+        My tickets
+        {responseAlerts > 0 && (
+          <span className="nav-badge" title={`${responseAlerts} ticket(s) with a new response`}>
+            {responseAlerts}
+          </span>
+        )}
+      </Link>
       <Link href="/all-open">All open</Link>
       <Link href="/overdue">Overdue</Link>
       <Link href="/closed">Closed</Link>

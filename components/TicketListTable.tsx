@@ -28,9 +28,12 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
           const due = effectiveDueDate(t.slaDueAt, t.targetDueAt);
           const overdue = isOverdue(t.slaDueAt, t.targetDueAt, t.status);
           return (
-            <tr key={t.id}>
+            <tr key={t.id} className={t.responseAlertPending ? "row-response-alert" : undefined}>
               <td>
                 <Link href={`/tickets/${t.id}`}>{t.ticketNo}</Link>
+                {t.responseAlertPending && (
+                  <span title="New response recorded -- not yet opened by the assignee"> 🔔</span>
+                )}
               </td>
               <td>
                 {t.subject} {t.isConfidential && <span title="Confidential">🔒</span>}

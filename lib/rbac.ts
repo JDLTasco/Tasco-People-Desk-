@@ -41,6 +41,18 @@ export function canActOnAssignedTicket(role: UserRole, isAssignedTicket: boolean
 }
 
 /**
+ * Edit ticket metadata (display subject, priority, CC list, category,
+ * business unit) -- operator amendment (John, 2026-09-29): every HR role
+ * may edit any ticket they can see, so officers can work on each other's
+ * cases. Supersedes canActOnAssignedTicket() for these fields only;
+ * outcome dispatch and closing stay assignee-gated. Confidential tickets
+ * remain gated by §9 visibility, checked separately by the caller.
+ */
+export function canEditTicketMetadata(_role: UserRole): boolean {
+  return true;
+}
+
+/**
  * Merge one ticket into another (added directly with John, Sep 2026 --
  * not in the original v1.3 permission matrix). ADMIN / HR_LEAD
  * unconditionally; HR_OFFICER only if they're the assignee of at least

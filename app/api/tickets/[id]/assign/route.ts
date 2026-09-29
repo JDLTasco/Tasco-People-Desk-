@@ -7,10 +7,13 @@ import { validateReassignment } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
 import { sendAllocationEmail } from "@/lib/email/allocation";
+import { isPriority, slaDueAtFor } from "@/lib/tickets/sla";
 
 interface AssignBody {
   userId: string;
   version?: number;
+  /** Pool assignment only: optional priority to set at the same time. */
+  priority?: unknown;
 }
 
 // Covers both halves of §4/§3's assignment story:
@@ -42,9 +45,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return forbidden("Only HR_LEAD or ADMIN may assign a pooled ticket to someone else");
     }
 
+    // Optional priority chosen at the moment of assigning (John, 2026-09-29),
+    // same as self-claim -- same atomic UPDATE, sla_due_at recalculated (§5).
+    if (body.priority !== undefined && !isPriority(body.priority)) return badRequest("priority must be P1, P2 or P3");
+    const newPriority = isPriority(body.priority) && body.priority !== ticket.priority ? body.priority : null;
+
     const result = await prisma.ticket.updateMany({
       where: { id: ticket.id, assignedToId: null, status: "NEW" },
-      data: { assignedToId: body.userId, status: "ALLOCATED", assignedAt: new Date(), version: { increment: 1 } },
+      data: {
+        assignedToId: body.userId,
+        status: "ALLOCATED",
+        assignedAt: new Date(),
+        version: { increment: 1 },
+        ...(newPriority ? { priority: newPriority, slaDueAt: slaDueAtFor(ticket.receivedAt, newPriority) } : {}),
+      },
     });
     if (result.count === 0) {
       const current = await prisma.ticket.findUnique({ where: { id: ticket.id } });
@@ -67,14 +81,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
       entity: "ticket",
       entityId: ticket.id,
       ticketId: ticket.id,
-      afterJson: { assignedToId: body.userId, status: "ALLOCATED" },
+      ...(newPriority ? { beforeJson: { priority: ticket.priority } } : {}),
+      afterJson: { assignedToId: body.userId, status: "ALLOCATED", ...(newPriority ? { priority: newPriority } : {}) },
     });
 
     // §7.4: "First entry into this [ALLOCATED] state sends the allocation
     // email" -- same as the self-claim path, just with the assignor's
     // choice of officer as the display name instead of the acting user.
     await sendAllocationEmail(
-      { id: ticket.id, ticketNo: ticket.ticketNo, subject: ticket.subject, requesterEmail: ticket.requesterEmail, priority: ticket.priority },
+      { id: ticket.id, ticketNo: ticket.ticketNo, subject: ticket.subject, requesterEmail: ticket.requesterEmail },
       targetUser.displayName,
       correlationId,
       session.user.id,

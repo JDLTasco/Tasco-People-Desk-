@@ -25,6 +25,7 @@ interface Props {
   businessUnitId: string | null;
   isAssignedTicket: boolean;
   canEditMetadata: boolean;
+  canMerge: boolean;
   role: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
   userId: string;
   ticketNo: string;
@@ -68,6 +69,7 @@ export default function TicketActions({
   businessUnitId,
   isAssignedTicket,
   canEditMetadata,
+  canMerge,
   role,
   userId,
   ticketNo,
@@ -100,6 +102,28 @@ export default function TicketActions({
   const [targetDueReasonText, setTargetDueReasonText] = useState(targetDueReason ?? "");
   const [legalHoldReasonText, setLegalHoldReasonText] = useState("");
   const [deleteReasonText, setDeleteReasonText] = useState("");
+  // Priority chosen at claim/assign time (2026-09-29) -- defaults to the
+  // ticket's current (usually auto-classified P3) priority.
+  const [allocationPriority, setAllocationPriority] = useState<"P1" | "P2" | "P3">(priority);
+  const [responseNote, setResponseNote] = useState("");
+
+  // IN_ACTION and its two response sub-steps (see lib/tickets/transitions.ts).
+  const isWorking = status === "IN_ACTION" || status === "AWAITING_RESPONSE" || status === "RESPONSE_RECEIVED";
+  const canCloseEarly = status === "NEW" || status === "ALLOCATED" || isWorking;
+  const isAssigneeOrLead = isAssignedTicket || role === "ADMIN" || role === "HR_LEAD";
+
+  const prioritySelect = (
+    <label>
+      Priority:{" "}
+      <select value={allocationPriority} onChange={(e) => setAllocationPriority(e.target.value as "P1" | "P2" | "P3")}>
+        {["P1", "P2", "P3"].map((p) => (
+          <option key={p} value={p}>
+            {p}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 
   useEffect(() => {
     fetch("/api/users")
@@ -282,9 +306,15 @@ export default function TicketActions({
         <h3>Action</h3>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {status === "NEW" && (
-            <button disabled={busy} onClick={() => run(() => postJson(`/api/tickets/${ticketId}/claim`, {}))}>
-              Claim
-            </button>
+            <span>
+              {prioritySelect}{" "}
+              <button
+                disabled={busy}
+                onClick={() => run(() => postJson(`/api/tickets/${ticketId}/claim`, { priority: allocationPriority }))}
+              >
+                Claim
+              </button>
+            </span>
           )}
 
           {status === "ALLOCATED" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
@@ -296,7 +326,27 @@ export default function TicketActions({
             </button>
           )}
 
-          {status === "IN_ACTION" && (isAssignedTicket || role === "ADMIN" || role === "HR_LEAD") && (
+          {(status === "IN_ACTION" || status === "RESPONSE_RECEIVED") && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                run(() => postJson(`/api/tickets/${ticketId}/response-status`, { version, toStatus: "AWAITING_RESPONSE" }))
+              }
+            >
+              Mark awaiting response
+            </button>
+          )}
+
+          {(status === "AWAITING_RESPONSE" || status === "RESPONSE_RECEIVED") && isAssigneeOrLead && (
+            <button
+              disabled={busy}
+              onClick={() => run(() => postJson(`/api/tickets/${ticketId}/response-status`, { version, toStatus: "IN_ACTION" }))}
+            >
+              Back to in action
+            </button>
+          )}
+
+          {isWorking && isAssigneeOrLead && (
             <OutcomeDispatchModal
               ticketId={ticketId}
               version={version}
@@ -315,7 +365,7 @@ export default function TicketActions({
             </button>
           )}
 
-          {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+          {canCloseEarly && (
             <button
               disabled={busy}
               onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-withdrawn`, { version }))}
@@ -324,7 +374,7 @@ export default function TicketActions({
             </button>
           )}
 
-          {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+          {canCloseEarly && (
             <button
               disabled={busy}
               onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version }))}
@@ -333,7 +383,7 @@ export default function TicketActions({
             </button>
           )}
 
-          {(status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION") && (
+          {canCloseEarly && (
             <button
               disabled={busy}
               onClick={() => run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }))}
@@ -344,7 +394,40 @@ export default function TicketActions({
         </div>
       </div>
 
-      {canEditMetadata && (status === "NEW" || status === "ALLOCATED" || status === "IN_ACTION" || status === "OUTCOME") && (
+      {/* Any staff member can record a requester's response (e.g. they took the
+          call on someone else's ticket) -- the assignee gets an in-app alert. */}
+      {(status === "IN_ACTION" || status === "AWAITING_RESPONSE") && (
+        <div style={{ marginBottom: "1rem" }}>
+          <h3>Response received</h3>
+          <textarea
+            value={responseNote}
+            onChange={(e) => setResponseNote(e.target.value)}
+            placeholder="What did the requester say? (required -- saved as an internal note)"
+            rows={3}
+            style={{ width: "100%", maxWidth: "40rem" }}
+          />
+          <div>
+            <button
+              disabled={busy || !responseNote.trim()}
+              onClick={() =>
+                run(async () => {
+                  const result = await postJson(`/api/tickets/${ticketId}/response-status`, {
+                    version,
+                    toStatus: "RESPONSE_RECEIVED",
+                    note: responseNote,
+                  });
+                  if (result.ok) setResponseNote("");
+                  return result;
+                })
+              }
+            >
+              Mark response received
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canMerge && (status === "NEW" || status === "ALLOCATED" || isWorking || status === "OUTCOME") && (
         <div style={{ marginBottom: "1rem" }}>
           <MergeTicketForm ticketId={ticketId} ticketNo={ticketNo} version={version} />
         </div>
@@ -363,16 +446,19 @@ export default function TicketActions({
                 </option>
               ))}
           </select>{" "}
+          {prioritySelect}{" "}
           <button
             disabled={busy || !selectedAssignee}
-            onClick={() => run(() => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee }))}
+            onClick={() =>
+              run(() => postJson(`/api/tickets/${ticketId}/assign`, { userId: selectedAssignee, priority: allocationPriority }))
+            }
           >
             Assign
           </button>
         </div>
       )}
 
-      {(status === "ALLOCATED" || status === "IN_ACTION") && (
+      {(status === "ALLOCATED" || isWorking) && (
         <div style={{ marginBottom: "1rem" }}>
           <h3>Reassign</h3>
           <select value={selectedAssignee} onChange={(e) => setSelectedAssignee(e.target.value)}>
@@ -399,7 +485,7 @@ export default function TicketActions({
           <h3>Reverse (ADMIN only, requires a fresh step-up sign-in)</h3>
           <select value={reverseTo} onChange={(e) => setReverseTo(e.target.value)}>
             <option value="">(target status)</option>
-            {["NEW", "ALLOCATED", "IN_ACTION", "OUTCOME", "CLOSED"].map((s) => (
+            {["NEW", "ALLOCATED", "IN_ACTION", "AWAITING_RESPONSE", "RESPONSE_RECEIVED", "OUTCOME", "CLOSED"].map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>

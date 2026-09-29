@@ -7,6 +7,27 @@
 // this far).
 import type { AccessBasis } from "@prisma/client";
 import type { UserRole } from "../roles";
+import { canViewConfidentialTicket } from "../rbac";
+
+export interface TicketVisibilityFacts {
+  isConfidential: boolean;
+  assignedToId: string | null;
+  accessGrants: { userId: string }[];
+}
+
+/**
+ * §9's view gate as a single yes/no for write routes that don't go through
+ * loadTicketForViewer() -- a caller who can't see a confidential ticket
+ * must get the same 404 there as on the detail page, never a way to act
+ * on it by id.
+ */
+export function canViewerSeeTicket(role: UserRole, userId: string, ticket: TicketVisibilityFacts): boolean {
+  if (!ticket.isConfidential) return true;
+  return canViewConfidentialTicket(role, {
+    isAssignee: ticket.assignedToId === userId,
+    hasExplicitGrant: ticket.accessGrants.some((g) => g.userId === userId),
+  });
+}
 
 export function determineAccessBasis(role: UserRole, isAssignee: boolean, hasExplicitGrant: boolean): AccessBasis {
   if (isAssignee) return "ASSIGNEE";

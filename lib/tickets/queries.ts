@@ -2,6 +2,8 @@ import { prisma } from "../prisma";
 import type { UserRole } from "../roles";
 import { isOverdue } from "./due-dates";
 import type { Prisma } from "@prisma/client";
+import { OPEN_STATUSES } from "./transitions";
+import { closedLast } from "./sort";
 
 const TICKET_LIST_SELECT = {
   id: true,
@@ -14,6 +16,7 @@ const TICKET_LIST_SELECT = {
   slaDueAt: true,
   targetDueAt: true,
   isConfidential: true,
+  responseAlertPending: true,
   category: { select: { name: true } },
   businessUnit: { select: { name: true } },
   assignee: { select: { id: true, displayName: true, initials: true } },
@@ -53,9 +56,9 @@ export async function getPoolTickets(userId: string, role: UserRole): Promise<Ti
   });
 }
 
-/** My tickets (§13): everything currently assigned to the caller, not yet archived. */
+/** My tickets (§13): everything currently assigned to the caller, not yet archived. Closed ones last (John, 2026-09-29). */
 export async function getMyTickets(userId: string): Promise<TicketListRow[]> {
-  return prisma.ticket.findMany({
+  const rows = await prisma.ticket.findMany({
     where: {
       assignedToId: userId,
       status: { not: "ARCHIVED" },
@@ -64,13 +67,19 @@ export async function getMyTickets(userId: string): Promise<TicketListRow[]> {
     select: TICKET_LIST_SELECT,
     orderBy: { receivedAt: "asc" },
   });
+  return closedLast(rows);
+}
+
+/** How many of the caller's tickets have an unacknowledged "response received" alert (nav badge). */
+export async function countResponseAlerts(userId: string): Promise<number> {
+  return prisma.ticket.count({ where: { assignedToId: userId, responseAlertPending: true, isDeleted: false } });
 }
 
 /** All open (§13): every active ticket across all officers, regardless of assignment. */
 export async function getAllOpenTickets(userId: string, role: UserRole): Promise<TicketListRow[]> {
   return prisma.ticket.findMany({
     where: {
-      status: { in: ["NEW", "ALLOCATED", "IN_ACTION", "OUTCOME"] },
+      status: { in: OPEN_STATUSES },
       isDeleted: false,
       ...confidentialFilter(userId, role),
     },
@@ -233,7 +242,7 @@ export async function getDeletedTickets(): Promise<DeletedTicketRow[]> {
 export async function searchTickets(userId: string, role: UserRole, query: string): Promise<TicketListRow[]> {
   const q = query.trim();
   if (!q) return [];
-  return prisma.ticket.findMany({
+  const rows = await prisma.ticket.findMany({
     where: {
       isDeleted: false,
       status: { not: "ARCHIVED" },
@@ -244,4 +253,5 @@ export async function searchTickets(userId: string, role: UserRole, query: strin
     orderBy: { receivedAt: "desc" },
     take: 20,
   });
+  return closedLast(rows);
 }

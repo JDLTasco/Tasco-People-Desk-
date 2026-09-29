@@ -260,6 +260,8 @@ button.secondary:hover:not(:disabled) {
 .chip-status-NEW { background: var(--tasco-navy-pale); color: var(--tasco-navy); }
 .chip-status-ALLOCATED { background: var(--chip-allocated-bg); color: var(--chip-allocated-ink); }
 .chip-status-IN_ACTION { background: var(--tasco-amber-pale); color: var(--tasco-amber); }
+.chip-status-AWAITING_RESPONSE { background: var(--tasco-amber-pale); color: var(--tasco-amber); border: 1px dashed var(--tasco-amber); }
+.chip-status-RESPONSE_RECEIVED { background: var(--tasco-green-pale); color: var(--tasco-green); }
 .chip-status-OUTCOME { background: var(--chip-outcome-bg); color: var(--chip-outcome-ink); }
 .chip-status-CLOSED { background: var(--chip-closed-bg); color: var(--chip-closed-ink); }
 .chip-status-ARCHIVED { background: var(--chip-archived-bg); color: var(--chip-archived-ink); }
@@ -294,6 +296,27 @@ button.secondary:hover:not(:disabled) {
 .banner-error {
   background: var(--tasco-red-pale);
   color: var(--tasco-red);
+}
+
+/* "Response received" alert (2026-09-29) -- nav count badge, highlighted list row, ticket banner. */
+.banner-response {
+  background: var(--tasco-green-pale);
+  color: var(--tasco-green);
+  border: 1px solid var(--tasco-green);
+}
+.row-response-alert td { background: var(--tasco-green-pale); }
+.nav-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  min-width: 1.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--tasco-red);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
 }
 
 /* Outcome dispatch preview modal (§7.4, Stage 5) */
