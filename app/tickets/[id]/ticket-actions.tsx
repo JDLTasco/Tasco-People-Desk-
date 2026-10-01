@@ -179,6 +179,43 @@ export default function TicketActions({
     });
   }
 
+  // Current action dropdown (2026-10-01). Values: the two response
+  // sub-statuses, plain IN_ACTION, or "item:<id>" for an action item.
+  const currentAction =
+    status === "IN_ACTION" ? (actionStatusId ? `item:${actionStatusId}` : "IN_ACTION") : status;
+  const [selectedAction, setSelectedAction] = useState(currentAction);
+  useEffect(() => setSelectedAction(currentAction), [currentAction]);
+  const actionOptions: { value: string; label: string; allowed: boolean }[] = [
+    // Back to plain IN_ACTION from anything else is assignee/HR_LEAD/ADMIN only.
+    { value: "IN_ACTION", label: "In action", allowed: isAssigneeOrLead },
+    { value: "AWAITING_RESPONSE", label: "Awaiting response", allowed: true },
+    { value: "RESPONSE_RECEIVED", label: "Response received", allowed: true },
+    ...actionItems.map((a) => ({
+      value: `item:${a.id}`,
+      label: a.name,
+      // From a response sub-step, setting an item moves the ticket back to IN_ACTION.
+      allowed: status === "IN_ACTION" || isAssigneeOrLead,
+    })),
+  ];
+  // A deactivated item still on this ticket isn't in the active list -- show it so the dropdown reads correctly.
+  if (actionStatusId && status === "IN_ACTION" && !actionItems.some((a) => a.id === actionStatusId)) {
+    actionOptions.push({ value: `item:${actionStatusId}`, label: actionStatusName ?? "Action item", allowed: true });
+  }
+
+  function changeAction(target: string, v: number): Promise<ApiResult> {
+    if (target.startsWith("item:")) {
+      return postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: target.slice(5) });
+    }
+    if (target === "IN_ACTION" && status === "IN_ACTION") {
+      return postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: null });
+    }
+    return postJson(`/api/tickets/${ticketId}/response-status`, {
+      version: v,
+      toStatus: target,
+      ...(target === "RESPONSE_RECEIVED" ? { note: responseNote } : {}),
+    });
+  }
+
   useEffect(() => {
     fetch("/api/users")
       .then((r) => r.json())
@@ -318,6 +355,48 @@ export default function TicketActions({
         {hasPendingChanges && <em> Unsaved changes -- also saved automatically when you press any Action button.</em>}
       </div>
 
+      {/* Current action (John, 2026-10-01): one dropdown for where the
+          ticket is up to while it's being worked -- in action, awaiting
+          response, response received, or any admin-managed action item
+          (e.g. On Hold). Each choice calls the same routes the separate
+          buttons used to; the server still enforces who may do what. */}
+      {isWorking && (
+        <div style={{ marginBottom: "1rem" }}>
+          <h3>Current action</h3>
+          <select value={selectedAction} onChange={(e) => setSelectedAction(e.target.value)} disabled={busy}>
+            {actionOptions.map((o) => (
+              <option key={o.value} value={o.value} disabled={!o.allowed}>
+                {o.label}
+                {o.value === currentAction ? " (current)" : !o.allowed ? " (assignee, HR Lead or Admin only)" : ""}
+              </option>
+            ))}
+          </select>{" "}
+          <button
+            disabled={busy || selectedAction === currentAction || (selectedAction === "RESPONSE_RECEIVED" && !responseNote.trim())}
+            onClick={() =>
+              runWithSave(async (v) => {
+                const result = await changeAction(selectedAction, v);
+                if (result.ok) setResponseNote("");
+                return result;
+              })
+            }
+          >
+            Update action
+          </button>
+          {selectedAction === "RESPONSE_RECEIVED" && selectedAction !== currentAction && (
+            <div style={{ marginTop: "0.5rem" }}>
+              <textarea
+                value={responseNote}
+                onChange={(e) => setResponseNote(e.target.value)}
+                placeholder="What did the requester say? (required -- saved as an internal note; the assignee gets an alert)"
+                rows={3}
+                style={{ width: "100%", maxWidth: "40rem" }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ marginBottom: "1rem" }}>
         <h3>Action</h3>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -333,59 +412,6 @@ export default function TicketActions({
               onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/start-action`, { version: v }))}
             >
               Start action
-            </button>
-          )}
-
-          {(status === "IN_ACTION" || status === "RESPONSE_RECEIVED") && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                runWithSave((v) =>
-                  postJson(`/api/tickets/${ticketId}/response-status`, { version: v, toStatus: "AWAITING_RESPONSE" }),
-                )
-              }
-            >
-              Mark awaiting response
-            </button>
-          )}
-
-          {/* Action items (admin-managed, e.g. "On Hold", 2026-10-01): any staff
-              member while IN_ACTION; from a response sub-step it also moves the
-              ticket back to IN_ACTION, so assignee/HR_LEAD/ADMIN only. */}
-          {(status === "IN_ACTION" || (isWorking && isAssigneeOrLead)) &&
-            actionItems
-              .filter((a) => !(status === "IN_ACTION" && a.id === actionStatusId))
-              .map((a) => (
-                <button
-                  key={a.id}
-                  disabled={busy}
-                  onClick={() =>
-                    runWithSave((v) => postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: a.id }))
-                  }
-                >
-                  Mark {a.name.toLowerCase()}
-                </button>
-              ))}
-
-          {status === "IN_ACTION" && actionStatusId && isAssigneeOrLead && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                runWithSave((v) => postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: null }))
-              }
-            >
-              Clear {actionStatusName ?? "action item"} (back to in action)
-            </button>
-          )}
-
-          {(status === "AWAITING_RESPONSE" || status === "RESPONSE_RECEIVED") && isAssigneeOrLead && (
-            <button
-              disabled={busy}
-              onClick={() =>
-                runWithSave((v) => postJson(`/api/tickets/${ticketId}/response-status`, { version: v, toStatus: "IN_ACTION" }))
-              }
-            >
-              Back to in action
             </button>
           )}
 
@@ -471,39 +497,6 @@ export default function TicketActions({
           )}
         </div>
       </div>
-
-      {/* Any staff member can record a requester's response (e.g. they took the
-          call on someone else's ticket) -- the assignee gets an in-app alert. */}
-      {(status === "IN_ACTION" || status === "AWAITING_RESPONSE") && (
-        <div style={{ marginBottom: "1rem" }}>
-          <h3>Response received</h3>
-          <textarea
-            value={responseNote}
-            onChange={(e) => setResponseNote(e.target.value)}
-            placeholder="What did the requester say? (required -- saved as an internal note)"
-            rows={3}
-            style={{ width: "100%", maxWidth: "40rem" }}
-          />
-          <div>
-            <button
-              disabled={busy || !responseNote.trim()}
-              onClick={() =>
-                runWithSave(async (v) => {
-                  const result = await postJson(`/api/tickets/${ticketId}/response-status`, {
-                    version: v,
-                    toStatus: "RESPONSE_RECEIVED",
-                    note: responseNote,
-                  });
-                  if (result.ok) setResponseNote("");
-                  return result;
-                })
-              }
-            >
-              Mark response received
-            </button>
-          </div>
-        </div>
-      )}
 
       {canMerge && (status === "NEW" || status === "ALLOCATED" || isWorking || status === "OUTCOME") && (
         <div style={{ marginBottom: "1rem" }}>

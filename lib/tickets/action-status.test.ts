@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { displayStatus, validateActionStatusChange, type ActionStatusChangeContext } from "./action-status";
+import { currentActionLabel, displayStatus, validateActionStatusChange, type ActionStatusChangeContext } from "./action-status";
 
 const officer: ActionStatusChangeContext = {
   status: "IN_ACTION",
@@ -60,5 +60,18 @@ describe("displayStatus", () => {
   it("shows the plain status otherwise", () => {
     assert.equal(displayStatus({ status: "IN_ACTION", actionStatus: null }), "IN_ACTION");
     assert.equal(displayStatus({ status: "OUTCOME", actionStatus: { name: "On Hold" } }), "OUTCOME");
+  });
+});
+
+describe("currentActionLabel", () => {
+  it("uses the action item's name while IN_ACTION", () => {
+    assert.equal(currentActionLabel({ status: "IN_ACTION", actionStatus: { name: "On Hold" } }), "On Hold");
+  });
+
+  it("uses plain-English labels for every status", () => {
+    assert.equal(currentActionLabel({ status: "IN_ACTION", actionStatus: null }), "In action");
+    assert.equal(currentActionLabel({ status: "AWAITING_RESPONSE" }), "Awaiting response");
+    assert.equal(currentActionLabel({ status: "RESPONSE_RECEIVED" }), "Response received");
+    assert.equal(currentActionLabel({ status: "NEW" }), "New -- waiting in the Pool");
   });
 });

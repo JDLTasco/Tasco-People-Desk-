@@ -64,3 +64,20 @@ export function displayStatus(ticket: { status: string; actionStatus?: { name: s
   if (ticket.status === "IN_ACTION" && ticket.actionStatus) return ticket.actionStatus.name;
   return ticket.status;
 }
+
+const CURRENT_ACTION_LABELS: Record<string, string> = {
+  NEW: "New -- waiting in the Pool",
+  ALLOCATED: "Allocated -- not started yet",
+  IN_ACTION: "In action",
+  AWAITING_RESPONSE: "Awaiting response",
+  RESPONSE_RECEIVED: "Response received",
+  OUTCOME: "Outcome sent -- ready to close",
+  CLOSED: "Closed",
+  ARCHIVED: "Archived",
+};
+
+/** Plain-English "Current action: ..." text for the banner at the top of a ticket (John, 2026-10-01). */
+export function currentActionLabel(ticket: { status: string; actionStatus?: { name: string } | null }): string {
+  if (ticket.status === "IN_ACTION" && ticket.actionStatus) return ticket.actionStatus.name;
+  return CURRENT_ACTION_LABELS[ticket.status] ?? ticket.status;
+}

@@ -482,6 +482,28 @@ main.ticket-page {
   border: 1px solid var(--tasco-navy);
 }
 
+/* "Current action" banner at the top of a ticket (2026-10-01) */
+.banner-current-action {
+  font-size: 1.1rem;
+  background: var(--tasco-navy-pale);
+  color: var(--tasco-navy);
+  border-left: 5px solid var(--tasco-navy);
+}
+.banner-current-action.current-action-AWAITING_RESPONSE {
+  background: var(--tasco-amber-pale);
+  color: var(--tasco-amber);
+  border-left-color: var(--tasco-amber);
+}
+.banner-current-action.current-action-RESPONSE_RECEIVED {
+  background: var(--tasco-green-pale);
+  color: var(--tasco-green);
+  border-left-color: var(--tasco-green);
+}
+.current-action-meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 /* Version + branding (2026-10-01) */
 .nav-version {
   font-size: 0.7rem;

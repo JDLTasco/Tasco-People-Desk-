@@ -51,31 +51,32 @@ export default async function InstructionsPage() {
           <li>
             <strong>IN_ACTION</strong> -- the assignee has started working it. <strong>A category must be set
             before a ticket can move here</strong> -- there&apos;s no way around this, by design. While in action, a
-            ticket can also be:
+            ticket can also be in one of the states below. Pick one from the <strong>Current action</strong>{" "}
+            dropdown and click <strong>Update action</strong>; the ticket&apos;s current action is always shown in the
+            banner at the top of the ticket, with who set it and when.
             <ul>
               <li>
                 <strong>AWAITING_RESPONSE</strong> -- you&apos;ve asked the requester something and are waiting to
-                hear back. Anyone can set this with <strong>Mark awaiting response</strong>. The assignee, HR Leads
+                hear back. Anyone can set this. The assignee, HR Leads
                 and Admins can also email the requester a question with <strong>Ask requester a question</strong>{" "}
                 -- you review the exact email before it sends, the ticket moves here automatically, and their reply
                 threads back onto the ticket.
               </li>
               <li>
                 <strong>RESPONSE_RECEIVED</strong> -- the requester has come back. <strong>Anyone</strong> can record
-                this, e.g. if you take a call about someone else&apos;s ticket: type what they said in the
-                &quot;Response received&quot; box and click <strong>Mark response received</strong> (the text is
-                saved as an internal note). The assignee gets an alert -- a red number next to{" "}
+                this, e.g. if you take a call about someone else&apos;s ticket: choose Response received, type what they
+                said in the box that appears, and click Update action (the text is saved as an internal note). The assignee gets an alert -- a red number next to{" "}
                 <strong>My tickets</strong> and a highlighted row -- until they open the ticket.
               </li>
               <li>
                 <strong>Action items</strong> such as <strong>On Hold</strong> -- labels an Admin manages under
-                Admin &rarr; Action items. Each shows as a <strong>Mark ...</strong> button; the label then shows in
+                Admin &rarr; Action items. Each appears in the Current action dropdown; the label then shows in
                 place of IN_ACTION on the ticket and in every list. Anyone can set one; only the assignee, HR Leads
                 and Admins can clear it. It clears by itself when the ticket moves to any other status, and the due
                 date keeps running while it&apos;s set.
               </li>
             </ul>
-            The assignee uses <strong>Back to in action</strong> to carry on working it. Use the Status filter on
+            The assignee picks <strong>In action</strong> in the dropdown to carry on working it. Use the Status filter on
             any list to find tickets in either state.
           </li>
           <li>
@@ -216,7 +217,7 @@ export default async function InstructionsPage() {
           <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress) and a <strong>target due date</strong> if there&apos;s a specific external deadline.</li>
           <li>Click <strong>Start action</strong> once you begin working it.</li>
           <li>Use <strong>internal notes</strong> to record progress -- mark a note &quot;requester-visible&quot; only if you want it available later as an option in the outcome email.</li>
-          <li>To ask the requester something, use <strong>Ask requester a question</strong> (or click <strong>Mark awaiting response</strong> if you asked them another way). To park a ticket, use <strong>Mark on hold</strong>. When they come back (to you or to a colleague), record it with <strong>Mark response received</strong>.</li>
+          <li>To ask the requester something, use <strong>Ask requester a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked them another way). To park a ticket, set it to <strong>On Hold</strong>. When they come back (to you or to a colleague), set it to <strong>Response received</strong>.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the requester-facing resolution, tick any requester-visible notes you want included, review the exact email that will send, and confirm.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
@@ -239,7 +240,7 @@ export default async function InstructionsPage() {
             <tr><td>View pool / self-assign</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Reassign another user&apos;s ticket</td><td>Yes</td><td>Yes</td><td>Own tickets only</td></tr>
             <tr><td>Edit ticket metadata, category, business unit, priority</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
-            <tr><td>Mark awaiting response / response received</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
+            <tr><td>Set the current action (awaiting response, response received, action items)</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>&quot;Not a request&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>

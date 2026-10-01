@@ -6,7 +6,7 @@ import { validateReopen } from "@/lib/tickets/reopen";
 import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
-import { displayStatus } from "@/lib/tickets/action-status";
+import { currentActionLabel, displayStatus } from "@/lib/tickets/action-status";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
@@ -24,12 +24,25 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   const canMerge = canActOnAssignedTicket(session.user.role, isAssignedTicket);
   const due = effectiveDueDate(ticket.slaDueAt, ticket.targetDueAt);
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
+  const lastChange = ticket.statusHistory[ticket.statusHistory.length - 1];
 
   return (
     <main className="ticket-page">
       <h1>
         {ticket.ticketNo} -- {ticket.subject}
       </h1>
+
+      {/* "Current action" banner (John, 2026-10-01) -- where the ticket is up
+          to, plus who last moved it and when (latest status history row). */}
+      <p className={`banner banner-current-action current-action-${ticket.status}`}>
+        Current action: <strong>{currentActionLabel(ticket)}</strong>
+        {lastChange && (
+          <span className="current-action-meta">
+            {" "}
+            -- set by {lastChange.actor.displayName} on {formatAuDateTime(lastChange.createdAt)}
+          </span>
+        )}
+      </p>
 
       {ticket.responseAlertPending && isAssignedTicket && (
         <p role="alert" className="banner banner-response">
