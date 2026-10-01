@@ -1,5 +1,6 @@
 import type { TicketListRow } from "./queries";
 import { effectiveDueDate, isOverdue } from "./due-dates";
+import { displayStatus } from "./action-status";
 
 // Dashboard list-view filtering (requester/status/priority/business unit/
 // assignee/due) -- pure so it's testable independent of the client
@@ -39,7 +40,9 @@ export function matchesFilters(ticket: TicketListRow, criteria: TicketFilterCrit
   if (criteria.requester) {
     if (!ticket.requesterName.toLowerCase().includes(criteria.requester.toLowerCase())) return false;
   }
-  if (criteria.status && ticket.status !== criteria.status) return false;
+  // Compared against what the list shows -- an action item's name (e.g.
+  // "On Hold") in place of IN_ACTION (2026-10-01).
+  if (criteria.status && displayStatus(ticket) !== criteria.status) return false;
   if (criteria.priority && ticket.priority !== criteria.priority) return false;
   if (criteria.businessUnit) {
     if (criteria.businessUnit === "__none__") {
@@ -52,8 +55,8 @@ export function matchesFilters(ticket: TicketListRow, criteria: TicketFilterCrit
     if (criteria.assignee === "__unassigned__") {
       if (ticket.assignee !== null) return false;
     } else {
-      const label = ticket.assignee ? `${ticket.assignee.displayName} (${ticket.assignee.initials})` : "";
-      if (label !== criteria.assignee) return false;
+      // Full name only, matching the dropdown (initials suffix removed 2026-09-29).
+      if (ticket.assignee?.displayName !== criteria.assignee) return false;
     }
   }
   if (!matchesDueFilter(ticket, criteria.due, now)) return false;

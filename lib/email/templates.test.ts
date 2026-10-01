@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { renderAllocationEmail, renderOutcomeEmail, renderEscalationEmail } from "./templates";
+import { renderAllocationEmail, renderOutcomeEmail, renderEscalationEmail, renderRequesterQuestionEmail } from "./templates";
 
 describe("renderAllocationEmail", () => {
   it("includes ticket number, subject, assignee name, and 'as soon as practical' (§7.4, amended 2026-09-29)", () => {
@@ -86,5 +86,24 @@ describe("renderEscalationEmail", () => {
       portalUrl: "https://example.test",
     });
     assert.match(email.bodyText, /target due date/);
+  });
+});
+
+describe("renderRequesterQuestionEmail", () => {
+  const rendered = renderRequesterQuestionEmail({
+    ticketNo: "261001093001",
+    displaySubject: "Leave balance",
+    question: "Which pay period are you asking about?\n\n<b>thanks</b>",
+  });
+
+  it("keeps the ticket number in the subject so the reply threads back", () => {
+    assert.equal(rendered.subject, "[261001093001] Leave balance -- Question from HR");
+    assert.match(rendered.bodyText, /keep the ticket number in the subject/);
+  });
+
+  it("includes the question and escapes it in HTML", () => {
+    assert.match(rendered.bodyText, /Which pay period are you asking about\?/);
+    assert.match(rendered.bodyHtml, /&lt;b&gt;thanks&lt;\/b&gt;/);
+    assert.doesNotMatch(rendered.bodyHtml, /<b>thanks/);
   });
 });

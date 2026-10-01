@@ -77,8 +77,8 @@ describe("matchesFilters: business unit", () => {
 describe("matchesFilters: assignee", () => {
   it("matches by 'Display Name (Initials)' label", () => {
     const t = ticket({ assignee: { id: "u1", displayName: "Jane Officer", initials: "JO" } });
-    assert.equal(matchesFilters(t, { assignee: "Jane Officer (JO)" }), true);
-    assert.equal(matchesFilters(t, { assignee: "Other Person (OP)" }), false);
+    assert.equal(matchesFilters(t, { assignee: "Jane Officer" }), true);
+    assert.equal(matchesFilters(t, { assignee: "Other Person" }), false);
   });
 
   it("__unassigned__ matches tickets with no assignee", () => {
@@ -126,5 +126,13 @@ describe("matchesFilters: combined criteria (AND, not OR)", () => {
       matchesFilters(t, { requester: "jane", status: "ALLOCATED", priority: "P1" /* wrong */ }, NOW),
       false,
     );
+  });
+});
+
+describe("matchesFilters: action items (2026-10-01)", () => {
+  it("filters an IN_ACTION ticket by its action item's name, not IN_ACTION", () => {
+    const t = ticket({ status: "IN_ACTION", actionStatus: { name: "On Hold" } });
+    assert.equal(matchesFilters(t, { status: "On Hold" }), true);
+    assert.equal(matchesFilters(t, { status: "IN_ACTION" }), false);
   });
 });

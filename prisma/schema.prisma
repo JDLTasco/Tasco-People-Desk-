@@ -103,6 +103,10 @@ enum MessageType {
   // content; this is a separate closing notice sent at the point of
   // final closure.
   CLOSED_RESOLVED
+  // Operator addition (John, 2026-10-01): an officer emails the requester a
+  // question mid-investigation (review-before-send, like OUTCOME); the
+  // ticket moves to AWAITING_RESPONSE and the reply threads back on.
+  REQUESTER_QUESTION
 
   @@map("message_type")
 }
@@ -186,6 +190,23 @@ model BusinessUnit {
   @@map("business_units")
 }
 
+// Operator addition (John, 2026-10-01): admin-managed "action items" -- a
+// label on an IN_ACTION ticket (e.g. "On Hold") shown in place of the
+// status. Same lookup-table shape as categories: deactivated, never deleted.
+model ActionStatus {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @unique
+  sortOrder   Int      @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdById String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  createdBy User?    @relation(fields: [createdById], references: [id])
+  tickets   Ticket[]
+
+  @@map("action_statuses")
+}
+
 // ---------- Users (§5, §3) ----------
 
 model User {
@@ -203,6 +224,7 @@ model User {
   // explicitly so Prisma can disambiguate the many relations to this model.
   categoriesCreated       Category[]           @relation
   businessUnitsCreated    BusinessUnit[]       @relation
+  actionStatusesCreated   ActionStatus[]       @relation
   ticketsAssigned         Ticket[]             @relation("TicketAssignee")
   ticketsFirstViewed      Ticket[]             @relation("TicketFirstViewedBy")
   ticketsConfidentialSet  Ticket[]             @relation("TicketConfidentialSetBy")
@@ -244,6 +266,12 @@ model Ticket {
   targetDueReason String?   @map("target_due_reason")
 
   status TicketStatus @default(NEW)
+
+  // Action item label (2026-10-01), only meaningful while status is
+  // IN_ACTION. A database trigger (migration 20261001000100) clears it
+  // whenever status changes without the same UPDATE setting a new label,
+  // so no status-changing route can leave a stale label behind.
+  actionStatusId String? @map("action_status_id") @db.Uuid
 
   assignedToId String?   @map("assigned_to") @db.Uuid
   assignedAt   DateTime? @map("assigned_at")
@@ -295,7 +323,8 @@ model Ticket {
 
   category         Category?     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   businessUnit     BusinessUnit? @relation(fields: [businessUnitId], references: [id], onDelete: Restrict)
-  assignee         User?         @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  actionStatus     ActionStatus? @relation(fields: [actionStatusId], references: [id], onDelete: Restrict)
+  assignee        User?         @relation("TicketAssignee", fields: [assignedToId], references: [id])
   firstViewedBy    User?         @relation("TicketFirstViewedBy", fields: [firstViewedById], references: [id])
   confidentialSetBy User?        @relation("TicketConfidentialSetBy", fields: [confidentialSetById], references: [id])
   legalHoldSetBy    User?        @relation("TicketLegalHoldSetBy", fields: [legalHoldSetById], references: [id])
@@ -324,6 +353,7 @@ model Ticket {
   @@index([slaDueAt])
   @@index([targetDueAt])
   @@index([mergedIntoTicketId])
+  @@index([actionStatusId])
   @@map("tickets")
 }
 

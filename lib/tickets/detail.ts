@@ -9,6 +9,7 @@ import { sortMessagesChronologically } from "./message-order";
 export const TICKET_DETAIL_INCLUDE = {
   category: { select: { id: true, name: true } },
   businessUnit: { select: { id: true, name: true } },
+  actionStatus: { select: { id: true, name: true } },
   assignee: { select: { id: true, displayName: true, initials: true } },
   firstViewedBy: { select: { id: true, displayName: true } },
   messages: {

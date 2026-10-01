@@ -19,6 +19,7 @@ const TICKET_LIST_SELECT = {
   responseAlertPending: true,
   category: { select: { name: true } },
   businessUnit: { select: { name: true } },
+  actionStatus: { select: { name: true } },
   assignee: { select: { id: true, displayName: true, initials: true } },
 } satisfies Prisma.TicketSelect;
 

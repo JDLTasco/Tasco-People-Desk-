@@ -64,14 +64,16 @@ export async function POST(request: Request) {
   const requesterEmail = body?.requesterEmail?.trim();
   const subject = body?.subject?.trim();
   const description = body?.description?.trim();
-  const priority = body?.priority;
+  // The form no longer sends a priority (John, 2026-10-01) -- default P3,
+  // the same provisional default ingestion uses; still accepted if given.
+  const priority = body?.priority ?? "P3";
 
   if (!requesterName) return badRequest("requesterName is required");
   if (!requesterEmail) return badRequest("requesterEmail is required");
   if (!subject) return badRequest("subject is required");
   if (!description) return badRequest("description is required");
-  if (!priority || !VALID_PRIORITIES.includes(priority)) {
-    return badRequest("priority is required and must be P1, P2, or P3");
+  if (!VALID_PRIORITIES.includes(priority)) {
+    return badRequest("priority must be P1, P2, or P3");
   }
 
   const receivedAt = new Date();

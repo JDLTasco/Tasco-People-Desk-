@@ -6,6 +6,7 @@ import { validateReopen } from "@/lib/tickets/reopen";
 import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
+import { displayStatus } from "@/lib/tickets/action-status";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
@@ -25,7 +26,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
 
   return (
-    <main>
+    <main className="ticket-page">
       <h1>
         {ticket.ticketNo} -- {ticket.subject}
       </h1>
@@ -69,155 +70,168 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         </p>
       )}
 
-      <section className="meta-grid">
-        <div>
-          <strong>Status:</strong> <span className={`chip chip-status-${ticket.status}`}>{ticket.status}</span>
-        </div>
-        <div>
-          <strong>Priority:</strong> <span className={`chip chip-priority-${ticket.priority}`}>{ticket.priority}</span>
-        </div>
-        <div>
-          <strong>Category:</strong>{" "}
-          {ticket.category?.name ?? <em>none {ticket.status === "ALLOCATED" && "-- required before starting work"}</em>}
-        </div>
-        <div>
-          <strong>Business unit:</strong> {ticket.businessUnit?.name ?? <em>optional, not set</em>}
-        </div>
-        <div>
-          <strong>Assignee:</strong>{" "}
-          {ticket.assignee ? ticket.assignee.displayName : <em>unassigned</em>}
-        </div>
-        <div className={overdue ? "overdue" : undefined}>
-          <strong>Due:</strong> {formatAuDateTime(due)}
-          {ticket.targetDueAt && (
-            <>
-              {" "}
-              (target: {formatAuDateTime(ticket.targetDueAt)}, reason: {ticket.targetDueReason})
-            </>
+      {/* Split layout (John, 2026-10-01): details, actions, attachments, notes
+          and history on the left, staying in view while the correspondence on
+          the right scrolls, newest first. One column on narrow screens. */}
+      <div className="ticket-split">
+        <div className="ticket-left">
+          <section className="meta-grid">
+            <div>
+              <strong>Status:</strong> <span className={`chip chip-status-${ticket.status}${ticket.actionStatus ? " chip-action-item" : ""}`}>
+                {displayStatus(ticket)}
+              </span>
+            </div>
+            <div>
+              <strong>Priority:</strong> <span className={`chip chip-priority-${ticket.priority}`}>{ticket.priority}</span>
+            </div>
+            <div>
+              <strong>Category:</strong>{" "}
+              {ticket.category?.name ?? <em>none {ticket.status === "ALLOCATED" && "-- required before starting work"}</em>}
+            </div>
+            <div>
+              <strong>Business unit:</strong> {ticket.businessUnit?.name ?? <em>optional, not set</em>}
+            </div>
+            <div>
+              <strong>Assignee:</strong>{" "}
+              {ticket.assignee ? ticket.assignee.displayName : <em>unassigned</em>}
+            </div>
+            <div className={overdue ? "overdue" : undefined}>
+              <strong>Due:</strong> {formatAuDateTime(due)}
+              {ticket.targetDueAt && (
+                <>
+                  {" "}
+                  (target: {formatAuDateTime(ticket.targetDueAt)}, reason: {ticket.targetDueReason})
+                </>
+              )}
+              {overdue && " -- OVERDUE"}
+            </div>
+            <div>
+              <strong>First viewed:</strong>{" "}
+              {ticket.firstViewedAt ? `${formatAuDateTime(ticket.firstViewedAt)} by ${ticket.firstViewedBy?.displayName}` : "not yet"}
+            </div>
+          </section>
+
+          {ticket.messages.some((m) => m.emailLog.length > 0 && !m.emailLog.some((l) => l.status === "SENT")) && (
+            <p className="banner banner-error">
+              One or more emails for this ticket failed to send after 3 attempts -- see Admin &rarr; Failed sends.
+            </p>
           )}
-          {overdue && " -- OVERDUE"}
-        </div>
-        <div>
-          <strong>First viewed:</strong>{" "}
-          {ticket.firstViewedAt ? `${formatAuDateTime(ticket.firstViewedAt)} by ${ticket.firstViewedBy?.displayName}` : "not yet"}
-        </div>
-      </section>
 
-      {ticket.messages.some((m) => m.emailLog.length > 0 && !m.emailLog.some((l) => l.status === "SENT")) && (
-        <p className="banner banner-error">
-          One or more emails for this ticket failed to send after 3 attempts -- see Admin &rarr; Failed sends.
-        </p>
-      )}
+          <TicketActions
+            ticketId={ticket.id}
+            version={ticket.version}
+            status={ticket.status}
+            priority={ticket.priority}
+            categoryId={ticket.categoryId}
+            businessUnitId={ticket.businessUnitId}
+            isAssignedTicket={isAssignedTicket}
+            canEditMetadata={canEditMetadata}
+            canMerge={canMerge}
+            role={session.user.role}
+            userId={session.user.id}
+            ticketNo={ticket.ticketNo}
+            displaySubject={ticket.subject}
+            requesterEmail={ticket.requesterEmail}
+            ccRecipients={ticket.ccRecipients}
+            targetDueAt={ticket.targetDueAt ? ticket.targetDueAt.toISOString() : null}
+            targetDueReason={ticket.targetDueReason}
+            notes={ticket.notes.map((n) => ({ id: n.id, body: n.body, visibility: n.visibility }))}
+            attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
+            isConfidential={ticket.isConfidential}
+            isLegalHold={ticket.isLegalHold}
+            canReopen={validateReopen(ticket).ok}
+            actionStatusId={ticket.actionStatusId}
+            actionStatusName={ticket.actionStatus?.name ?? null}
+          />
 
-      <TicketActions
-        ticketId={ticket.id}
-        version={ticket.version}
-        status={ticket.status}
-        priority={ticket.priority}
-        categoryId={ticket.categoryId}
-        businessUnitId={ticket.businessUnitId}
-        isAssignedTicket={isAssignedTicket}
-        canEditMetadata={canEditMetadata}
-        canMerge={canMerge}
-        role={session.user.role}
-        userId={session.user.id}
-        ticketNo={ticket.ticketNo}
-        displaySubject={ticket.subject}
-        requesterEmail={ticket.requesterEmail}
-        ccRecipients={ticket.ccRecipients}
-        targetDueAt={ticket.targetDueAt ? ticket.targetDueAt.toISOString() : null}
-        targetDueReason={ticket.targetDueReason}
-        notes={ticket.notes.map((n) => ({ id: n.id, body: n.body, visibility: n.visibility }))}
-        attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
-        isConfidential={ticket.isConfidential}
-        isLegalHold={ticket.isLegalHold}
-        canReopen={validateReopen(ticket).ok}
-      />
+          <p className="no-print">
+            Export: <a href={`/api/tickets/${ticket.id}/export`}>.txt</a> |{" "}
+            <a href={`/api/tickets/${ticket.id}/export?attachments=true`}>.zip (with attachments)</a>
+          </p>
 
-      <p className="no-print">
-        Export: <a href={`/api/tickets/${ticket.id}/export`}>.txt</a> |{" "}
-        <a href={`/api/tickets/${ticket.id}/export?attachments=true`}>.zip (with attachments)</a>
-      </p>
+          <section className="section-card">
+            <h2>Attachments</h2>
+            {ticket.attachments.length === 0 && <p>No attachments.</p>}
+            {ticket.attachments.length > 0 && (
+              <ul>
+                {ticket.attachments.map((a) => (
+                  <li key={a.id}>
+                    {a.scanStatus === "CLEAN" ? (
+                      <a href={`/api/tickets/${ticket.id}/attachments/${a.id}`}>{a.filename}</a>
+                    ) : (
+                      a.filename
+                    )}{" "}
+                    ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}
+                    {a.scanStatus === "PENDING" && "scanning"}
+                    {a.scanStatus === "CLEAN" && "clean"}
+                    {a.scanStatus === "BLOCKED" && `blocked (${a.blockReason})`}
+                    {a.scanStatus === "MALICIOUS" && "malicious"}
+                    {/* SKIPPED (inline signature/footer images) are no longer stored at all
+                        (2026-09-23) -- this branch is dead for anything ingested from now on,
+                        kept only so any already-stored SKIPPED row from before the fix still
+                        renders sensibly instead of blank. */}
+                    {a.scanStatus === "SKIPPED" && "skipped (inline image)"}
+                    {a.source === "UPLOAD" && ` -- uploaded by ${a.uploadedBy?.displayName ?? "(unknown)"}`}
+                    {canEditMetadata && !ticket.isLegalHold && (
+                      <AttachmentRemoveForm ticketId={ticket.id} attachmentId={a.id} filename={a.filename} />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <AttachmentForm ticketId={ticket.id} />
+          </section>
 
-      <section className="section-card">
-        <h2>Correspondence</h2>
-        {ticket.messages.length === 0 && <p>No messages yet.</p>}
-        {ticket.messages.map((m) => (
-          <article key={m.id} className="item-card">
-            <div>
-              <strong>
-                [{m.messageType === "MANUAL" ? "MANUAL ENTRY" : m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]
-              </strong>{" "}
-              {m.fromName} ({m.fromAddress})
-              -- {(m.receivedAt ?? m.sentAt) ? formatAuDateTime((m.receivedAt ?? m.sentAt)!) : ""}
-            </div>
-            <div>{m.subject}</div>
-            <div style={{ whiteSpace: "pre-wrap" }}>{messageDisplayText(m)}</div>
-          </article>
-        ))}
-      </section>
-
-      <section className="section-card">
-        <h2>Attachments</h2>
-        {ticket.attachments.length === 0 && <p>No attachments.</p>}
-        {ticket.attachments.length > 0 && (
-          <ul>
-            {ticket.attachments.map((a) => (
-              <li key={a.id}>
-                {a.scanStatus === "CLEAN" ? (
-                  <a href={`/api/tickets/${ticket.id}/attachments/${a.id}`}>{a.filename}</a>
-                ) : (
-                  a.filename
-                )}{" "}
-                ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}
-                {a.scanStatus === "PENDING" && "scanning"}
-                {a.scanStatus === "CLEAN" && "clean"}
-                {a.scanStatus === "BLOCKED" && `blocked (${a.blockReason})`}
-                {a.scanStatus === "MALICIOUS" && "malicious"}
-                {/* SKIPPED (inline signature/footer images) are no longer stored at all
-                    (2026-09-23) -- this branch is dead for anything ingested from now on,
-                    kept only so any already-stored SKIPPED row from before the fix still
-                    renders sensibly instead of blank. */}
-                {a.scanStatus === "SKIPPED" && "skipped (inline image)"}
-                {a.source === "UPLOAD" && ` -- uploaded by ${a.uploadedBy?.displayName ?? "(unknown)"}`}
-                {canEditMetadata && !ticket.isLegalHold && (
-                  <AttachmentRemoveForm ticketId={ticket.id} attachmentId={a.id} filename={a.filename} />
-                )}
-              </li>
+          <section className="section-card">
+            <h2>Internal notes</h2>
+            {ticket.notes.length === 0 && <p>No notes yet.</p>}
+            {ticket.notes.map((n) => (
+              <article key={n.id} className="item-card">
+                <div>
+                  <strong>[{n.visibility === "REQUESTER_VISIBLE" ? "NOTE -- REQUESTER-VISIBLE" : "INTERNAL NOTE"}]</strong>{" "}
+                  {n.author.displayName} --{formatAuDateTime(n.createdAt)}{" "}
+                  {n.supersedesNoteId && <em>(edited)</em>}
+                </div>
+                <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>
+                {n.authorId === session.user.id && <NoteForm ticketId={ticket.id} noteId={n.id} initialBody={n.body} mode="edit" />}
+              </article>
             ))}
-          </ul>
-        )}
-        <AttachmentForm ticketId={ticket.id} />
-      </section>
+            <NoteForm ticketId={ticket.id} mode="create" />
+          </section>
 
-      <section className="section-card">
-        <h2>Internal notes</h2>
-        {ticket.notes.length === 0 && <p>No notes yet.</p>}
-        {ticket.notes.map((n) => (
-          <article key={n.id} className="item-card">
-            <div>
-              <strong>[{n.visibility === "REQUESTER_VISIBLE" ? "NOTE -- REQUESTER-VISIBLE" : "INTERNAL NOTE"}]</strong>{" "}
-              {n.author.displayName} --{formatAuDateTime(n.createdAt)}{" "}
-              {n.supersedesNoteId && <em>(edited)</em>}
-            </div>
-            <div style={{ whiteSpace: "pre-wrap" }}>{n.body}</div>
-            {n.authorId === session.user.id && <NoteForm ticketId={ticket.id} noteId={n.id} initialBody={n.body} mode="edit" />}
-          </article>
-        ))}
-        <NoteForm ticketId={ticket.id} mode="create" />
-      </section>
+          <section className="section-card">
+            <h2>Status history</h2>
+            <ul>
+              {ticket.statusHistory.map((h) => (
+                <li key={h.id}>
+                  {formatAuDateTime(h.createdAt)}: {h.fromStatus ?? "(created)"} -&gt; {h.toStatus} by {h.actor.displayName}
+                  {h.reason && ` -- ${h.reason}`}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
 
-      <section className="section-card">
-        <h2>Status history</h2>
-        <ul>
-          {ticket.statusHistory.map((h) => (
-            <li key={h.id}>
-              {formatAuDateTime(h.createdAt)}: {h.fromStatus ?? "(created)"} -&gt; {h.toStatus} by {h.actor.displayName}
-              {h.reason && ` -- ${h.reason}`}
-            </li>
-          ))}
-        </ul>
-      </section>
+        <div className="ticket-right">
+          <section className="section-card ticket-correspondence">
+            <h2>Correspondence <small>(newest first)</small></h2>
+            {ticket.messages.length === 0 && <p>No messages yet.</p>}
+            {[...ticket.messages].reverse().map((m) => (
+              <article key={m.id} className="item-card">
+                <div>
+                  <strong>
+                    [{m.messageType === "MANUAL" ? "MANUAL ENTRY" : m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]
+                  </strong>{" "}
+                  {m.fromName} ({m.fromAddress})
+                  -- {(m.receivedAt ?? m.sentAt) ? formatAuDateTime((m.receivedAt ?? m.sentAt)!) : ""}
+                </div>
+                <div>{m.subject}</div>
+                <div style={{ whiteSpace: "pre-wrap" }}>{messageDisplayText(m)}</div>
+              </article>
+            ))}
+          </section>
+        </div>
+      </div>
     </main>
   );
 }

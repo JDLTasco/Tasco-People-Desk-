@@ -2,6 +2,7 @@ import Link from "next/link";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { formatAuDateTime } from "@/lib/format-date";
 import type { TicketListRow } from "@/lib/tickets/queries";
+import { displayStatus } from "@/lib/tickets/action-status";
 
 export default function TicketListTable({ tickets }: { tickets: TicketListRow[] }) {
   if (tickets.length === 0) {
@@ -40,7 +41,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
               </td>
               <td>{t.requesterName}</td>
               <td>
-                <span className={`chip chip-status-${t.status}`}>{t.status}</span>
+                <span className={`chip chip-status-${t.status}${t.actionStatus ? " chip-action-item" : ""}`}>{displayStatus(t)}</span>
               </td>
               <td>
                 <span className={`chip chip-priority-${t.priority}`}>{t.priority}</span>

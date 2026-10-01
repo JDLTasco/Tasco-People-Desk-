@@ -9,7 +9,6 @@ export default function NewTicketForm() {
   const [requesterEmail, setRequesterEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
-  const [priority, setPriority] = useState<"P1" | "P2" | "P3">("P3");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,7 +19,7 @@ export default function NewTicketForm() {
     const res = await fetch("/api/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requesterName, requesterEmail, subject, description, priority }),
+      body: JSON.stringify({ requesterName, requesterEmail, subject, description }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
@@ -75,16 +74,8 @@ export default function NewTicketForm() {
           />
         </label>
         <br />
-        <label>
-          Priority
-          <br />
-          <select value={priority} onChange={(e) => setPriority(e.target.value as "P1" | "P2" | "P3")}>
-            <option value="P1">P1 -- 2 days</option>
-            <option value="P2">P2 -- 7 days</option>
-            <option value="P3">P3 -- 30 days</option>
-          </select>
-        </label>
-        <br />
+        {/* No priority picker (John, 2026-10-01): new tickets start at P3, same
+            as an emailed one, and priority is set in the ticket's details. */}
         <button
           type="submit"
           disabled={busy || !requesterName.trim() || !requesterEmail.trim() || !subject.trim() || !description.trim()}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import OutcomeDispatchModal from "./outcome-dispatch-modal";
 import MergeTicketForm from "./merge-ticket-form";
+import QuestionModal from "./question-modal";
 
 interface OutcomeNote {
   id: string;
@@ -40,6 +41,9 @@ interface Props {
   isLegalHold: boolean;
   /** CLOSED within the last 30 days and not merged away -- see lib/tickets/reopen.ts. */
   canReopen: boolean;
+  /** Current action item (e.g. "On Hold"), only ever set while IN_ACTION -- see lib/tickets/action-status.ts. */
+  actionStatusId: string | null;
+  actionStatusName: string | null;
 }
 
 interface SimpleUser {
@@ -91,6 +95,8 @@ export default function TicketActions({
   isConfidential,
   isLegalHold,
   canReopen,
+  actionStatusId,
+  actionStatusName,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -98,6 +104,7 @@ export default function TicketActions({
   const [users, setUsers] = useState<SimpleUser[]>([]);
   const [categories, setCategories] = useState<SimpleLookup[]>([]);
   const [businessUnits, setBusinessUnits] = useState<SimpleLookup[]>([]);
+  const [actionItems, setActionItems] = useState<SimpleLookup[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [selectedPriority, setSelectedPriority] = useState<"P1" | "P2" | "P3">(priority);
   const [selectedCategory, setSelectedCategory] = useState(categoryId ?? "");
@@ -182,6 +189,9 @@ export default function TicketActions({
     fetch("/api/business-units")
       .then((r) => r.json())
       .then((d) => setBusinessUnits(d.businessUnits ?? []));
+    fetch("/api/action-statuses")
+      .then((r) => r.json())
+      .then((d) => setActionItems(d.actionStatuses ?? []));
   }, []);
 
   async function run(action: () => Promise<{ ok: boolean; status: number; data: { error?: string } }>) {
@@ -339,6 +349,35 @@ export default function TicketActions({
             </button>
           )}
 
+          {/* Action items (admin-managed, e.g. "On Hold", 2026-10-01): any staff
+              member while IN_ACTION; from a response sub-step it also moves the
+              ticket back to IN_ACTION, so assignee/HR_LEAD/ADMIN only. */}
+          {(status === "IN_ACTION" || (isWorking && isAssigneeOrLead)) &&
+            actionItems
+              .filter((a) => !(status === "IN_ACTION" && a.id === actionStatusId))
+              .map((a) => (
+                <button
+                  key={a.id}
+                  disabled={busy}
+                  onClick={() =>
+                    runWithSave((v) => postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: a.id }))
+                  }
+                >
+                  Mark {a.name.toLowerCase()}
+                </button>
+              ))}
+
+          {status === "IN_ACTION" && actionStatusId && isAssigneeOrLead && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                runWithSave((v) => postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: null }))
+              }
+            >
+              Clear {actionStatusName ?? "action item"} (back to in action)
+            </button>
+          )}
+
           {(status === "AWAITING_RESPONSE" || status === "RESPONSE_RECEIVED") && isAssigneeOrLead && (
             <button
               disabled={busy}
@@ -360,6 +399,21 @@ export default function TicketActions({
               initialCcRecipients={ccRecipients}
               notes={notes}
               attachments={attachments}
+            />
+          )}
+
+          {isWorking && isAssigneeOrLead && (
+            <QuestionModal
+              ticketId={ticketId}
+              ticketNo={ticketNo}
+              displaySubject={displaySubject}
+              requesterEmail={requesterEmail}
+              initialCcRecipients={ccRecipients}
+              saveChanges={async () => {
+                const saved = await saveChanges();
+                if ("ok" in saved) return { error: saved.data?.error ?? `Saving changes failed (${saved.status})` };
+                return saved;
+              }}
             />
           )}
 

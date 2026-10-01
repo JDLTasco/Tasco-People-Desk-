@@ -440,6 +440,48 @@ button.secondary:hover:not(:disabled) {
   color: #fff;
 }
 
+/* Ticket page split layout (2026-10-01): left column (details, actions,
+   attachments, notes, history) stays in view while the correspondence on
+   the right scrolls with the page. Falls back to one column when narrow. */
+main.ticket-page {
+  max-width: 1600px;
+}
+.ticket-split {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.ticket-left {
+  position: sticky;
+  top: 0.5rem;
+  max-height: calc(100vh - 1rem);
+  overflow-y: auto;
+  padding-right: 0.35rem;
+}
+@media (max-width: 1100px) {
+  .ticket-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ticket-left {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+}
+.ticket-correspondence h2 small {
+  font-weight: normal;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* Action item label (e.g. "On Hold") shown in place of IN_ACTION */
+.chip-action-item {
+  background: var(--tasco-navy-pale);
+  color: var(--tasco-navy);
+  border: 1px solid var(--tasco-navy);
+}
+
 /* Print -- always light, regardless of the active on-screen theme */
 @media print {
   .main-nav,
@@ -461,5 +503,13 @@ button.secondary:hover:not(:disabled) {
     background: #eee !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+  .ticket-split {
+    display: block;
+  }
+  .ticket-left {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }

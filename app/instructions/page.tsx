@@ -55,7 +55,10 @@ export default async function InstructionsPage() {
             <ul>
               <li>
                 <strong>AWAITING_RESPONSE</strong> -- you&apos;ve asked the requester something and are waiting to
-                hear back. Anyone can set this with <strong>Mark awaiting response</strong>.
+                hear back. Anyone can set this with <strong>Mark awaiting response</strong>. The assignee, HR Leads
+                and Admins can also email the requester a question with <strong>Ask requester a question</strong>{" "}
+                -- you review the exact email before it sends, the ticket moves here automatically, and their reply
+                threads back onto the ticket.
               </li>
               <li>
                 <strong>RESPONSE_RECEIVED</strong> -- the requester has come back. <strong>Anyone</strong> can record
@@ -64,14 +67,21 @@ export default async function InstructionsPage() {
                 saved as an internal note). The assignee gets an alert -- a red number next to{" "}
                 <strong>My tickets</strong> and a highlighted row -- until they open the ticket.
               </li>
+              <li>
+                <strong>Action items</strong> such as <strong>On Hold</strong> -- labels an Admin manages under
+                Admin &rarr; Action items. Each shows as a <strong>Mark ...</strong> button; the label then shows in
+                place of IN_ACTION on the ticket and in every list. Anyone can set one; only the assignee, HR Leads
+                and Admins can clear it. It clears by itself when the ticket moves to any other status, and the due
+                date keeps running while it&apos;s set.
+              </li>
             </ul>
             The assignee uses <strong>Back to in action</strong> to carry on working it. Use the Status filter on
             any list to find tickets in either state.
           </li>
           <li>
             <strong>OUTCOME</strong> -- the resolution has been drafted and sent to the requester via the dispatch
-            preview (see below). This is the only way an outcome email goes out -- there is no way to email a
-            requester directly from a note.
+            preview (see below). This is the only way an outcome email goes out -- notes are never emailed to a
+            requester automatically.
           </li>
           <li>
             <strong>CLOSED</strong> -- the matter is finished. A ticket can also reach CLOSED directly from an
@@ -201,12 +211,12 @@ export default async function InstructionsPage() {
         <h2>Step-by-step: handling a ticket end to end</h2>
         <ol>
           <li>Check the <a href="/pool">Pool</a> for unassigned tickets, or check <a href="/my-tickets">My tickets</a> for what&apos;s already yours.</li>
-          <li>Set its priority in the Metadata panel, then Claim it (or have it assigned to you by an HR_LEAD/ADMIN) -- Claim saves the priority too.</li>
+          <li>Claim it (or have it assigned to you by an HR_LEAD/ADMIN). Any unsaved changes in the Metadata panel are saved when you press Claim.</li>
           <li>Read the request properly, then set its real <strong>Priority</strong> and <strong>Category</strong> in the Metadata panel -- category is mandatory before you can start action.</li>
           <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress) and a <strong>target due date</strong> if there&apos;s a specific external deadline.</li>
           <li>Click <strong>Start action</strong> once you begin working it.</li>
           <li>Use <strong>internal notes</strong> to record progress -- mark a note &quot;requester-visible&quot; only if you want it available later as an option in the outcome email.</li>
-          <li>If you&apos;re waiting on the requester, click <strong>Mark awaiting response</strong>. When they come back (to you or to a colleague), record it with <strong>Mark response received</strong>.</li>
+          <li>To ask the requester something, use <strong>Ask requester a question</strong> (or click <strong>Mark awaiting response</strong> if you asked them another way). To park a ticket, use <strong>Mark on hold</strong>. When they come back (to you or to a colleague), record it with <strong>Mark response received</strong>.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the requester-facing resolution, tick any requester-visible notes you want included, review the exact email that will send, and confirm.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
@@ -255,7 +265,7 @@ export default async function InstructionsPage() {
         <h2>Admin tasks (ADMIN only, listed here for visibility)</h2>
         <ul>
           <li><strong>Admin -- Users</strong>: create/pre-provision users, change roles, set a person&apos;s real display name, archive/restore a user.</li>
-          <li><strong>Admin -- Categories</strong> / <strong>Business units</strong>: add new ones, rename existing ones, deactivate (never delete -- existing tickets keep their history either way).</li>
+          <li><strong>Admin -- Categories</strong> / <strong>Business units</strong> / <strong>Action items</strong>: add new ones, rename existing ones, deactivate (never delete -- existing tickets keep their history either way).</li>
           <li><strong>Admin -- Legal holds</strong>: see every ticket currently under hold, oldest first.</li>
           <li><strong>Admin -- Deleted</strong>: see soft-deleted tickets (no drill-down back into them, by design).</li>
           <li><strong>Admin -- Audit log</strong>: search every recorded action by ticket number, actor, action type, date range, or correlation ID.</li>

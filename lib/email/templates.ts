@@ -1,4 +1,4 @@
-// §7.4's three outbound email templates -- pure, isomorphic rendering
+// §7.4's outbound email templates (plus later operator additions) -- pure, isomorphic rendering
 // functions (no Prisma, no fetch, no server-only imports) so the exact
 // same code renders the live "final body exactly as it will send" in the
 // outcome dispatch preview modal (a client component) and the real send
@@ -96,6 +96,26 @@ export function renderOutcomeEmail(input: OutcomeEmailInput): RenderedEmail {
   const bodyText = `${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`;
   const bodyHtml = `${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`;
   return { subject, bodyText, bodyHtml };
+}
+
+export interface RequesterQuestionEmailInput {
+  ticketNo: string;
+  displaySubject: string;
+  question: string;
+}
+
+// Operator addition (John, 2026-10-01): an officer asks the requester
+// something mid-investigation, without moving the ticket to OUTCOME. The
+// tracking note matters most here -- the reply is what threads back on.
+export function renderRequesterQuestionEmail(input: RequesterQuestionEmailInput): RenderedEmail {
+  const subject = `[${input.ticketNo}] ${input.displaySubject} -- Question from HR`;
+  const header = `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}`;
+  const parts = [header, input.question, "Please reply to this email with your response."];
+  return {
+    subject,
+    bodyText: `${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`,
+    bodyHtml: `${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`,
+  };
 }
 
 export interface ClosedResolvedEmailInput {

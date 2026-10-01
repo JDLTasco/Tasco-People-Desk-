@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { matchesFilters, type DueFilter } from "@/lib/tickets/filters";
+import { displayStatus } from "@/lib/tickets/action-status";
 import type { TicketListRow } from "@/lib/tickets/queries";
 import TicketListTable from "./TicketListTable";
 
@@ -25,7 +26,7 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
   const [assignee, setAssignee] = useState("");
   const [due, setDue] = useState<DueFilter>("");
 
-  const statusOptions = useMemo(() => uniqueSorted(tickets.map((t) => t.status)), [tickets]);
+  const statusOptions = useMemo(() => uniqueSorted(tickets.map((t) => displayStatus(t))), [tickets]);
   const priorityOptions = useMemo(() => uniqueSorted(tickets.map((t) => t.priority)), [tickets]);
   const businessUnitOptions = useMemo(() => uniqueSorted(tickets.map((t) => t.businessUnit?.name)), [tickets]);
   const assigneeOptions = useMemo(
