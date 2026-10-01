@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
 import NavBar from "@/components/NavBar";
+import { APP_VERSION } from "@/lib/version";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -52,6 +53,9 @@ export default function RootLayout({
         <AuthSessionProvider>
           <NavBar />
           {children}
+          <footer className="site-footer">
+            Powered by JDL &middot; v{APP_VERSION}
+          </footer>
         </AuthSessionProvider>
       </body>
     </html>

@@ -6,6 +6,7 @@ import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 import RefreshButton from "./RefreshButton";
 import { countResponseAlerts } from "@/lib/tickets/queries";
+import { APP_VERSION } from "@/lib/version";
 
 // §13's view list. Archive Search (full-text over archive artefacts,
 // Stage 6) isn't linked yet -- Closed here is a lighter-weight history
@@ -22,7 +23,9 @@ export default async function NavBar() {
       <span className="nav-logo">
         <Image src="/tasco-logo.jpg" alt="Tasco Petroleum" width={531} height={272} priority unoptimized />
       </span>
-      <span className="nav-brand">Tasco People Desk</span>
+      <span className="nav-brand">
+        Tasco People Desk <span className="nav-version">v{APP_VERSION}</span>
+      </span>
       <Link href="/pool">Pool</Link>
       <Link href="/my-tickets">
         My tickets
