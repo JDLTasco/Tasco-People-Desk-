@@ -9,12 +9,14 @@ import { renderOutcomeEmail } from "@/lib/email/templates";
 import { sendTicketEmail } from "@/lib/email/send";
 import { threadingForTicket } from "@/lib/email/threading";
 import { TICKET_DETAIL_INCLUDE } from "@/lib/tickets/detail";
+import { validateRecipients } from "@/lib/email/recipients";
 
 interface OutcomeBody {
   version: number;
   outcomeForRequester: string;
+  /** Defaults to the requester; since 2026-10-03 it can be changed (To + CC). */
+  toRecipients?: string[];
   ccRecipients?: string[];
-  requesterVisibleNoteIds?: string[];
 }
 
 // §7.4 "Outcome dispatch preview -- mandatory": the ONLY path from
@@ -55,17 +57,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return check.status === 403 ? forbidden(check.error) : badRequest(check.error!);
   }
 
-  const finalCcRecipients = body.ccRecipients ?? ticket.ccRecipients;
-
-  // Never trust client-supplied note bodies -- re-fetch and filter server-side
-  // so only genuinely current, REQUESTER_VISIBLE notes on THIS ticket can
-  // ever reach a requester's inbox, regardless of what ids were posted.
-  const includedNotes = body.requesterVisibleNoteIds?.length
-    ? await prisma.ticketNote.findMany({
-        where: { id: { in: body.requesterVisibleNoteIds }, ticketId: ticket.id, visibility: "REQUESTER_VISIBLE", isCurrent: true },
-        orderBy: { createdAt: "asc" },
-      })
-    : [];
+  // Notes are internal only and never included (operator amendment, John,
+  // 2026-10-03 -- the requester-visible opt-in was removed).
+  const recipients = validateRecipients(body.toRecipients ?? [ticket.requesterEmail], body.ccRecipients ?? ticket.ccRecipients);
+  if (!recipients.ok) return badRequest(recipients.error);
+  const { to: toRecipients, cc: finalCcRecipients } = recipients;
 
   const result = await prisma.ticket.updateMany({
     where: { id: ticket.id, version: body.version },
@@ -94,13 +90,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     ticketNo: ticket.ticketNo,
     displaySubject: ticket.subject,
     outcomeForRequester: body.outcomeForRequester,
-    includedNotes: includedNotes.map((n) => ({ body: n.body })),
   });
 
   const sendResult = await sendTicketEmail({
     ticketId: ticket.id,
     messageType: "OUTCOME",
-    toRecipients: [ticket.requesterEmail],
+    toRecipients,
     ccRecipients: finalCcRecipients,
     subject: rendered.subject,
     bodyText: rendered.bodyText,
@@ -121,7 +116,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     afterJson: {
       status: "OUTCOME",
       outcomeForRequester: body.outcomeForRequester,
-      includedNoteIds: includedNotes.map((n) => n.id),
+      toRecipients,
+      ccRecipients: finalCcRecipients,
       emailSent: sendResult.ok,
       emailAttempts: sendResult.attempts,
     },

@@ -1,59 +1,40 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { renderAllocationEmail, renderOutcomeEmail, renderEscalationEmail, renderRequesterQuestionEmail } from "./templates";
+import { renderAcknowledgementEmail, renderOutcomeEmail, renderEscalationEmail, renderRequesterQuestionEmail } from "./templates";
 
-describe("renderAllocationEmail", () => {
-  it("includes ticket number, subject, assignee name, and 'as soon as practical' (§7.4, amended 2026-09-29)", () => {
-    const email = renderAllocationEmail({
-      ticketNo: "2609151030",
-      displaySubject: "Leave request",
-      assigneeDisplayName: "Rebecca Johnson",
-    });
+describe("renderAcknowledgementEmail", () => {
+  it("includes ticket number, subject and 'as soon as practical' (2026-10-03, replaces allocation)", () => {
+    const email = renderAcknowledgementEmail({ ticketNo: "2609151030", displaySubject: "Leave request" });
     assert.match(email.subject, /2609151030/);
     assert.match(email.bodyText, /2609151030/);
     assert.match(email.bodyText, /Leave request/);
-    assert.match(email.bodyText, /Rebecca Johnson/);
+    assert.match(email.bodyText, /received by HR/);
     assert.match(email.bodyText, /Expected response: as soon as practical/);
+    assert.match(email.bodyText, /keep the ticket number in the subject/);
   });
 
   it("never quotes an SLA timeframe to the requester", () => {
-    const email = renderAllocationEmail({ ticketNo: "x", displaySubject: "s", assigneeDisplayName: "a" });
-    assert.doesNotMatch(email.bodyText, /48 hours|7 days|30 days|timeframe/);
-    assert.doesNotMatch(email.bodyHtml, /48 hours|7 days|30 days|timeframe/);
+    const email = renderAcknowledgementEmail({ ticketNo: "x", displaySubject: "s" });
+    assert.doesNotMatch(email.bodyText, /48 hours|7 days|30 days|working days|timeframe/);
+    assert.doesNotMatch(email.bodyHtml, /48 hours|7 days|30 days|working days|timeframe/);
   });
 
   it("escapes HTML-significant characters in user-influenced fields", () => {
-    const email = renderAllocationEmail({
-      ticketNo: "x",
-      displaySubject: "<script>alert(1)</script>",
-      assigneeDisplayName: "a",
-    });
+    const email = renderAcknowledgementEmail({ ticketNo: "x", displaySubject: "<script>alert(1)</script>" });
     assert.ok(!email.bodyHtml.includes("<script>"));
     assert.match(email.bodyHtml, /&lt;script&gt;/);
   });
 });
 
 describe("renderOutcomeEmail", () => {
-  it("includes the curated outcome text but no notes when none are ticked (§7.4: never sent automatically)", () => {
+  it("includes the curated outcome text", () => {
     const email = renderOutcomeEmail({
       ticketNo: "2609151030",
       displaySubject: "Leave request",
       outcomeForRequester: "Your leave has been approved.",
-      includedNotes: [],
     });
     assert.match(email.bodyText, /Your leave has been approved\./);
     assert.match(email.subject, /Resolved/);
-  });
-
-  it("appends only the explicitly-included notes' bodies, never a note that wasn't passed in", () => {
-    const email = renderOutcomeEmail({
-      ticketNo: "x",
-      displaySubject: "s",
-      outcomeForRequester: "Curated text.",
-      includedNotes: [{ body: "Ticked note body." }],
-    });
-    assert.match(email.bodyText, /Curated text\./);
-    assert.match(email.bodyText, /Ticked note body\./);
   });
 });
 

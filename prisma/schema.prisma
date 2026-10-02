@@ -107,6 +107,10 @@ enum MessageType {
   // question mid-investigation (review-before-send, like OUTCOME); the
   // ticket moves to AWAITING_RESPONSE and the reply threads back on.
   REQUESTER_QUESTION
+  // Operator amendment (John, 2026-10-03): the requester's "we've received
+  // it, here's your ticket number" email, sent when the ticket is created.
+  // Replaces the ALLOCATION email (no longer sent; kept for old rows).
+  ACKNOWLEDGEMENT
 
   @@map("message_type")
 }

@@ -6,7 +6,8 @@ import { canEditTicketMetadata } from "@/lib/rbac";
 import { canViewerSeeTicket } from "@/lib/tickets/confidential-access";
 import { writeAuditLog } from "@/lib/audit";
 import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/lib/tickets/detail";
-import { slaDueAtFor } from "@/lib/tickets/sla";
+import { dueFieldsForPriorityChange } from "@/lib/tickets/sla";
+import { isAutoTargetReason } from "@/lib/tickets/target-due";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
@@ -79,6 +80,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (effectiveTargetDueAt && !effectiveTargetDueReason) {
     return badRequest("target_due_reason is required whenever target_due_at is set");
   }
+  // 2026-10-03: an override of the automatic date needs a real reason, not
+  // the "Automatic: ..." text -- otherwise it would still look automatic and
+  // be recalculated on the next priority change.
+  const targetDateChanging =
+    settingTargetDue &&
+    !!body.targetDueAt &&
+    new Date(body.targetDueAt).getTime() !== (current.targetDueAt?.getTime() ?? null);
+  if (targetDateChanging && isAutoTargetReason(effectiveTargetDueReason)) {
+    return badRequest("Give a reason for overriding the automatic target due date");
+  }
 
   const data: Record<string, unknown> = {};
   const before: Record<string, unknown> = {};
@@ -99,9 +110,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   if (body.priority !== undefined && body.priority !== current.priority) {
     setField("priority", "priority", body.priority, current.priority);
-    // §5: "sla_due_at ... Recalculated whenever priority changes."
-    const newSlaDueAt = slaDueAtFor(current.receivedAt, body.priority);
-    setField("slaDueAt", "slaDueAt", newSlaDueAt.toISOString(), current.slaDueAt.toISOString());
+    // §5: "sla_due_at ... Recalculated whenever priority changes." Since
+    // 2026-10-03 the automatic target due date follows too, unless it was
+    // overridden -- or the same save sets a target date explicitly.
+    const due = dueFieldsForPriorityChange(current, body.priority);
+    setField("slaDueAt", "slaDueAt", due.slaDueAt.toISOString(), current.slaDueAt.toISOString());
+    if (due.targetDueAt && body.targetDueAt === undefined) {
+      setField("targetDueAt", "targetDueAt", due.targetDueAt.toISOString(), current.targetDueAt?.toISOString() ?? null);
+      setField("targetDueReason", "targetDueReason", due.targetDueReason, current.targetDueReason);
+    }
   }
 
   if (body.targetDueAt !== undefined) {

@@ -12,10 +12,9 @@ export interface RenderedEmail {
   bodyHtml: string;
 }
 
-// Operator amendment (John, 2026-09-29): the allocation email no longer
-// quotes a per-priority SLA timeframe to the requester (P3 read "30 days",
-// which is what nearly every ticket got) -- it just says "as soon as
-// practical". SLA hours still drive internal due dates/escalation.
+// Operator amendment (John, 2026-09-29): the requester is never quoted a
+// per-priority timeframe (P3 read "30 days", which is what nearly every
+// ticket got) -- just "as soon as practical". Internal due dates are separate.
 const EXPECTED_RESPONSE_TEXT = "Expected response: as soon as practical";
 
 // Outbound HTML is generated here from user-influenced text (subjects,
@@ -50,19 +49,22 @@ const TRACKING_NOTE_TEXT =
   "When replying, please keep the ticket number in the subject line so your response can be tracked against this ticket.";
 const TRACKING_NOTE_HTML = `<p>${TRACKING_NOTE_TEXT}</p>`;
 
-export interface AllocationEmailInput {
+export interface AcknowledgementEmailInput {
   ticketNo: string;
   displaySubject: string;
-  assigneeDisplayName: string;
 }
 
-/** §7.4: "Allocation -- Requester -- Ticket number, display subject, assigned officer display name, expected response timeframe." */
-export function renderAllocationEmail(input: AllocationEmailInput): RenderedEmail {
+/**
+ * Operator amendment (John, 2026-10-03): sent to the requester as soon as
+ * the ticket is created and numbered, replacing §7.4's allocation email
+ * (which went out only once an officer claimed the ticket, and named them).
+ */
+export function renderAcknowledgementEmail(input: AcknowledgementEmailInput): RenderedEmail {
   const subject = `[${input.ticketNo}] ${input.displaySubject}`;
   const intro =
-    `Your request has been allocated to ${input.assigneeDisplayName} in HR.\n\n` +
+    `Thank you -- your request has been received by HR.\n\n` +
     `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}\n${EXPECTED_RESPONSE_TEXT}\n\n` +
-    `You will receive further updates and questions once this matter has been investigated.`;
+    `A member of the HR team will be in touch. You will receive further updates and questions once this matter has been investigated.`;
   return {
     subject,
     bodyText: `${intro}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`,
@@ -70,29 +72,22 @@ export function renderAllocationEmail(input: AllocationEmailInput): RenderedEmai
   };
 }
 
-export interface OutcomeEmailIncludedNote {
-  body: string;
-}
-
 export interface OutcomeEmailInput {
   ticketNo: string;
   displaySubject: string;
   outcomeForRequester: string;
-  includedNotes: OutcomeEmailIncludedNote[];
 }
 
 /**
  * §7.4: "Outcome -- Requester + cc_recipients -- Ticket number, display
- * subject, the curated outcome_for_requester text, plus any notes the
- * officer explicitly ticked. Internal staff notes are never dumped or
- * sent automatically." includedNotes here must already be the caller's
- * filtered, explicitly-ticked selection -- this function has no concept
- * of "internal" vs "requester-visible" and trusts its input completely.
+ * subject, the curated outcome_for_requester text." Operator amendment
+ * (John, 2026-10-03): notes are internal only and can never be included
+ * (the "requester-visible note" opt-in was removed).
  */
 export function renderOutcomeEmail(input: OutcomeEmailInput): RenderedEmail {
   const subject = `[${input.ticketNo}] ${input.displaySubject} -- Resolved`;
   const header = `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}`;
-  const parts = [header, input.outcomeForRequester, ...input.includedNotes.map((n) => n.body)];
+  const parts = [header, input.outcomeForRequester];
   const bodyText = `${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`;
   const bodyHtml = `${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`;
   return { subject, bodyText, bodyHtml };

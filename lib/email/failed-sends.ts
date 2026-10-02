@@ -23,7 +23,7 @@ export interface FailedSendSummary {
 
 export async function getFailedSends(): Promise<FailedSendSummary[]> {
   const messages = await prisma.ticketMessage.findMany({
-    where: { direction: "OUTBOUND", messageType: { in: ["ALLOCATION", "OUTCOME", "SLA_ESCALATION", "CLOSED_RESOLVED", "REQUESTER_QUESTION"] } },
+    where: { direction: "OUTBOUND", messageType: { in: ["ALLOCATION", "OUTCOME", "SLA_ESCALATION", "CLOSED_RESOLVED", "REQUESTER_QUESTION", "ACKNOWLEDGEMENT"] } },
     include: {
       emailLog: { orderBy: { attemptedAt: "asc" } },
       ticket: { select: { id: true, ticketNo: true, subject: true } },

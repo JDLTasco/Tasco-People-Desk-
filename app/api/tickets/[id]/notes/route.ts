@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/audit";
 
 interface CreateNoteBody {
   body: string;
-  visibility?: "INTERNAL" | "REQUESTER_VISIBLE";
+  visibility?: string;
 }
 
 // §3: "Add internal notes -- ✔" for every role, on any ticket.
@@ -20,13 +20,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const body = (await request.json().catch(() => ({}))) as Partial<CreateNoteBody>;
   if (!body.body || !body.body.trim()) return badRequest("body is required");
+  // Operator amendment (John, 2026-10-03): notes are internal documents only
+  // and can never go to anyone outside -- the requester-visible option is gone.
+  if (body.visibility !== undefined && body.visibility !== "INTERNAL") {
+    return badRequest("Notes are internal only");
+  }
 
   const note = await prisma.ticketNote.create({
     data: {
       ticketId: ticket.id,
       authorId: session.user.id,
       body: body.body,
-      visibility: body.visibility ?? "INTERNAL",
+      visibility: "INTERNAL",
     },
     include: { author: { select: { id: true, displayName: true, initials: true } } },
   });

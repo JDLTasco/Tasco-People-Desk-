@@ -9,15 +9,19 @@ import { writeStatusHistory } from "@/lib/tickets/history";
 import { renderRequesterQuestionEmail } from "@/lib/email/templates";
 import { sendTicketEmail } from "@/lib/email/send";
 import { threadingForTicket } from "@/lib/email/threading";
+import { validateRecipients } from "@/lib/email/recipients";
 
 interface QuestionBody {
   version: number;
   question: string;
+  /** Defaults to the requester. Since 2026-10-03 anyone can be emailed, e.g. the requester's manager. */
+  toRecipients?: string[];
   ccRecipients?: string[];
 }
 
 // Operator addition (John, 2026-10-01): email the requester a question
-// mid-investigation. Same people as outcome dispatch (assignee/HR_LEAD/
+// mid-investigation. Since 2026-10-03 it can go to anyone (To + CC), not
+// only the requester -- e.g. ask the requester's manager. Same people as outcome dispatch (assignee/HR_LEAD/
 // ADMIN), from any working status, and the ticket moves to
 // AWAITING_RESPONSE (stays there if it already is). Same ordering as the
 // outcome route: the status change is applied first under optimistic
@@ -41,13 +45,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const isAssignee = ticket.assignedToId === session.user.id;
   if (!(session.user.role === "ADMIN" || session.user.role === "HR_LEAD" || isAssignee)) {
-    return forbidden("Only the assignee, HR_LEAD, or ADMIN may email the requester");
+    return forbidden("Only the assignee, HR_LEAD, or ADMIN may email a question");
   }
   if (!isWorkingStatus(ticket.status)) {
     return badRequest(`A question can only be sent while the ticket is in action (current status: ${ticket.status})`);
   }
 
-  const ccRecipients = body.ccRecipients ?? ticket.ccRecipients;
+  const recipients = validateRecipients(body.toRecipients ?? [ticket.requesterEmail], body.ccRecipients ?? ticket.ccRecipients);
+  if (!recipients.ok) return badRequest(recipients.error);
+  const { to: toRecipients, cc: ccRecipients } = recipients;
 
   const result = await prisma.ticket.updateMany({
     where: { id: ticket.id, version: body.version },
@@ -64,7 +70,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       fromStatus: ticket.status,
       toStatus: "AWAITING_RESPONSE",
       actorId: session.user.id,
-      reason: "Question emailed to requester",
+      reason: `Question emailed to ${toRecipients.join(", ")}`,
       correlationId,
     });
   }
@@ -73,7 +79,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const sendResult = await sendTicketEmail({
     ticketId: ticket.id,
     messageType: "REQUESTER_QUESTION",
-    toRecipients: [ticket.requesterEmail],
+    toRecipients,
     ccRecipients,
     subject: rendered.subject,
     bodyText: rendered.bodyText,
@@ -94,6 +100,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     afterJson: {
       status: "AWAITING_RESPONSE",
       question,
+      toRecipients,
       ccRecipients,
       emailSent: sendResult.ok,
       emailAttempts: sendResult.attempts,

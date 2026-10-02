@@ -9,6 +9,7 @@ import {
   canCloseAsNotARequest,
   canEditNote,
   canManageAdminSettings,
+  canAssignPooledTicketToOthers,
   canMergeTickets,
   canReassignTicket,
   canReverseStatusTransition,
@@ -63,15 +64,18 @@ describe("Merge one ticket into another (added directly with John, Sep 2026)", (
   });
 });
 
-describe("Reassign another user's ticket", () => {
-  it("ADMIN and HR_LEAD can reassign any ticket", () => {
-    assert.equal(canReassignTicket(ADMIN, false), true);
-    assert.equal(canReassignTicket(HR_LEAD, false), true);
+describe("Reassign another user's ticket (amended 2026-10-03: every HR role, any ticket)", () => {
+  it("every role can reassign any ticket, their own or not", () => {
+    for (const role of [ADMIN, HR_LEAD, HR_OFFICER]) {
+      assert.equal(canReassignTicket(role, true), true);
+      assert.equal(canReassignTicket(role, false), true);
+    }
   });
+});
 
-  it("HR_OFFICER can only reassign their own ticket", () => {
-    assert.equal(canReassignTicket(HR_OFFICER, true), true);
-    assert.equal(canReassignTicket(HR_OFFICER, false), false);
+describe("Assign a pooled ticket to someone else (amended 2026-10-03: every HR role)", () => {
+  it("every role can", () => {
+    for (const role of [ADMIN, HR_LEAD, HR_OFFICER]) assert.equal(canAssignPooledTicketToOthers(role), true);
   });
 });
 

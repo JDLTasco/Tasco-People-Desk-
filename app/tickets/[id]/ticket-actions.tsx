@@ -6,12 +6,8 @@ import { signIn } from "next-auth/react";
 import OutcomeDispatchModal from "./outcome-dispatch-modal";
 import MergeTicketForm from "./merge-ticket-form";
 import QuestionModal from "./question-modal";
+import { isAutoTargetReason } from "@/lib/tickets/target-due";
 
-interface OutcomeNote {
-  id: string;
-  body: string;
-  visibility: "INTERNAL" | "REQUESTER_VISIBLE";
-}
 interface OutcomeAttachment {
   id: string;
   filename: string;
@@ -35,7 +31,6 @@ interface Props {
   ccRecipients: string[];
   targetDueAt: string | null;
   targetDueReason: string | null;
-  notes: OutcomeNote[];
   attachments: OutcomeAttachment[];
   isConfidential: boolean;
   isLegalHold: boolean;
@@ -90,7 +85,6 @@ export default function TicketActions({
   ccRecipients,
   targetDueAt,
   targetDueReason,
-  notes,
   attachments,
   isConfidential,
   isLegalHold,
@@ -315,20 +309,30 @@ export default function TicketActions({
           </p>
         )}
 
-        {/* Target due date (§8 -- optional, for a specific external deadline).
-            Editable by any signed-in staff member -- broadened at John's
-            request (2026-09-16), see STATUS.md. */}
+        {/* Target due date -- the KPI (2026-10-03). Set automatically from the
+            priority in working days (P1 3, P2 10, P3 20) and follows priority
+            changes until someone overrides it with a reason. Editable by any
+            signed-in staff member (2026-09-16), see STATUS.md. */}
         <p>
         <label>
-          Target due:{" "}
-          <input type="datetime-local" value={targetDue} onChange={(e) => setTargetDue(e.target.value)} />
+          Target due (KPI):{" "}
+          <input
+            type="datetime-local"
+            value={targetDue}
+            onChange={(e) => {
+              setTargetDue(e.target.value);
+              // Overriding the automatic date needs a real reason.
+              if (isAutoTargetReason(targetDueReasonText)) setTargetDueReasonText("");
+            }}
+          />
         </label>{" "}
         <label>
-          Reason (required whenever a date is set):{" "}
+          Reason (required when you change the date):{" "}
           <input
             value={targetDueReasonText}
             onChange={(e) => setTargetDueReasonText(e.target.value)}
             placeholder="e.g. Fair Work response date"
+            readOnly={isAutoTargetReason(targetDueReasonText)}
             style={{ width: "16rem" }}
           />
         </label>{" "}
@@ -423,7 +427,6 @@ export default function TicketActions({
               displaySubject={displaySubject}
               requesterEmail={requesterEmail}
               initialCcRecipients={ccRecipients}
-              notes={notes}
               attachments={attachments}
             />
           )}
@@ -504,7 +507,8 @@ export default function TicketActions({
         </div>
       )}
 
-      {status === "NEW" && (role === "ADMIN" || role === "HR_LEAD") && (
+      {/* Any HR role may assign a pooled ticket to someone else (2026-10-03). */}
+      {status === "NEW" && (
         <div style={{ marginBottom: "1rem" }}>
           <h3>Assign to</h3>
           <select value={selectedAssignee} onChange={(e) => setSelectedAssignee(e.target.value)}>

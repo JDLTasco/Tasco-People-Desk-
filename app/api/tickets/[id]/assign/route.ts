@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiContext } from "@/lib/api-context";
 import { badRequest, conflict, forbidden, notFound } from "@/lib/http-errors";
-import { canReassignTicket } from "@/lib/rbac";
+import { canAssignPooledTicketToOthers, canReassignTicket } from "@/lib/rbac";
+import { canViewerSeeTicket } from "@/lib/tickets/confidential-access";
 import { validateReassignment } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
-import { sendAllocationEmail } from "@/lib/email/allocation";
-import { isPriority, slaDueAtFor } from "@/lib/tickets/sla";
+import { dueFieldsForPriorityChange, isPriority } from "@/lib/tickets/sla";
 
 interface AssignBody {
   userId: string;
@@ -17,15 +17,17 @@ interface AssignBody {
 }
 
 // Covers both halves of §4/§3's assignment story:
-//  - NEW -> ALLOCATED, assigning to someone else (HR_LEAD/ADMIN only --
-//    any-user self-claim is /claim). Same atomic conditional UPDATE as
-//    self-claim, since it's racing the exact same pool.
+//  - NEW -> ALLOCATED, assigning to someone else (self-claim is /claim).
+//    Same atomic conditional UPDATE as self-claim, since it's racing the
+//    exact same pool.
 //  - Reassignment of an already-ALLOCATED/IN_ACTION ticket (not a status
-//    transition -- §4's "events that are not transitions"). HR_OFFICER may
-//    only reassign a ticket currently assigned to them (§3: "Own tickets
-//    only"); ADMIN/HR_LEAD may reassign anyone's ticket. Optimistic
+//    transition -- §4's "events that are not transitions"). Optimistic
 //    locking via `version`, per §5's general rule (this isn't the
 //    unassigned-pool race the atomic UPDATE exists for).
+// Operator amendment (John, 2026-10-03): every HR role may do both, on any
+// ticket they can see (was: pool assignment HR_LEAD/ADMIN only, officers
+// reassign their own tickets only -- §3). Confidential tickets still 404
+// for anyone who can't see them.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
   if (ctx instanceof Response) return ctx;
@@ -37,16 +39,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const targetUser = await prisma.user.findUnique({ where: { id: body.userId } });
   if (!targetUser || !targetUser.isActive) return badRequest("Target user does not exist or is not active");
 
-  const ticket = await prisma.ticket.findUnique({ where: { id: params.id } });
+  const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, include: { accessGrants: true } });
   if (!ticket || ticket.isDeleted) return notFound();
+  if (!canViewerSeeTicket(session.user.role, session.user.id, ticket)) return notFound();
 
   if (ticket.status === "NEW" && ticket.assignedToId === null) {
-    if (!(session.user.role === "ADMIN" || session.user.role === "HR_LEAD")) {
-      return forbidden("Only HR_LEAD or ADMIN may assign a pooled ticket to someone else");
+    if (!canAssignPooledTicketToOthers(session.user.role)) {
+      return forbidden("Not permitted to assign a pooled ticket to someone else");
     }
 
     // Optional priority chosen at the moment of assigning (John, 2026-09-29),
-    // same as self-claim -- same atomic UPDATE, sla_due_at recalculated (§5).
+    // same as self-claim -- same atomic UPDATE, due dates recalculated (§5).
     if (body.priority !== undefined && !isPriority(body.priority)) return badRequest("priority must be P1, P2 or P3");
     const newPriority = isPriority(body.priority) && body.priority !== ticket.priority ? body.priority : null;
 
@@ -57,7 +60,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         status: "ALLOCATED",
         assignedAt: new Date(),
         version: { increment: 1 },
-        ...(newPriority ? { priority: newPriority, slaDueAt: slaDueAtFor(ticket.receivedAt, newPriority) } : {}),
+        ...(newPriority ? { priority: newPriority, ...dueFieldsForPriorityChange(ticket, newPriority) } : {}),
       },
     });
     if (result.count === 0) {
@@ -85,15 +88,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
       afterJson: { assignedToId: body.userId, status: "ALLOCATED", ...(newPriority ? { priority: newPriority } : {}) },
     });
 
-    // §7.4: "First entry into this [ALLOCATED] state sends the allocation
-    // email" -- same as the self-claim path, just with the assignor's
-    // choice of officer as the display name instead of the acting user.
-    await sendAllocationEmail(
-      { id: ticket.id, ticketNo: ticket.ticketNo, subject: ticket.subject, requesterEmail: ticket.requesterEmail },
-      targetUser.displayName,
-      correlationId,
-      session.user.id,
-    );
+    // No allocation email any more (2026-10-03) -- the requester got an
+    // acknowledgement when the ticket was created.
 
     return NextResponse.json({ ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }) });
   }

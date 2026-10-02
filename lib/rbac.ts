@@ -23,10 +23,22 @@ export function canSelfAssignPooledTicket(_role: UserRole): boolean {
   return true;
 }
 
-/** Reassign another user's ticket -- ADMIN / HR_LEAD unconditionally; HR_OFFICER only their own tickets. */
-export function canReassignTicket(role: UserRole, isOwnTicket: boolean): boolean {
-  if (role === "ADMIN" || role === "HR_LEAD") return true;
-  return isOwnTicket;
+/**
+ * Reassign another user's ticket. Was ADMIN / HR_LEAD unconditionally,
+ * HR_OFFICER own tickets only (§3); operator amendment (John, 2026-10-03):
+ * every HR role may reassign any ticket they can see. Confidential tickets
+ * remain gated by §9 visibility, checked separately by the caller.
+ */
+export function canReassignTicket(_role: UserRole, _isOwnTicket: boolean): boolean {
+  return true;
+}
+
+/**
+ * Assign a pooled (NEW) ticket to someone else. Was HR_LEAD / ADMIN only;
+ * operator amendment (John, 2026-10-03): every HR role.
+ */
+export function canAssignPooledTicketToOthers(_role: UserRole): boolean {
+  return true;
 }
 
 /**

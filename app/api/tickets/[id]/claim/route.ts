@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireApiContext } from "@/lib/api-context";
 import { badRequest, conflict, notFound } from "@/lib/http-errors";
-import { isPriority, slaDueAtFor } from "@/lib/tickets/sla";
+import { dueFieldsForPriorityChange, isPriority } from "@/lib/tickets/sla";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
-import { sendAllocationEmail } from "@/lib/email/allocation";
 
 // §3: "Self-assign a pooled ticket -- ADMIN / HR_LEAD / HR_OFFICER" (any
 // role may claim). §5: the literal atomic conditional UPDATE -- zero rows
@@ -20,7 +19,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!existing || existing.isDeleted) return notFound();
 
   // Optional priority chosen at the moment of claiming (John, 2026-09-29) --
-  // applied in the same atomic UPDATE, with sla_due_at recalculated (§5).
+  // applied in the same atomic UPDATE, with sla_due_at (and the automatic
+  // target due date) recalculated (§5).
   const body = (await request.json().catch(() => ({}))) as { priority?: unknown };
   if (body.priority !== undefined && !isPriority(body.priority)) return badRequest("priority must be P1, P2 or P3");
   const newPriority = isPriority(body.priority) && body.priority !== existing.priority ? body.priority : null;
@@ -32,7 +32,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       status: "ALLOCATED",
       assignedAt: new Date(),
       version: { increment: 1 },
-      ...(newPriority ? { priority: newPriority, slaDueAt: slaDueAtFor(existing.receivedAt, newPriority) } : {}),
+      ...(newPriority ? { priority: newPriority, ...dueFieldsForPriorityChange(existing, newPriority) } : {}),
     },
   });
 
@@ -62,13 +62,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     afterJson: { assignedToId: session.user.id, status: "ALLOCATED", ...(newPriority ? { priority: newPriority } : {}) },
   });
 
+  // No requester email here any more (operator amendment, John, 2026-10-03):
+  // the acknowledgement email now goes out when the ticket is created
+  // (lib/email/acknowledgement.ts), replacing §7.4's allocation email.
   const ticket = await prisma.ticket.findUnique({ where: { id: params.id } });
-  if (ticket) {
-    // §7.4: "First entry into this [ALLOCATED] state sends the allocation
-    // email." Awaited (see lib/email/send.ts's own note on why -- no
-    // background queue exists in this build), but a delivery failure never
-    // undoes the claim that already succeeded; it's recorded and bannered.
-    await sendAllocationEmail(ticket, session.user.name ?? "your assigned HR officer", correlationId, session.user.id);
-  }
   return NextResponse.json({ ticket });
 }

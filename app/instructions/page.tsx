@@ -39,14 +39,15 @@ export default async function InstructionsPage() {
         <p>Every ticket moves through these statuses in order. Nothing skips a step.</p>
         <ol>
           <li>
-            <strong>NEW</strong> -- just arrived, sitting unassigned in the <a href="/pool">Pool</a>. Anyone can
-            self-assign it, or an ADMIN/HR_LEAD can assign it to someone specific.
+            <strong>NEW</strong> -- just arrived, sitting unassigned in the <a href="/pool">Pool</a>. The requester
+            automatically gets an acknowledgement email straight away, with the ticket number, &quot;Expected
+            response: as soon as practical&quot;, and a note asking them to keep the ticket number in the subject line
+            when they reply (see &quot;Replying to a requester&quot; below). Anyone can self-assign it, or assign it
+            to someone else.
           </li>
           <li>
-            <strong>ALLOCATED</strong> -- a person now owns it. The requester automatically gets an email confirming
-            this, with the ticket number, &quot;Expected response: as soon as practical&quot;, and a note asking them
-            to keep the ticket number in the subject line when they reply (see &quot;Replying to a requester&quot;
-            below). Set the priority in the Metadata panel first -- pressing Claim or Assign saves it for you.
+            <strong>ALLOCATED</strong> -- a person now owns it. No email goes to the requester at this point (they
+            were already acknowledged when the ticket arrived). Anyone can reassign it to someone else at any time.
           </li>
           <li>
             <strong>IN_ACTION</strong> -- the assignee has started working it. <strong>A category must be set
@@ -58,14 +59,18 @@ export default async function InstructionsPage() {
               <li>
                 <strong>AWAITING_RESPONSE</strong> -- you&apos;ve asked the requester something and are waiting to
                 hear back. Anyone can set this. The assignee, HR Leads
-                and Admins can also email the requester a question with <strong>Ask requester a question</strong>{" "}
-                -- you review the exact email before it sends, the ticket moves here automatically, and their reply
-                threads back onto the ticket.
+                and Admins can also send a question by email with <strong>Email a question</strong>{" "}
+                -- it goes to the requester by default, but you can change <strong>To</strong> to ask someone else
+                (e.g. the requester&apos;s manager) and add CCs. You review the exact email before it sends, the
+                ticket moves here automatically, and the reply threads back onto the ticket.
               </li>
               <li>
-                <strong>RESPONSE_RECEIVED</strong> -- the requester has come back. <strong>Anyone</strong> can record
-                this, e.g. if you take a call about someone else&apos;s ticket: choose Response received, type what they
-                said in the box that appears, and click Update action (the text is saved as an internal note). The assignee gets an alert -- a red number next to{" "}
+                <strong>RESPONSE_RECEIVED</strong> -- the requester (or whoever you asked) has come back.{" "}
+                <strong>An emailed reply sets this automatically</strong> when the ticket is in action or awaiting a
+                response (a reply to a ticket that is assigned but not started yet just raises the alert). For a phone
+                call or a conversation, <strong>anyone</strong> can record it by hand: choose Response received, type
+                what they said in the box that appears, and click Update action (the text is saved as an internal
+                note). The assignee gets an alert -- a red number next to{" "}
                 <strong>My tickets</strong> and a highlighted row -- until they open the ticket.
               </li>
               <li>
@@ -81,8 +86,8 @@ export default async function InstructionsPage() {
           </li>
           <li>
             <strong>OUTCOME</strong> -- the resolution has been drafted and sent to the requester via the dispatch
-            preview (see below). This is the only way an outcome email goes out -- notes are never emailed to a
-            requester automatically.
+            preview (see below). It goes to the requester by default; To and CC can be changed. Notes are never
+            included -- they are internal only.
           </li>
           <li>
             <strong>CLOSED</strong> -- the matter is finished. A ticket can also reach CLOSED directly from an
@@ -118,25 +123,29 @@ export default async function InstructionsPage() {
             you&apos;ve actually read the request.
           </li>
         </ul>
-        <p>Internal response-time targets by priority (these drive due dates and overdue alerts; requesters are
-          only told &quot;as soon as practical&quot;):</p>
+        <p>
+          Every ticket gets a <strong>target due date</strong> automatically from its priority, counted in working
+          days (Monday to Friday -- public holidays are not skipped, so adjust the date if one falls inside). This is
+          the date the People Desk tracks as its KPI: it drives the Due date, the Overdue list and overdue alerts.
+          Requesters are only ever told &quot;as soon as practical&quot;.
+        </p>
         <ul>
-          <li><strong>P1</strong> -- 2 days</li>
-          <li><strong>P2</strong> -- 7 days</li>
-          <li><strong>P3</strong> -- 30 days</li>
+          <li><strong>P1</strong> -- 3 working days</li>
+          <li><strong>P2</strong> -- 10 working days</li>
+          <li><strong>P3</strong> -- 20 working days</li>
         </ul>
         <p>
-          Priority is set in the Metadata panel by any HR staff member, at any time -- changing it automatically
-          recalculates the SLA clock. There is one <strong>Save changes</strong> button for priority, category,
-          business unit and target due date, and pressing any Action button (Claim, Start action, Close, etc.) also
-          saves whatever you&apos;ve changed there first.
+          Priority is set in the Metadata panel by any HR staff member, at any time -- changing it moves the
+          automatic target due date to match. There is one <strong>Save changes</strong> button for priority,
+          category, business unit and target due date, and pressing any Action button (Claim, Start action, Close,
+          etc.) also saves whatever you&apos;ve changed there first.
         </p>
         <p>
-          Separately, a <strong>target due date</strong> can be set on any ticket for a specific external
-          deadline (a Fair Work response date, a WorkCover deadline, and similar) -- it requires a reason, and can
-          only bring the deadline <em>forward</em>, never push it later than the standard SLA. Unlike most other
-          fields, the target due date can be set by <strong>any signed-in staff member</strong>, not just the
-          ticket&apos;s own assignee.
+          Anyone can <strong>override</strong> the target due date -- earlier or later -- for example for a Fair Work
+          response date or a WorkCover deadline. An override needs a reason, and once overridden the date no
+          longer changes when the priority does. Tickets that arrived before 3 October 2026 have no target date
+          and are still measured against the old clock (P1 2 days, P2 7 days, P3 30 days, shown as &quot;Due
+          (SLA)&quot;) until someone sets a target date or changes their priority.
         </p>
       </section>
 
@@ -150,8 +159,9 @@ export default async function InstructionsPage() {
         <p>
           If a reply arrives as a fresh email (a forward, a different email client, or the ticket number got
           copied into a brand-new message) it still threads onto the correct ticket as long as{" "}
-          <code>[TICKETNO]</code> survives somewhere in the subject line -- this is why the allocation email
-          explicitly asks the requester to keep it there.
+          <code>[TICKETNO]</code> survives somewhere in the subject line -- this is why every email we send
+          explicitly asks people to keep it there. This works for anyone who replies, not only the requester (for
+          example a manager you emailed a question to).
         </p>
       </section>
 
@@ -161,7 +171,7 @@ export default async function InstructionsPage() {
           <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>
           <li><strong>My tickets</strong> -- everything assigned to you, closed ones at the bottom. A red number next to it means someone recorded a response on one of your tickets.</li>
           <li><strong>All open</strong> -- every ticket that isn&apos;t CLOSED or ARCHIVED, across all officers.</li>
-          <li><strong>Overdue</strong> -- tickets past their effective deadline (SLA or target due, whichever is earlier).</li>
+          <li><strong>Overdue</strong> -- tickets past their target due date (or, for tickets from before 3 October 2026 with no target date, their old SLA date).</li>
           <li><strong>Closed</strong> -- every CLOSED or ARCHIVED ticket, across all officers, most recent first.</li>
           <li>
             <strong>Archive search</strong> -- full-text search specifically over <em>archived</em> tickets (see
@@ -212,13 +222,13 @@ export default async function InstructionsPage() {
         <h2>Step-by-step: handling a ticket end to end</h2>
         <ol>
           <li>Check the <a href="/pool">Pool</a> for unassigned tickets, or check <a href="/my-tickets">My tickets</a> for what&apos;s already yours.</li>
-          <li>Claim it (or have it assigned to you by an HR_LEAD/ADMIN). Any unsaved changes in the Metadata panel are saved when you press Claim.</li>
+          <li>Claim it, or use <strong>Assign to</strong> to give it to a colleague. Any unsaved changes in the Metadata panel are saved when you press Claim.</li>
           <li>Read the request properly, then set its real <strong>Priority</strong> and <strong>Category</strong> in the Metadata panel -- category is mandatory before you can start action.</li>
-          <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress) and a <strong>target due date</strong> if there&apos;s a specific external deadline.</li>
+          <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress). Check the automatic <strong>target due date</strong> and override it (with a reason) if there&apos;s a specific external deadline.</li>
           <li>Click <strong>Start action</strong> once you begin working it.</li>
-          <li>Use <strong>internal notes</strong> to record progress -- mark a note &quot;requester-visible&quot; only if you want it available later as an option in the outcome email.</li>
-          <li>To ask the requester something, use <strong>Ask requester a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked them another way). To park a ticket, set it to <strong>On Hold</strong>. When they come back (to you or to a colleague), set it to <strong>Response received</strong>.</li>
-          <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the requester-facing resolution, tick any requester-visible notes you want included, review the exact email that will send, and confirm.</li>
+          <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
+          <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
+          <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the resolution, check who it goes To and CC, review the exact email that will send, and confirm.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
           <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>
@@ -238,7 +248,7 @@ export default async function InstructionsPage() {
           </thead>
           <tbody>
             <tr><td>View pool / self-assign</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Reassign another user&apos;s ticket</td><td>Yes</td><td>Yes</td><td>Own tickets only</td></tr>
+            <tr><td>Assign a Pool ticket to someone else / reassign any ticket</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Edit ticket metadata, category, business unit, priority</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Set the current action (awaiting response, response received, action items)</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>

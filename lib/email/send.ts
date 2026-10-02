@@ -9,7 +9,13 @@
 import { prisma } from "../prisma";
 import { getGraphClient, type GraphClient } from "../graph/client";
 
-export type TicketEmailType = "ALLOCATION" | "OUTCOME" | "SLA_ESCALATION" | "CLOSED_RESOLVED" | "REQUESTER_QUESTION";
+export type TicketEmailType =
+  | "ALLOCATION"
+  | "OUTCOME"
+  | "SLA_ESCALATION"
+  | "CLOSED_RESOLVED"
+  | "REQUESTER_QUESTION"
+  | "ACKNOWLEDGEMENT";
 
 export interface ThreadingContext {
   inReplyToInternetMessageId?: string;

@@ -2,21 +2,22 @@
 // stored columns -- both are fully derivable from sla_due_at/target_due_at,
 // so they live here rather than as schema fields (see schema.prisma's own
 // comment on this).
+//
+// Operator amendment (John, 2026-10-03): the target due date is the KPI.
+// It is set automatically from the priority in working days (see
+// target-due.ts), can be overridden earlier OR later, and drives the due
+// date, Overdue list and escalation on its own. The old SLA clock
+// (sla_due_at) only applies to a ticket with no target date -- tickets
+// created before this change, until someone sets one or changes priority.
+// Previously: LEAST(sla_due_at, target_due_at), target could only bring
+// the deadline forward.
 import type { TicketStatus } from "./transitions";
 
-/**
- * "LEAST(sla_due_at, COALESCE(target_due_at, sla_due_at))" -- a target due
- * date can only bring the deadline forward, never extend the SLA floor.
- */
 export function effectiveDueDate(slaDueAt: Date, targetDueAt: Date | null): Date {
-  if (!targetDueAt) return slaDueAt;
-  return targetDueAt < slaDueAt ? targetDueAt : slaDueAt;
+  return targetDueAt ?? slaDueAt;
 }
 
-/**
- * "A ticket is overdue when either sla_due_at or target_due_at has passed,
- * whichever comes first, and the status is not CLOSED or ARCHIVED."
- */
+/** Overdue when the effective due date has passed and the status is not CLOSED or ARCHIVED. */
 export function isOverdue(
   slaDueAt: Date,
   targetDueAt: Date | null,
@@ -28,7 +29,6 @@ export function isOverdue(
 }
 
 /** Which deadline is driving the effective due date -- used to label "which deadline was breached" (§8's escalation email). */
-export function breachedDeadline(slaDueAt: Date, targetDueAt: Date | null): "SLA" | "TARGET" {
-  if (!targetDueAt) return "SLA";
-  return targetDueAt < slaDueAt ? "TARGET" : "SLA";
+export function breachedDeadline(_slaDueAt: Date, targetDueAt: Date | null): "SLA" | "TARGET" {
+  return targetDueAt ? "TARGET" : "SLA";
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { renderRequesterQuestionEmail } from "@/lib/email/templates";
+import { parseRecipientList } from "@/lib/email/recipients";
 
 interface Props {
   ticketId: string;
@@ -15,7 +16,8 @@ interface Props {
 }
 
 // Operator addition (John, 2026-10-01): email the requester a question
-// without moving to OUTCOME. Same review-before-send shape as the outcome
+// without moving to OUTCOME. Since 2026-10-03 the To line can be changed,
+// e.g. to ask the requester's manager, with CCs. Same review-before-send shape as the outcome
 // dispatch modal -- the preview uses the exact template the server sends.
 export default function QuestionModal({
   ticketId,
@@ -28,6 +30,7 @@ export default function QuestionModal({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
+  const [to, setTo] = useState(requesterEmail);
   const [cc, setCc] = useState(initialCcRecipients.join(", "));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +59,7 @@ export default function QuestionModal({
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)}>
-        Ask requester a question
+        Email a question
       </button>
     );
   }
@@ -76,10 +79,8 @@ export default function QuestionModal({
       body: JSON.stringify({
         version: saved.version,
         question,
-        ccRecipients: cc
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        toRecipients: parseRecipientList(to),
+        ccRecipients: parseRecipientList(cc),
       }),
     });
     setBusy(false);
@@ -89,6 +90,7 @@ export default function QuestionModal({
       return;
     }
     setQuestion("");
+    setTo(requesterEmail);
     setOpen(false);
     router.refresh();
   }
@@ -96,13 +98,17 @@ export default function QuestionModal({
   return (
     <div className="modal-overlay">
       <div className="modal section-card">
-        <h2>Ask the requester a question -- {ticketNo}</h2>
+        <h2>Email a question -- {ticketNo}</h2>
         {error && (
           <p role="alert" className="banner banner-error">
             {error}
           </p>
         )}
-        <p>Sending moves the ticket to AWAITING_RESPONSE. The requester&apos;s reply threads back onto this ticket.</p>
+        <p>
+          Goes to the requester by default -- change To to ask someone else (e.g. their manager), and add CCs. Sending
+          moves the ticket to AWAITING_RESPONSE; a reply that keeps the ticket number in the subject threads back onto this
+          ticket and marks it Response received.
+        </p>
 
         <label>
           Question:
@@ -110,7 +116,8 @@ export default function QuestionModal({
         </label>
 
         <label>
-          To: <input value={requesterEmail} disabled style={{ width: "20rem" }} />
+          To:{" "}
+          <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="comma-separated addresses" style={{ width: "20rem" }} />
         </label>
         <br />
         <label>
@@ -126,7 +133,7 @@ export default function QuestionModal({
           <div style={{ whiteSpace: "pre-wrap" }}>{rendered.bodyText}</div>
         </div>
 
-        <button type="button" disabled={busy || !question.trim()} onClick={() => void send()}>
+        <button type="button" disabled={busy || !question.trim() || !to.trim()} onClick={() => void send()}>
           Approve &amp; Send Question
         </button>{" "}
         <button type="button" className="secondary" disabled={busy} onClick={() => setOpen(false)}>

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
+import { isAutoTargetReason } from "@/lib/tickets/target-due";
 import { validateReopen } from "@/lib/tickets/reopen";
 import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
@@ -46,7 +47,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
       {ticket.responseAlertPending && isAssignedTicket && (
         <p role="alert" className="banner banner-response">
-          🔔 A response was recorded on this ticket by someone else -- see the latest note below.
+          🔔 A response was received on this ticket -- see the latest email or note.
         </p>
       )}
 
@@ -109,11 +110,13 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
               {ticket.assignee ? ticket.assignee.displayName : <em>unassigned</em>}
             </div>
             <div className={overdue ? "overdue" : undefined}>
-              <strong>Due:</strong> {formatAuDateTime(due)}
-              {ticket.targetDueAt && (
+              {/* The target due date is the KPI (2026-10-03); tickets from before
+                  then with no target still show their old SLA date. */}
+              <strong>{ticket.targetDueAt ? "Target due:" : "Due (SLA):"}</strong> {formatAuDateTime(due)}
+              {ticket.targetDueAt && ticket.targetDueReason && (
                 <>
                   {" "}
-                  (target: {formatAuDateTime(ticket.targetDueAt)}, reason: {ticket.targetDueReason})
+                  ({isAutoTargetReason(ticket.targetDueReason) ? ticket.targetDueReason.replace(/^Automatic:\s*/, "automatic, ") : `override: ${ticket.targetDueReason}`})
                 </>
               )}
               {overdue && " -- OVERDUE"}
@@ -148,7 +151,6 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             ccRecipients={ticket.ccRecipients}
             targetDueAt={ticket.targetDueAt ? ticket.targetDueAt.toISOString() : null}
             targetDueReason={ticket.targetDueReason}
-            notes={ticket.notes.map((n) => ({ id: n.id, body: n.body, visibility: n.visibility }))}
             attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
             isConfidential={ticket.isConfidential}
             isLegalHold={ticket.isLegalHold}

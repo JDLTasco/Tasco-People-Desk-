@@ -11,6 +11,7 @@ import {
 import { createTicket } from "@/lib/tickets/create-ticket";
 import { writeAuditLog } from "@/lib/audit";
 import type { Priority } from "@/lib/ingestion/priority";
+import { sendAcknowledgementEmail, shouldSendAcknowledgement } from "@/lib/email/acknowledgement";
 
 // §13's list views. "view" defaults to pool, the spec's own default landing view.
 export async function GET(request: Request) {
@@ -53,7 +54,7 @@ const VALID_PRIORITIES: Priority[] = ["P1", "P2", "P3"];
 // staff member, same as self-claiming from the Pool -- no ADMIN/HR_LEAD
 // gate. Lands in NEW, unassigned, in the Pool exactly like an ingested
 // ticket, so every downstream rule (claim, category-before-IN_ACTION,
-// allocation email, etc.) applies identically without special-casing.
+// acknowledgement email, etc.) applies identically without special-casing.
 export async function POST(request: Request) {
   const ctx = await requireApiContext(request);
   if (ctx instanceof Response) return ctx;
@@ -104,6 +105,16 @@ export async function POST(request: Request) {
     ticketId: created.ticketId,
     afterJson: { ticketNo: created.ticketNo, priority, requesterEmail, source: "manual" },
   });
+
+  // 2026-10-03: the requester is acknowledged on creation (replaces the
+  // allocation email) -- manual tickets included.
+  if (shouldSendAcknowledgement({ receivedAt, requesterEmail })) {
+    await sendAcknowledgementEmail(
+      { id: created.ticketId, ticketNo: created.ticketNo, subject, requesterEmail },
+      correlationId,
+      session.user.id,
+    );
+  }
 
   return NextResponse.json({ ticketId: created.ticketId, ticketNo: created.ticketNo }, { status: 201 });
 }

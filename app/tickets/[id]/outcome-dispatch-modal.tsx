@@ -3,12 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { renderOutcomeEmail } from "@/lib/email/templates";
+import { parseRecipientList } from "@/lib/email/recipients";
 
-interface Note {
-  id: string;
-  body: string;
-  visibility: "INTERNAL" | "REQUESTER_VISIBLE";
-}
 interface Attachment {
   id: string;
   filename: string;
@@ -21,7 +17,6 @@ interface Props {
   displaySubject: string;
   requesterEmail: string;
   initialCcRecipients: string[];
-  notes: Note[];
   attachments: Attachment[];
 }
 
@@ -37,18 +32,16 @@ export default function OutcomeDispatchModal({
   displaySubject,
   requesterEmail,
   initialCcRecipients,
-  notes,
   attachments,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [outcomeText, setOutcomeText] = useState("");
+  // To defaults to the requester but can be changed (2026-10-03).
+  const [to, setTo] = useState(requesterEmail);
   const [cc, setCc] = useState(initialCcRecipients.join(", "));
-  const [tickedNoteIds, setTickedNoteIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const requesterVisibleNotes = notes.filter((n) => n.visibility === "REQUESTER_VISIBLE");
 
   // §7.4: "A navigation-away warning is shown if the draft is non-empty."
   useEffect(() => {
@@ -68,9 +61,8 @@ export default function OutcomeDispatchModal({
         ticketNo,
         displaySubject,
         outcomeForRequester: outcomeText || "(draft outcome text will appear here)",
-        includedNotes: requesterVisibleNotes.filter((n) => tickedNoteIds.includes(n.id)).map((n) => ({ body: n.body })),
       }),
-    [ticketNo, displaySubject, outcomeText, tickedNoteIds, requesterVisibleNotes],
+    [ticketNo, displaySubject, outcomeText],
   );
 
   if (!open) {
@@ -90,11 +82,8 @@ export default function OutcomeDispatchModal({
       body: JSON.stringify({
         version,
         outcomeForRequester: outcomeText,
-        ccRecipients: cc
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        requesterVisibleNoteIds: tickedNoteIds,
+        toRecipients: parseRecipientList(to),
+        ccRecipients: parseRecipientList(cc),
       }),
     });
     setBusy(false);
@@ -127,26 +116,13 @@ export default function OutcomeDispatchModal({
           />
         </label>
 
-        {requesterVisibleNotes.length > 0 && (
-          <fieldset>
-            <legend>Include notes (unticked by default -- internal notes are never sent automatically)</legend>
-            {requesterVisibleNotes.map((n) => (
-              <label key={n.id} style={{ display: "block" }}>
-                <input
-                  type="checkbox"
-                  checked={tickedNoteIds.includes(n.id)}
-                  onChange={(e) =>
-                    setTickedNoteIds((prev) => (e.target.checked ? [...prev, n.id] : prev.filter((id) => id !== n.id)))
-                  }
-                />{" "}
-                {n.body.length > 80 ? `${n.body.slice(0, 80)}...` : n.body}
-              </label>
-            ))}
-          </fieldset>
-        )}
+        <p>
+          <em>Internal notes are never included -- only the text above is sent.</em>
+        </p>
 
         <label>
-          To: <input value={requesterEmail} disabled style={{ width: "20rem" }} />
+          To:{" "}
+          <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="comma-separated addresses" style={{ width: "20rem" }} />
         </label>
         <br />
         <label>
@@ -173,7 +149,7 @@ export default function OutcomeDispatchModal({
           <div style={{ whiteSpace: "pre-wrap" }}>{rendered.bodyText}</div>
         </div>
 
-        <button type="button" disabled={busy || !outcomeText.trim()} onClick={() => void send()}>
+        <button type="button" disabled={busy || !outcomeText.trim() || !to.trim()} onClick={() => void send()}>
           Approve &amp; Send Outcome
         </button>{" "}
         <button type="button" className="secondary" disabled={busy} onClick={() => setOpen(false)}>
