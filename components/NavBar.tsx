@@ -5,6 +5,7 @@ import { canManageAdminSettings, canViewAuditLog } from "@/lib/rbac";
 import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 import RefreshButton from "./RefreshButton";
+import AdminMenu from "./AdminMenu";
 import { countResponseAlerts } from "@/lib/tickets/queries";
 import { APP_VERSION } from "@/lib/version";
 
@@ -17,6 +18,28 @@ export default async function NavBar() {
   // "Response received" alerts (2026-09-29): someone else recorded a
   // response on one of this user's tickets and they haven't opened it yet.
   const responseAlerts = await countResponseAlerts(session.user.id);
+  const isAdmin = canManageAdminSettings(session.user.role);
+  const canAudit = canViewAuditLog(session.user.role);
+  // Grouped under one "Admin" menu (2026-10-03) -- same permissions as before.
+  const adminLinks = [
+    ...(isAdmin
+      ? [
+          { href: "/admin/users", label: "Users" },
+          { href: "/admin/categories", label: "Categories" },
+          { href: "/admin/business-units", label: "Business units" },
+          { href: "/admin/action-items", label: "Action items" },
+          { href: "/admin/failed-sends", label: "Failed sends" },
+        ]
+      : []),
+    ...(canAudit ? [{ href: "/admin/legal-holds", label: "Legal holds" }] : []),
+    ...(isAdmin ? [{ href: "/admin/deleted", label: "Deleted" }] : []),
+    ...(canAudit
+      ? [
+          { href: "/admin/address-book", label: "Address book" },
+          { href: "/admin/audit-log", label: "Audit log" },
+        ]
+      : []),
+  ];
 
   return (
     <nav className="main-nav no-print">
@@ -40,14 +63,7 @@ export default async function NavBar() {
       <Link href="/closed">Closed</Link>
       <Link href="/archive-search">Archive search</Link>
       <Link href="/instructions">Instructions</Link>
-      {canManageAdminSettings(session.user.role) && <Link href="/admin/users">Admin</Link>}
-      {canManageAdminSettings(session.user.role) && <Link href="/admin/categories">Categories</Link>}
-      {canManageAdminSettings(session.user.role) && <Link href="/admin/business-units">Business units</Link>}
-      {canManageAdminSettings(session.user.role) && <Link href="/admin/action-items">Action items</Link>}
-      {canManageAdminSettings(session.user.role) && <Link href="/admin/failed-sends">Failed sends</Link>}
-      {canViewAuditLog(session.user.role) && <Link href="/admin/legal-holds">Legal holds</Link>}
-      {canManageAdminSettings(session.user.role) && <Link href="/admin/deleted">Deleted</Link>}
-      {canViewAuditLog(session.user.role) && <Link href="/admin/audit-log">Audit log</Link>}
+      {adminLinks.length > 0 && <AdminMenu links={adminLinks} />}
       <span className="nav-spacer">
         {session.user.name} ({session.user.role})
       </span>

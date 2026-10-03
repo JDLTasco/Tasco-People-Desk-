@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { renderOutcomeEmail } from "@/lib/email/templates";
 import { parseRecipientList } from "@/lib/email/recipients";
+import RecipientInput from "@/components/RecipientInput";
 
 interface Attachment {
   id: string;
@@ -122,12 +123,12 @@ export default function OutcomeDispatchModal({
 
         <label>
           To:{" "}
-          <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="comma-separated addresses" style={{ width: "20rem" }} />
+          <RecipientInput value={to} onChange={setTo} placeholder="start typing a name or address" ariaLabel="To" />
         </label>
         <br />
         <label>
           CC:{" "}
-          <input value={cc} onChange={(e) => setCc(e.target.value)} placeholder="comma-separated addresses" style={{ width: "20rem" }} />
+          <RecipientInput value={cc} onChange={setCc} placeholder="start typing a name or address" ariaLabel="CC" />
         </label>
 
         {attachments.length > 0 && (

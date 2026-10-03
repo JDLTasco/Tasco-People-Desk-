@@ -40,7 +40,7 @@ async function withColours(rows: TicketListBaseRow[]): Promise<TicketListRow[]> 
  * and HR_LEAD see every ticket per §3's table; HR_OFFICER only sees a
  * confidential ticket they're assigned to or explicitly granted on.
  */
-function confidentialFilter(userId: string, role: UserRole): Prisma.TicketWhereInput {
+export function confidentialFilter(userId: string, role: UserRole): Prisma.TicketWhereInput {
   if (role === "ADMIN" || role === "HR_LEAD") {
     return {};
   }

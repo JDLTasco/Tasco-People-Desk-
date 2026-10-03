@@ -62,7 +62,9 @@ export default async function InstructionsPage() {
                 hear back. Anyone can set this. The assignee, HR Leads
                 and Admins can also send a question by email with <strong>Email a question</strong>{" "}
                 -- it goes to the requester by default, but you can change <strong>To</strong> to ask someone else
-                (e.g. the requester&apos;s manager) and add CCs. You review the exact email before it sends, the
+                (e.g. the requester&apos;s manager) and add CCs. Start typing a name or address in To or CC and
+                the People Desk suggests addresses it has already seen (requesters, people CC&apos;d, anyone who
+                has emailed HR or been emailed by HR) -- pick one with the mouse, or the arrow keys and Enter. You review the exact email before it sends, the
                 ticket moves here automatically, and the reply threads back onto the ticket.
               </li>
               <li>
