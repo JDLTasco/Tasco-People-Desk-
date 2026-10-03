@@ -155,7 +155,10 @@ p:last-child { margin-bottom: 0; }
 /* Page shell */
 main {
   padding: 1.5rem;
-  max-width: 1000px;
+  /* Was max-width: 1000px. Half the viewport + 500px leaves exactly half the
+     empty margin the old cap did on any screen wider than 1000px (e.g. 230px
+     each side instead of 460px on a 1920px monitor) -- John, 2026-10-03. */
+  max-width: calc(50% + 500px);
   margin: 0 auto;
 }
 h1 {
@@ -196,6 +199,14 @@ th {
 }
 tr:hover td {
   background: var(--surface-alt);
+}
+
+/* Nothing typed into or picked from should ever be wider than the screen
+   (several forms set fixed rem widths) -- 2026-10-03, phones/tablets. */
+input,
+select,
+textarea {
+  max-width: 100%;
 }
 
 /* Forms */
@@ -674,3 +685,93 @@ tr[class*="assignee-colour-"] > td:first-child { box-shadow: inset 4px 0 0 var(-
   font-size: 0.9rem;
 }
 .main-nav .nav-menu-panel a:hover, .main-nav .nav-menu-panel a.current { background: var(--tasco-navy-pale); color: var(--tasco-navy); }
+
+/* ---------- Responsive: tablets and phones (John, 2026-10-03) ---------- */
+.nav-links { display: contents; }
+.nav-burger { display: none; }
+
+@media (max-width: 900px) {
+  .main-nav { padding: 0.4rem 0.75rem; gap: 0.6rem; }
+  .nav-logo img { height: 34px; }
+  .nav-burger { display: inline-block; margin-left: auto; }
+  .nav-links { display: none; }
+  .nav-links.open {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.5rem 0 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .nav-links.open > a,
+  .nav-links.open > .nav-menu > summary { padding: 0.45rem 0; font-size: 1rem; }
+  /* Links one per line; Refresh / Dark / Sign out side by side underneath. */
+  .nav-links.open > a,
+  .nav-links.open > .nav-menu,
+  .nav-links.open > .nav-spacer { flex: 1 1 100%; }
+  .nav-links.open .nav-spacer { margin-left: 0; margin-top: 0.4rem; }
+  .nav-links.open .nav-menu-panel { position: static; box-shadow: none; margin-top: 0.25rem; }
+
+  main { padding: 1rem 0.75rem; max-width: 100%; }
+  h1 { font-size: 1.25rem; }
+  .meta-grid { gap: 0.6rem 1.25rem; }
+  .section-card { padding: 0.75rem; }
+  .modal-overlay { padding: 0.75rem 0.5rem; }
+
+  /* Wide tables scroll sideways instead of running off the screen (the
+     ticket list turns into cards below 700px instead). */
+  main table { display: block; overflow-x: auto; }
+}
+
+@media (max-width: 700px) {
+  /* Filter bar: two controls per line, so the tickets start sooner. */
+  .filter-bar { gap: 0.4rem; padding: 0.5rem; }
+  .filter-bar > input,
+  .filter-bar > select,
+  .filter-bar > .multi-select { flex: 1 1 calc(50% - 0.4rem); width: auto !important; min-width: 0; font-size: 0.8rem; }
+  .filter-bar .multi-select > summary { width: 100%; box-sizing: border-box; }
+  .multi-select-panel { left: 0; right: 0; min-width: 0; }
+  .sort-bar > span { flex: 1 1 100%; }
+
+  /* Ticket lists become stacked cards, one per ticket. */
+  table.ticket-list thead { display: none; }
+  table.ticket-list,
+  table.ticket-list tbody,
+  table.ticket-list tr,
+  table.ticket-list td { display: block; width: 100%; box-sizing: border-box; }
+  table.ticket-list tr {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  table.ticket-list td {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
+    padding: 0.4rem 0.75rem;
+    text-align: right;
+  }
+  table.ticket-list td:last-child { border-bottom: none; }
+  table.ticket-list td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--tasco-navy);
+    text-align: left;
+  }
+  table.ticket-list td:first-child { background: var(--tasco-navy-pale); font-weight: 600; }
+  /* The assignee colour edge moves to the card's left side. */
+  table.ticket-list tr[class*="assignee-colour-"] { border-left: 5px solid var(--a-edge); }
+  table.ticket-list tr[class*="assignee-colour-"] > td:first-child { box-shadow: none; }
+
+  .recipient-input { width: 100% !important; }
+  .ticket-page h1 { font-size: 1.1rem; word-break: break-word; }
+}

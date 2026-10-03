@@ -10,7 +10,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
   }
 
   return (
-    <table>
+    <table className="ticket-list">
       <thead>
         <tr>
           <th>Ticket</th>
@@ -37,25 +37,26 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
                   .join(" ") || undefined
               }
             >
-              <td>
+              {/* data-label: the column name shown on phones, where each row is a card (2026-10-03). */}
+              <td data-label="Ticket">
                 <Link href={`/tickets/${t.id}`}>{t.ticketNo}</Link>
                 {t.responseAlertPending && (
                   <span title="New response recorded -- not yet opened by the assignee"> 🔔</span>
                 )}
               </td>
-              <td>
+              <td data-label="Subject">
                 {t.subject} {t.isConfidential && <span title="Confidential">🔒</span>}
               </td>
-              <td>{t.requesterName}</td>
-              <td>
+              <td data-label="Requester">{t.requesterName}</td>
+              <td data-label="Status">
                 <span className={`chip chip-status-${t.status}${t.actionStatus ? " chip-action-item" : ""}`}>{displayStatus(t)}</span>
               </td>
-              <td>
+              <td data-label="Priority">
                 <span className={`chip chip-priority-${t.priority}`}>{t.priority}</span>
               </td>
-              <td>{t.category?.name ?? <em>none</em>}</td>
-              <td>{t.businessUnit?.name ?? <em>none</em>}</td>
-              <td>
+              <td data-label="Category">{t.category?.name ?? <em>none</em>}</td>
+              <td data-label="Business unit">{t.businessUnit?.name ?? <em>none</em>}</td>
+              <td data-label="Assignee">
                 {/* A colour per staff member (2026-10-03) -- see lib/users/colours.ts. */}
                 {t.assignee ? (
                   <span className={`chip chip-assignee assignee-colour-${t.assigneeColour ?? 0}`}>{t.assignee.displayName}</span>
@@ -63,7 +64,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
                   <em>unassigned</em>
                 )}
               </td>
-              <td className={overdue ? "overdue" : undefined}>
+              <td data-label="Due" className={overdue ? "overdue" : undefined}>
                 {formatAuDateTime(due)} {overdue && "-- OVERDUE"}
               </td>
             </tr>

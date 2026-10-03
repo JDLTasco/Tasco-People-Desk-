@@ -6,6 +6,7 @@ import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 import RefreshButton from "./RefreshButton";
 import AdminMenu from "./AdminMenu";
+import NavLinks from "./NavLinks";
 import { countResponseAlerts } from "@/lib/tickets/queries";
 import { APP_VERSION } from "@/lib/version";
 
@@ -49,6 +50,7 @@ export default async function NavBar() {
       <span className="nav-brand">
         Tasco People Desk <span className="nav-version">v{APP_VERSION}</span>
       </span>
+      <NavLinks>
       <Link href="/pool">Pool</Link>
       <Link href="/my-tickets">
         My tickets
@@ -70,6 +72,7 @@ export default async function NavBar() {
       <RefreshButton />
       <ThemeToggle />
       <SignOutButton />
+      </NavLinks>
     </nav>
   );
 }
