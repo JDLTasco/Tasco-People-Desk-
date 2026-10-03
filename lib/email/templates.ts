@@ -48,6 +48,11 @@ const FOOTER_HTML = `<p>${FOOTER_TEXT}</p>`;
 const TRACKING_NOTE_TEXT =
   "When replying, please keep the ticket number in the subject line so your response can be tracked against this ticket.";
 const TRACKING_NOTE_HTML = `<p>${TRACKING_NOTE_TEXT}</p>`;
+// The acknowledgement (the requester's first email) shows it bold in yellow
+// (John, 2026-10-03). Inline style, since email clients ignore stylesheets;
+// #FFC000 is Office's standard yellow/gold -- pure #FFFF00 is unreadable on
+// white. Plain-text bodies can't carry formatting, so only the HTML changes.
+const TRACKING_NOTE_HTML_HIGHLIGHTED = `<p><strong style="color:#FFC000;">${TRACKING_NOTE_TEXT}</strong></p>`;
 
 export interface AcknowledgementEmailInput {
   ticketNo: string;
@@ -68,7 +73,7 @@ export function renderAcknowledgementEmail(input: AcknowledgementEmailInput): Re
   return {
     subject,
     bodyText: `${intro}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`,
-    bodyHtml: `${htmlParagraphs(intro)}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`,
+    bodyHtml: `${htmlParagraphs(intro)}\n${TRACKING_NOTE_HTML_HIGHLIGHTED}\n${FOOTER_HTML}`,
   };
 }
 

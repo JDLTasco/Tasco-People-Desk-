@@ -13,6 +13,15 @@ describe("renderAcknowledgementEmail", () => {
     assert.match(email.bodyText, /keep the ticket number in the subject/);
   });
 
+  it("shows the keep-the-ticket-number line bold and yellow in the HTML (2026-10-03)", () => {
+    const email = renderAcknowledgementEmail({ ticketNo: "x", displaySubject: "s" });
+    assert.ok(
+      email.bodyHtml.includes(
+        '<strong style="color:#FFC000;">When replying, please keep the ticket number in the subject line so your response can be tracked against this ticket.</strong>',
+      ),
+    );
+  });
+
   it("never quotes an SLA timeframe to the requester", () => {
     const email = renderAcknowledgementEmail({ ticketNo: "x", displaySubject: "s" });
     assert.doesNotMatch(email.bodyText, /48 hours|7 days|30 days|working days|timeframe/);
