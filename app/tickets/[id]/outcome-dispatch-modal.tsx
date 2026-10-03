@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { renderOutcomeEmail } from "@/lib/email/templates";
 import { parseRecipientList } from "@/lib/email/recipients";
@@ -97,7 +98,10 @@ export default function OutcomeDispatchModal({
     router.refresh();
   }
 
-  return (
+  // Rendered into <body> (2026-10-03): the button lives in the ticket page's
+  // sticky left column, which forms its own stacking context, so without a
+  // portal the window would sit underneath the frozen nav bar.
+  return createPortal(
     <div className="modal-overlay">
       <div className="modal section-card">
         <h2>Send outcome -- {ticketNo}</h2>
@@ -157,6 +161,7 @@ export default function OutcomeDispatchModal({
           Cancel
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,9 +1,10 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.9.0";
+export const APP_VERSION = "1.9.1";
 
 // History:
+// 1.9.1 (2026-10-03) -- nav/header bar stays on screen while scrolling
 // 1.9.0 (2026-10-03) -- business calendar (Vic public holidays + shutdowns,
 //   Admin -> Calendar) for the working-day target; HR dashboard
 //   (Admin -> Dashboard); list filters by category / from the address bar
