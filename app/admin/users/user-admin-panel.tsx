@@ -43,6 +43,11 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
   const [upn, setUpn] = useState("");
   const [role, setRole] = useState<Role>("HR_OFFICER");
 
+  // Archived users are hidden unless asked for (John, 2026-10-03).
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = users.filter((u) => !u.isActive).length;
+  const visibleUsers = showArchived ? users : users.filter((u) => u.isActive);
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
@@ -93,6 +98,15 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
         </p>
       )}
 
+      <p className="no-print">
+        <button type="button" className="secondary" onClick={() => setShowArchived((v) => !v)} disabled={archivedCount === 0 && !showArchived}>
+          {showArchived ? "Hide archived users" : `Show all users, including archived (${archivedCount})`}
+        </button>{" "}
+        <span className="text-muted">
+          Showing {visibleUsers.length} of {users.length} users{showArchived ? "" : " -- live users only"}
+        </span>
+      </p>
+
       <table>
         <thead>
           <tr>
@@ -106,7 +120,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
           </tr>
         </thead>
         <tbody>
-          {users.map((u) => (
+          {visibleUsers.map((u) => (
             <tr key={u.id}>
               <td>
                 {editingId === u.id ? (
