@@ -13,6 +13,7 @@ import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
 import AttachmentRemoveForm from "./attachment-remove-form";
+import SaveExitButton from "./save-exit-button";
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -31,9 +32,12 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   return (
     <main className="ticket-page">
-      <h1>
-        {ticket.ticketNo} -- {ticket.subject}
-      </h1>
+      <div className="ticket-title-row">
+        <h1>
+          {ticket.ticketNo} -- {ticket.subject}
+        </h1>
+        <SaveExitButton />
+      </div>
 
       {/* "Current action" banner (John, 2026-10-01) -- where the ticket is up
           to, plus who last moved it and when (latest status history row). */}

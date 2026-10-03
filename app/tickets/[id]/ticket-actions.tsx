@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import OutcomeDispatchModal from "./outcome-dispatch-modal";
 import MergeTicketForm from "./merge-ticket-form";
 import QuestionModal from "./question-modal";
 import { isAutoTargetReason } from "@/lib/tickets/target-due";
+import { registerSaver, type SaveResult } from "@/components/pending-saves";
 
 interface OutcomeAttachment {
   id: string;
@@ -209,6 +210,31 @@ export default function TicketActions({
       ...(target === "RESPONSE_RECEIVED" ? { note: responseNote } : {}),
     });
   }
+
+  // Save & exit (2026-10-03): saves pending detail changes, then applies a
+  // Current action that was picked but not yet applied with Update action.
+  // A ref keeps the registered saver reading the latest state.
+  const saveForExit = useRef<() => Promise<SaveResult>>(async () => ({ ok: true }));
+  saveForExit.current = async () => {
+    if (targetDue !== "" && pendingChanges().targetDueAt !== undefined && !targetDueReasonText.trim()) {
+      return { ok: false, error: "give a reason for the target due date (Metadata panel)." };
+    }
+    const saved = await saveChanges();
+    if ("ok" in saved) {
+      return { ok: false, error: saved.status === 409 ? "this ticket changed since you opened it -- reload and try again." : (saved.data?.error ?? `saving changes failed (${saved.status})`) };
+    }
+    if (isWorking && selectedAction !== currentAction) {
+      if (selectedAction === "RESPONSE_RECEIVED" && !responseNote.trim()) {
+        return { ok: false, error: "type what the requester said for Response received (Current action), or change it back." };
+      }
+      const result = await changeAction(selectedAction, saved.version);
+      if (!result.ok) {
+        return { ok: false, error: result.status === 409 ? "this ticket changed since you opened it -- reload and try again." : (result.data?.error ?? `updating the current action failed (${result.status})`) };
+      }
+    }
+    return { ok: true };
+  };
+  useEffect(() => registerSaver("ticket-actions", () => saveForExit.current()), []);
 
   useEffect(() => {
     fetch("/api/users")

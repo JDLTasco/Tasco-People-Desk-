@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { registerSaver, type SaveResult } from "@/components/pending-saves";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -16,6 +17,25 @@ export default function NoteForm({ ticketId, mode, noteId, initialBody }: Props)
   const [body, setBody] = useState(initialBody ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Save & exit (2026-10-03): a note typed but not yet added is saved too.
+  const saveForExit = useRef<() => Promise<SaveResult>>(async () => ({ ok: true }));
+  saveForExit.current = async () => {
+    if (!body.trim() || !editing) return { ok: true };
+    const url = mode === "create" ? `/api/tickets/${ticketId}/notes` : `/api/tickets/${ticketId}/notes/${noteId}`;
+    const res = await fetch(url, {
+      method: mode === "create" ? "POST" : "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    if (res.ok) return { ok: true };
+    const data = await res.json().catch(() => ({}));
+    return { ok: false, error: data?.error ?? `saving the note failed (${res.status})` };
+  };
+  useEffect(
+    () => registerSaver(`note-${mode}-${noteId ?? "new"}`, () => saveForExit.current()),
+    [mode, noteId],
+  );
 
   async function submit() {
     if (!body.trim()) return;

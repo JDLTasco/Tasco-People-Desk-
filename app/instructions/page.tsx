@@ -238,6 +238,13 @@ export default async function InstructionsPage() {
           <li>Read the request properly, then set its real <strong>Priority</strong> and <strong>Category</strong> in the Metadata panel -- category is mandatory before you can start action.</li>
           <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress). Check the automatic <strong>target due date</strong> and override it (with a reason) if there&apos;s a specific external deadline.</li>
           <li>Click <strong>Start action</strong> once you begin working it.</li>
+          <li>
+            When you&apos;re done with a ticket for now, press the green <strong>Save &amp; exit</strong> button at the top
+            right. It saves anything you haven&apos;t saved yet -- changes in the Metadata panel, a new choice in the
+            Current action drop-down, and a note you&apos;ve typed but not added -- then takes you back to{" "}
+            <strong>My tickets</strong> for the next one. If something can&apos;t be saved (for example Response
+            received with no note), it stays on the ticket and tells you why.
+          </li>
           <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
           <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the resolution, check who it goes To and CC, review the exact email that will send, and confirm.</li>

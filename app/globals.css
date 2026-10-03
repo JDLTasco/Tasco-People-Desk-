@@ -775,3 +775,21 @@ tr[class*="assignee-colour-"] > td:first-child { box-shadow: inset 4px 0 0 var(-
   .recipient-input { width: 100% !important; }
   .ticket-page h1 { font-size: 1.1rem; word-break: break-word; }
 }
+
+/* Ticket page title row with the green Save & exit button (2026-10-03) */
+.ticket-title-row { display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.ticket-title-row h1 { flex: 1 1 20rem; margin-top: 0; }
+.save-exit { flex: 0 0 auto; text-align: right; }
+.btn-save-exit {
+  background: var(--tasco-green);
+  border-color: var(--tasco-green);
+  color: #fff;
+  font-weight: 600;
+  padding: 0.55rem 1.2rem;
+}
+.btn-save-exit:hover:not(:disabled) { filter: brightness(1.1); background: var(--tasco-green); }
+@media (max-width: 700px) {
+  .save-exit { flex: 1 1 100%; text-align: left; }
+  .btn-save-exit { width: 100%; }
+}
+:root[data-theme="dark"] .btn-save-exit { color: #0b1f12; }
