@@ -5,6 +5,7 @@ import { badRequest, conflict, notFound } from "@/lib/http-errors";
 import { validateNotARequestClose } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
+import { archiveNowAfterClose } from "@/lib/tickets/archive-on-close";
 
 interface Body {
   version: number;
@@ -62,5 +63,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
     afterJson: { status: "CLOSED", closeReason: "AUTOCLOSE" },
   });
 
-  return NextResponse.json({ ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }) });
+  // Straight to the archive (John, 2026-10-03) -- see lib/tickets/archive-on-close.ts.
+  const archive = await archiveNowAfterClose({
+    ticketId: ticket.id,
+    closeReason: "AUTOCLOSE",
+    actorId: session.user.id,
+    correlationId,
+  });
+
+  return NextResponse.json({
+    ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }),
+    archived: archive.archived,
+    ...(archive.error ? { archiveError: archive.error } : {}),
+  });
 }

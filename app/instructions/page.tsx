@@ -94,7 +94,7 @@ export default async function InstructionsPage() {
           </li>
           <li>
             <strong>CLOSED</strong> -- the matter is finished. A ticket can also reach CLOSED directly from an
-            earlier status via &quot;Not a request&quot; close (spam, wrong address, genuinely not an HR matter),
+            earlier status via &quot;Info only&quot; close (for information only, wrong address, genuinely not an HR matter),
             Autoclose (similar, kept as a separate reason purely so the two can be told apart in reporting), or
             Withdrawn (the requester no longer wants it actioned).
           </li>
@@ -187,7 +187,7 @@ export default async function InstructionsPage() {
           <li><strong>Closed</strong> -- every CLOSED or ARCHIVED ticket, across all officers, most recent first.</li>
           <li>
             <strong>Archive search</strong> -- full-text search specifically over <em>archived</em> tickets (see
-            below), with checkboxes to include &quot;Not a request&quot; and Autoclose closures, which are excluded
+            below), with checkboxes to include &quot;Info only&quot; and Autoclose closures, which are excluded
             by default.
           </li>
         </ul>
@@ -249,7 +249,7 @@ export default async function InstructionsPage() {
           <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the resolution, check who it goes To and CC, review the exact email that will send, and confirm.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
-          <li>If the email turns out to be spam or genuinely not an HR matter, use <strong>&quot;Not a request&quot; close</strong> or <strong>Autoclose</strong> instead of working it -- neither notifies the requester.</li>
+          <li>If the email is for information only or genuinely not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
           <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>
         </ol>
       </section>
@@ -272,7 +272,7 @@ export default async function InstructionsPage() {
             <tr><td>Set the current action (awaiting response, response received, action items)</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
-            <tr><td>&quot;Not a request&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>&quot;Info only&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Reopen a closed ticket (within 30 days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Set / clear confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if granted or assigned</td></tr>

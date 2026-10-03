@@ -65,7 +65,7 @@ export default function ArchiveSearchClient({ canBulkExport }: Props) {
           </label>
           <label>
             <input type="checkbox" checked={includeNotARequest} onChange={(e) => setIncludeNotARequest(e.target.checked)} /> Include
-            &quot;Not a request&quot; closures
+            &quot;Info only&quot; closures
           </label>
           <label>
             <input type="checkbox" checked={includeAutoclose} onChange={(e) => setIncludeAutoclose(e.target.checked)} /> Include

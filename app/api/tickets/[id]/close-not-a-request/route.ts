@@ -5,12 +5,15 @@ import { badRequest, conflict, notFound } from "@/lib/http-errors";
 import { validateNotARequestClose } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
+import { archiveNowAfterClose } from "@/lib/tickets/archive-on-close";
 
 interface Body {
   version: number;
 }
 
-// §4: "Not a request" close -- available from NEW, ALLOCATED, or IN_ACTION.
+// §4: "Not a request" close -- shown to staff as "Close -- Info only" since
+// 2026-10-03 (close reason stays NOT_A_REQUEST) -- available from NEW,
+// ALLOCATED, or IN_ACTION.
 // Any role. Bypasses all requester notifications (there's no outbound
 // email yet regardless -- Stage 5), requires no category, and is excluded
 // from the default archive search view (Stage 6's own concern once
@@ -58,5 +61,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
     afterJson: { status: "CLOSED", closeReason: "NOT_A_REQUEST" },
   });
 
-  return NextResponse.json({ ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }) });
+  // Straight to the archive (John, 2026-10-03) -- see lib/tickets/archive-on-close.ts.
+  const archive = await archiveNowAfterClose({
+    ticketId: ticket.id,
+    closeReason: "NOT_A_REQUEST",
+    actorId: session.user.id,
+    correlationId,
+  });
+
+  return NextResponse.json({
+    ticket: await prisma.ticket.findUnique({ where: { id: ticket.id } }),
+    archived: archive.archived,
+    ...(archive.error ? { archiveError: archive.error } : {}),
+  });
 }

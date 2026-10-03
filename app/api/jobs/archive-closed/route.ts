@@ -4,6 +4,7 @@ import { checkJobKey } from "@/lib/jobs/auth";
 import { runJob } from "@/lib/jobs/run";
 import { archiveTicket } from "@/lib/archive/writer";
 import { reopenWindowCutoff } from "@/lib/tickets/reopen";
+import { IMMEDIATE_ARCHIVE_CLOSE_REASONS } from "@/lib/tickets/archive-on-close";
 
 // §10, §12: "On transition to CLOSED, a nightly job (plus on-demand for
 // ADMIN) writes the archive artefacts and sets status ARCHIVED." Runs
@@ -22,7 +23,16 @@ export async function POST(request: Request) {
 
   const outcome = await runJob("archive-closed", async () => {
     const candidates = await prisma.ticket.findMany({
-      where: { status: "CLOSED", OR: [{ closedAt: null }, { closedAt: { lt: reopenWindowCutoff() } }] },
+      // Info only / Autoclose closes archive immediately (2026-10-03); any
+      // whose immediate archive write failed are retried here regardless of age.
+      where: {
+        status: "CLOSED",
+        OR: [
+          { closedAt: null },
+          { closedAt: { lt: reopenWindowCutoff() } },
+          { closeReason: { in: [...IMMEDIATE_ARCHIVE_CLOSE_REASONS] } },
+        ],
+      },
       select: { id: true },
     });
 

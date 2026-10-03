@@ -487,19 +487,30 @@ export default function TicketActions({
             </button>
           )}
 
+          {/* Info only / Autoclose (2026-10-03): close and archive straight away --
+              no priority, category or target date needed, and any unsaved
+              detail edits are deliberately NOT saved first (they'd only get in
+              the way of closing). Confirmed, because an archived ticket can't
+              be reopened. */}
           {canCloseEarly && (
             <button
               disabled={busy}
-              onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version: v }))}
+              onClick={() => {
+                if (!window.confirm("Close as Info only and archive it now? It can't be reopened afterwards.")) return;
+                void run(() => postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version }));
+              }}
             >
-              Close -- Not a request
+              Close -- Info only
             </button>
           )}
 
           {canCloseEarly && (
             <button
               disabled={busy}
-              onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version: v }))}
+              onClick={() => {
+                if (!window.confirm("Close as Autoclose (spam / no action needed) and archive it now? It can't be reopened afterwards.")) return;
+                void run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }));
+              }}
             >
               Close -- Autoclose (spam / no action needed)
             </button>
