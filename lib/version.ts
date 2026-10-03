@@ -1,9 +1,10 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.8.0";
+export const APP_VERSION = "1.8.1";
 
 // History:
+// 1.8.1 (2026-10-03) -- darker green Save & exit button
 // 1.8.0 (2026-10-03) -- "Close -- Not a request" renamed "Close -- Info only";
 //   Info only and Autoclose close + archive immediately, nothing to fill in
 // 1.7.0 (2026-10-03) -- green "Save & exit" button at the top of every

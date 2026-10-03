@@ -780,16 +780,16 @@ tr[class*="assignee-colour-"] > td:first-child { box-shadow: inset 4px 0 0 var(-
 .ticket-title-row { display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
 .ticket-title-row h1 { flex: 1 1 20rem; margin-top: 0; }
 .save-exit { flex: 0 0 auto; text-align: right; }
+/* Darker green (John, 2026-10-03), the same in light and dark mode. */
 .btn-save-exit {
-  background: var(--tasco-green);
-  border-color: var(--tasco-green);
+  background: #0b5323;
+  border-color: #0b5323;
   color: #fff;
   font-weight: 600;
   padding: 0.55rem 1.2rem;
 }
-.btn-save-exit:hover:not(:disabled) { filter: brightness(1.1); background: var(--tasco-green); }
+.btn-save-exit:hover:not(:disabled) { background: #0e6a2d; border-color: #0e6a2d; }
 @media (max-width: 700px) {
   .save-exit { flex: 1 1 100%; text-align: left; }
   .btn-save-exit { width: 100%; }
 }
-:root[data-theme="dark"] .btn-save-exit { color: #0b1f12; }
