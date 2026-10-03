@@ -30,6 +30,9 @@ export default function AddressBookTable({ entries }: { entries: Row[] }) {
     <>
       <div className="filter-bar no-print">
         <input placeholder="Search name or address..." value={q} onChange={(e) => setQ(e.target.value)} style={{ width: "18rem" }} />
+        <button type="button" className="secondary" disabled={!q} onClick={() => setQ("")}>
+          Clear all filters
+        </button>
         <span className="text-muted">
           {rows.length} of {entries.length} addresses
         </span>

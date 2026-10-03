@@ -65,6 +65,21 @@ export default function AuditLogClient() {
         <button type="button" disabled={busy} onClick={() => void search()}>
           Search
         </button>
+        <button
+          type="button"
+          className="secondary"
+          disabled={busy || !(ticketNo || action || correlationId || from || to || entries)}
+          onClick={() => {
+            setTicketNo("");
+            setAction("");
+            setCorrelationId("");
+            setFrom("");
+            setTo("");
+            setEntries(null);
+          }}
+        >
+          Clear all filters
+        </button>
       </div>
 
       {entries !== null && (

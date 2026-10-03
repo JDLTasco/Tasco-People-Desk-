@@ -881,3 +881,17 @@ table.viz-barlist td, table.viz-barlist th { border-bottom: none; padding: 0.25r
   .viz-columns { height: 170px; }
   .tile-value { font-size: 1.4rem; }
 }
+
+/* Instructions definitions (2026-10-03) */
+.definitions dt { font-weight: 700; color: var(--tasco-navy); margin-top: 0.75rem; }
+.definitions dd { margin: 0.25rem 0 0 0; }
+
+/* Dashboard information panel (2026-10-03) */
+.dash-info {
+  margin-top: 2rem; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface-alt); font-size: 0.85rem; color: var(--ink);
+  display: flex; flex-wrap: wrap; gap: 0.4rem 2rem;
+}
+.dash-info dt { font-weight: 600; color: var(--muted); }
+.dash-info dd { margin: 0; }
+.dash-info > div { display: flex; flex-direction: column; gap: 0.1rem; }

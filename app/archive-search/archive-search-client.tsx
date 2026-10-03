@@ -74,6 +74,23 @@ export default function ArchiveSearchClient({ canBulkExport }: Props) {
           <button type="button" disabled={busy} onClick={() => void search()}>
             Search
           </button>
+          <button
+            type="button"
+            className="secondary"
+            disabled={busy || !(ticketNo || requester || subject || from || to || includeNotARequest || includeAutoclose || results)}
+            onClick={() => {
+              setTicketNo("");
+              setRequester("");
+              setSubject("");
+              setFrom("");
+              setTo("");
+              setIncludeNotARequest(false);
+              setIncludeAutoclose(false);
+              setResults(null);
+            }}
+          >
+            Clear all filters
+          </button>
         </div>
 
         {results !== null && (

@@ -171,6 +171,32 @@ export default async function InstructionsPage() {
       </section>
 
       <section className="section-card">
+        <h2>Definitions</h2>
+        <dl className="definitions">
+          <dt>Working day</dt>
+          <dd>
+            Monday to Friday in Melbourne time, <strong>except</strong> the dates listed on{" "}
+            <strong>Admin &rarr; Calendar</strong> -- Victorian public holidays and any Tasco shutdown days. Saturdays,
+            Sundays and listed dates are skipped. Target due dates are counted from the moment the ticket arrived and fall
+            at the same time of day: a P1 that arrives at 10:00 on a Monday is due at 10:00 on Thursday (3 working days).
+            A ticket that arrives on a weekend or holiday starts counting from the next working day. &quot;Working
+            days&quot; on the dashboard (average age, time to resolve, due in the next 7 working days) are counted the
+            same way.
+          </dd>
+          <dt>On time</dt>
+          <dd>
+            A ticket is <strong>on time</strong> if it was closed with <strong>Close -- Resolved</strong> on or before
+            its target due date. If the target date was overridden, the overridden date is the one that counts; for a
+            ticket from before 3 October 2026 with no target date, its old SLA date counts. Tickets closed as Info only,
+            Autoclose or Withdrawn, and merged tickets, are not counted either way. The dashboard&apos;s{" "}
+            <strong>on-time rate</strong> is the number of on-time tickets divided by all tickets resolved in the
+            selected period. An open ticket isn&apos;t counted until it is resolved -- if it is past its target due date
+            in the meantime it shows as <strong>Overdue</strong>.
+          </dd>
+        </dl>
+      </section>
+
+      <section className="section-card">
         <h2>HR dashboard (HR Leads and Admins)</h2>
         <p>
           <strong>Admin &rarr; Dashboard</strong> shows the workload right now (open tickets by priority, status,

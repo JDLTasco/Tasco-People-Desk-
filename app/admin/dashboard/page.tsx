@@ -69,6 +69,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const w = d.workload;
   const tp = d.throughput;
   const rangeText = `last ${RANGE_LABELS[range]}`;
+  const melbDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Australia/Melbourne" });
+  const monthName = new Date(d.generatedAt).toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "Australia/Melbourne" });
 
   return (
     <main className="dashboard">
@@ -188,6 +191,28 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           </section>
         </div>
       </section>
+
+      {/* Information panel (John, 2026-10-03): when the figures were taken and what period they cover. */}
+      <dl className="dash-info" aria-label="About these figures">
+        <div>
+          <dt>Last refreshed</dt>
+          <dd>{formatAuDateTime(new Date(d.generatedAt))} (Melbourne time)</dd>
+        </div>
+        <div>
+          <dt>Reporting period (trends, on-time rate, time to resolve)</dt>
+          <dd>
+            Last {RANGE_LABELS[range]}: {melbDate(d.rangeStart)} to {melbDate(d.generatedAt)}
+          </dd>
+        </div>
+        <div>
+          <dt>&quot;This month&quot;</dt>
+          <dd>{monthName}, to date</dd>
+        </div>
+        <div>
+          <dt>Workload now</dt>
+          <dd>As at the refresh time</dd>
+        </div>
+      </dl>
     </main>
   );
 }

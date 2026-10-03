@@ -188,25 +188,28 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
           <option value="WEEK">Due within 7 days</option>
           <option value="MONTH">Due within 30 days</option>
         </select>
-        {anyFilterActive && (
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setTicketNo("");
-              setRequester("");
-              setStatus([]);
-              setPriority([]);
-              setBusinessUnit([]);
-              setAssignee([]);
-              setCategory([]);
-              setDue("");
-              setSortKeys([]);
-            }}
-          >
-            Clear filters
-          </button>
-        )}
+        {/* Always shown (2026-10-03), greyed out when nothing is set. Also drops
+            any dashboard drill-down filters from the address bar, so a refresh
+            doesn't bring them back. */}
+        <button
+          type="button"
+          className="secondary"
+          disabled={!anyFilterActive}
+          onClick={() => {
+            setTicketNo("");
+            setRequester("");
+            setStatus([]);
+            setPriority([]);
+            setBusinessUnit([]);
+            setAssignee([]);
+            setCategory([]);
+            setDue("");
+            setSortKeys([]);
+            if (window.location.search) window.history.replaceState(null, "", window.location.pathname);
+          }}
+        >
+          Clear all filters
+        </button>
 
         <div className="sort-bar" style={{ flexBasis: "100%", display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
           {Array.from({ length: Math.min(sortKeys.length + 1, MAX_SORT_KEYS) }, (_, i) => {
