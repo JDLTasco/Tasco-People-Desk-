@@ -43,6 +43,8 @@ interface CreateTicketBody {
   subject?: string;
   description?: string;
   priority?: Priority;
+  /** Defaults to true; the + New ticket form lets staff untick it (2026-10-03). */
+  sendAcknowledgement?: boolean;
 }
 
 const VALID_PRIORITIES: Priority[] = ["P1", "P2", "P3"];
@@ -103,12 +105,14 @@ export async function POST(request: Request) {
     entity: "ticket",
     entityId: created.ticketId,
     ticketId: created.ticketId,
-    afterJson: { ticketNo: created.ticketNo, priority, requesterEmail, source: "manual" },
+    afterJson: { ticketNo: created.ticketNo, priority, requesterEmail, source: "manual", acknowledgementRequested: body?.sendAcknowledgement !== false },
   });
 
   // 2026-10-03: the requester is acknowledged on creation (replaces the
-  // allocation email) -- manual tickets included.
-  if (shouldSendAcknowledgement({ receivedAt, requesterEmail })) {
+  // allocation email) -- manual tickets included, unless staff unticked
+  // "Send the requester an acknowledgement email" on the form.
+  const acknowledge = body?.sendAcknowledgement !== false;
+  if (acknowledge && shouldSendAcknowledgement({ receivedAt, requesterEmail })) {
     await sendAcknowledgementEmail(
       { id: created.ticketId, ticketNo: created.ticketNo, subject, requesterEmail },
       correlationId,

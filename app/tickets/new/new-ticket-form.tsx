@@ -9,6 +9,8 @@ export default function NewTicketForm() {
   const [requesterEmail, setRequesterEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
+  // Ticked by default; untick e.g. for a phone call that needs no email (2026-10-03).
+  const [sendAcknowledgement, setSendAcknowledgement] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -19,7 +21,7 @@ export default function NewTicketForm() {
     const res = await fetch("/api/tickets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requesterName, requesterEmail, subject, description }),
+      body: JSON.stringify({ requesterName, requesterEmail, subject, description, sendAcknowledgement }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
@@ -74,6 +76,14 @@ export default function NewTicketForm() {
           />
         </label>
         <br />
+        <label style={{ display: "block", marginTop: "0.75rem" }}>
+          <input
+            type="checkbox"
+            checked={sendAcknowledgement}
+            onChange={(e) => setSendAcknowledgement(e.target.checked)}
+          />{" "}
+          Send the requester an acknowledgement email (ticket number and &quot;we&apos;ve received your request&quot;)
+        </label>
         {/* No priority picker (John, 2026-10-01): new tickets start at P3, same
             as an emailed one, and priority is set in the ticket's details. */}
         <button

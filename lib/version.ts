@@ -1,9 +1,10 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.4.1";
+export const APP_VERSION = "1.4.2";
 
 // History:
+// 1.4.2 (2026-10-03) -- "Send acknowledgement email" tick box on + New ticket
 // 1.4.1 (2026-10-03) -- acknowledgement email: "keep the ticket number" line
 //   bold and yellow
 // 1.4.0 (2026-10-03) -- colour per assignee; multi-choice filters + sort by

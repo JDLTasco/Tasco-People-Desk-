@@ -42,7 +42,8 @@ export default async function InstructionsPage() {
             <strong>NEW</strong> -- just arrived, sitting unassigned in the <a href="/pool">Pool</a>. The requester
             automatically gets an acknowledgement email straight away, with the ticket number, &quot;Expected
             response: as soon as practical&quot;, and a note asking them to keep the ticket number in the subject line
-            when they reply (see &quot;Replying to a requester&quot; below). Anyone can self-assign it, or assign it
+            when they reply (see &quot;Replying to a requester&quot; below). For a ticket you create yourself with{" "}
+            <strong>+ New ticket</strong>, untick &quot;Send the requester an acknowledgement email&quot; if they don&apos;t need one. Anyone can self-assign it, or assign it
             to someone else.
           </li>
           <li>
