@@ -10,6 +10,7 @@ import {
   canEditNote,
   canManageAdminSettings,
   canAssignPooledTicketToOthers,
+  canViewDashboard,
   canMergeTickets,
   canReassignTicket,
   canReverseStatusTransition,
@@ -161,4 +162,12 @@ describe("ADMIN/HR_LEAD-only rows (audit log, bulk export)", () => {
       assert.equal(check(HR_OFFICER), false);
     });
   }
+});
+
+describe("HR dashboard (2026-10-03)", () => {
+  it("ADMIN and HR_LEAD only", () => {
+    assert.equal(canViewDashboard(ADMIN), true);
+    assert.equal(canViewDashboard(HR_LEAD), true);
+    assert.equal(canViewDashboard(HR_OFFICER), false);
+  });
 });

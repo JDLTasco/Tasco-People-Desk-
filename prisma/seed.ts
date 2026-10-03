@@ -6,6 +6,7 @@ import { ticketNoWithSequence } from "../lib/ingestion/ticket-number";
 import { melbourneDateOnly } from "../lib/timezone";
 import { SYSTEM_ENTRA_OBJECT_ID } from "../lib/ingestion/process-message";
 import { SLA_HOURS } from "../lib/tickets/sla";
+import { VIC_PUBLIC_HOLIDAYS } from "../lib/calendar/vic-holidays";
 
 const prisma = new PrismaClient();
 
@@ -66,6 +67,16 @@ async function main() {
       where: { name: BUSINESS_UNITS[index] },
       update: {},
       create: { name: BUSINESS_UNITS[index], sortOrder: index },
+    });
+  }
+
+  // Business calendar (2026-10-03): Victorian public holidays (also loaded by
+  // migration 20261003000300 on existing databases). Never overwrites an edit.
+  for (const h of VIC_PUBLIC_HOLIDAYS) {
+    await prisma.nonWorkingDay.upsert({
+      where: { date: new Date(`${h.date}T00:00:00Z`) },
+      update: {},
+      create: { date: new Date(`${h.date}T00:00:00Z`), name: h.name },
     });
   }
 

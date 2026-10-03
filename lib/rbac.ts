@@ -145,6 +145,11 @@ export function canViewAuditLog(role: UserRole): boolean {
   return role === "ADMIN" || role === "HR_LEAD";
 }
 
+/** HR Management Dashboard (John, 2026-10-03) -- ADMIN / HR_LEAD only. */
+export function canViewDashboard(role: UserRole): boolean {
+  return role === "ADMIN" || role === "HR_LEAD";
+}
+
 /** Bulk export -- ADMIN / HR_LEAD only. */
 export function canBulkExport(role: UserRole): boolean {
   return role === "ADMIN" || role === "HR_LEAD";

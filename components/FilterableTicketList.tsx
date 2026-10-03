@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  filtersFromSearchParams,
   matchesFilters,
   sortTickets,
   SORT_FIELD_LABELS,
@@ -93,8 +94,22 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
   const [priority, setPriority] = useState<string[]>([]);
   const [businessUnit, setBusinessUnit] = useState<string[]>([]);
   const [assignee, setAssignee] = useState<string[]>([]);
+  const [category, setCategory] = useState<string[]>([]);
   const [due, setDue] = useState<DueFilter>("");
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+
+  // Dashboard drill-down links (2026-10-03) open a list pre-filtered via the
+  // address bar, e.g. /all-open?assignee=Lisa%20Ferguson. Read once on load.
+  useEffect(() => {
+    const { criteria, sort } = filtersFromSearchParams(new URLSearchParams(window.location.search));
+    if (criteria.status) setStatus(criteria.status);
+    if (criteria.priority) setPriority(criteria.priority);
+    if (criteria.businessUnit) setBusinessUnit(criteria.businessUnit);
+    if (criteria.assignee) setAssignee(criteria.assignee);
+    if (criteria.category) setCategory(criteria.category);
+    if (criteria.due) setDue(criteria.due);
+    if (sort.length) setSortKeys(sort);
+  }, []);
 
   const statusOptions = useMemo(
     () => uniqueSorted(tickets.map((t) => displayStatus(t))).map((s) => ({ value: s, label: s })),
@@ -119,12 +134,20 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
     [tickets],
   );
 
+  const categoryOptions = useMemo(
+    () => [
+      { value: "__none__", label: "(none set)" },
+      ...uniqueSorted(tickets.map((t) => t.category?.name)).map((c) => ({ value: c, label: c })),
+    ],
+    [tickets],
+  );
+
   const filtered = sortTickets(
-    tickets.filter((t) => matchesFilters(t, { ticketNo, requester, status, priority, businessUnit, assignee, due })),
+    tickets.filter((t) => matchesFilters(t, { ticketNo, requester, status, priority, businessUnit, assignee, category, due })),
     sortKeys,
   );
   const anyFilterActive = Boolean(
-    ticketNo || requester || status.length || priority.length || businessUnit.length || assignee.length || due || sortKeys.length,
+    ticketNo || requester || status.length || priority.length || businessUnit.length || assignee.length || category.length || due || sortKeys.length,
   );
 
   function setSortKey(index: number, key: SortKey | null) {
@@ -157,6 +180,7 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
         <MultiSelect label="Priority" options={priorityOptions} selected={priority} onChange={setPriority} />
         <MultiSelect label="Business unit" options={businessUnitOptions} selected={businessUnit} onChange={setBusinessUnit} />
         <MultiSelect label="Assignee" options={assigneeOptions} selected={assignee} onChange={setAssignee} />
+        <MultiSelect label="Category" options={categoryOptions} selected={category} onChange={setCategory} />
         <select value={due} onChange={(e) => setDue(e.target.value as DueFilter)}>
           <option value="">Due: any</option>
           <option value="OVERDUE">Overdue</option>
@@ -175,6 +199,7 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
               setPriority([]);
               setBusinessUnit([]);
               setAssignee([]);
+              setCategory([]);
               setDue("");
               setSortKeys([]);
             }}

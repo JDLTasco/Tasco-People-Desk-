@@ -621,3 +621,18 @@ model JobRun {
   @@index([jobName])
   @@map("job_runs")
 }
+
+// Business calendar (John, 2026-10-03): dates that are not working days for
+// the automatic target due date (lib/calendar/working-days.ts) -- Victorian
+// public holidays and Tasco shutdowns, managed on Admin -> Calendar (ADMIN).
+// is_recurring: the same day and month every year.
+model NonWorkingDay {
+  id          String   @id @default(uuid()) @db.Uuid
+  date        DateTime @unique @db.Date
+  name        String   @db.VarChar(100)
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdBy   String?  @map("created_by") @db.Uuid
+
+  @@map("non_working_days")
+}

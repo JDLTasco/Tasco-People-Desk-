@@ -128,7 +128,8 @@ export default async function InstructionsPage() {
         </ul>
         <p>
           Every ticket gets a <strong>target due date</strong> automatically from its priority, counted in working
-          days (Monday to Friday -- public holidays are not skipped, so adjust the date if one falls inside). This is
+          days -- Monday to Friday, skipping Victorian public holidays and any Tasco shutdown days listed on{" "}
+          <strong>Admin &rarr; Calendar</strong> (an Admin keeps that list up to date). This is
           the date the People Desk tracks as its KPI: it drives the Due date, the Overdue list and overdue alerts.
           Requesters are only ever told &quot;as soon as practical&quot;.
         </p>
@@ -166,6 +167,20 @@ export default async function InstructionsPage() {
           <code>[TICKETNO]</code> survives somewhere in the subject line -- this is why every email we send
           explicitly asks people to keep it there. This works for anyone who replies, not only the requester (for
           example a manager you emailed a question to).
+        </p>
+      </section>
+
+      <section className="section-card">
+        <h2>HR dashboard (HR Leads and Admins)</h2>
+        <p>
+          <strong>Admin &rarr; Dashboard</strong> shows the workload right now (open tickets by priority, status,
+          assignee, business unit and category; unassigned; overdue; due in the next 7 working days; average age), what
+          was created and closed this month, and trends over 7 days, 30 days, 90 days or 12 months: inbound vs closed,
+          average time to resolve, and the <strong>on-time rate</strong> -- the share of resolved tickets closed on or
+          before their target due date (an overridden target counts as the target), also broken down by assignee,
+          business unit and category. Info only, Autoclose and Withdrawn closures are counted separately and are not
+          part of the on-time rate. Click a number or a name to open the matching filtered list. Hover over a bar for its
+          exact value, or use &quot;Show as a table&quot;.
         </p>
       </section>
 

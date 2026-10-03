@@ -4,6 +4,7 @@ import { requireApiContext } from "@/lib/api-context";
 import { badRequest, conflict, notFound } from "@/lib/http-errors";
 import { dueFieldsForPriorityChange, isPriority } from "@/lib/tickets/sla";
 import { missingTargetFields } from "@/lib/tickets/target-due";
+import { loadHolidaySet } from "@/lib/calendar/holidays";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
 
@@ -26,7 +27,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (body.priority !== undefined && !isPriority(body.priority)) return badRequest("priority must be P1, P2 or P3");
   const newPriority = isPriority(body.priority) && body.priority !== existing.priority ? body.priority : null;
   // A ticket with no target due date yet gets one now (2026-10-03).
-  const fillTarget = newPriority ? {} : missingTargetFields(existing, existing.priority);
+  const holidays = await loadHolidaySet();
+  const fillTarget = newPriority ? {} : missingTargetFields(existing, existing.priority, holidays);
 
   const result = await prisma.ticket.updateMany({
     where: { id: params.id, assignedToId: null, status: "NEW" },
@@ -35,7 +37,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       status: "ALLOCATED",
       assignedAt: new Date(),
       version: { increment: 1 },
-      ...(newPriority ? { priority: newPriority, ...dueFieldsForPriorityChange(existing, newPriority) } : {}),
+      ...(newPriority ? { priority: newPriority, ...dueFieldsForPriorityChange(existing, newPriority, holidays) } : {}),
       ...fillTarget,
     },
   });

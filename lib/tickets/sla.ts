@@ -20,10 +20,11 @@ export function slaDueAtFor(receivedAt: Date, priority: Priority): Date {
 export function dueFieldsForPriorityChange(
   current: { receivedAt: Date; targetDueAt: Date | null; targetDueReason: string | null },
   priority: Priority,
+  holidays: Set<string>,
 ): { slaDueAt: Date; targetDueAt?: Date; targetDueReason?: string } {
   return {
     slaDueAt: slaDueAtFor(current.receivedAt, priority),
-    ...(shouldRecalculateTarget(current) ? autoTargetDue(current.receivedAt, priority) : {}),
+    ...(shouldRecalculateTarget(current) ? autoTargetDue(current.receivedAt, priority, holidays) : {}),
   };
 }
 

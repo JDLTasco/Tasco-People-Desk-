@@ -8,6 +8,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/lib/tickets/detail";
 import { dueFieldsForPriorityChange } from "@/lib/tickets/sla";
 import { isAutoTargetReason, missingTargetFields } from "@/lib/tickets/target-due";
+import { loadHolidaySet } from "@/lib/calendar/holidays";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
@@ -91,6 +92,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return badRequest("Give a reason for overriding the automatic target due date");
   }
 
+  const holidays = await loadHolidaySet();
   const data: Record<string, unknown> = {};
   const before: Record<string, unknown> = {};
   const after: Record<string, unknown> = {};
@@ -113,7 +115,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     // §5: "sla_due_at ... Recalculated whenever priority changes." Since
     // 2026-10-03 the automatic target due date follows too, unless it was
     // overridden -- or the same save sets a target date explicitly.
-    const due = dueFieldsForPriorityChange(current, body.priority);
+    const due = dueFieldsForPriorityChange(current, body.priority, holidays);
     setField("slaDueAt", "slaDueAt", due.slaDueAt.toISOString(), current.slaDueAt.toISOString());
     if (due.targetDueAt && body.targetDueAt === undefined) {
       setField("targetDueAt", "targetDueAt", due.targetDueAt.toISOString(), current.targetDueAt?.toISOString() ?? null);
@@ -132,7 +134,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   // automatic one on its first save, even when priority didn't change --
   // unless this save sets or clears the target itself.
   if (body.targetDueAt === undefined && data.targetDueAt === undefined) {
-    const fill = missingTargetFields(current, body.priority ?? current.priority);
+    const fill = missingTargetFields(current, body.priority ?? current.priority, holidays);
     if (fill.targetDueAt) {
       setField("targetDueAt", "targetDueAt", fill.targetDueAt.toISOString(), null);
       setField("targetDueReason", "targetDueReason", fill.targetDueReason, current.targetDueReason);

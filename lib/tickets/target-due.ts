@@ -1,36 +1,24 @@
 // Automatic target due date (operator amendment, John, 2026-10-03): set from
-// the priority in working days (Mon-Fri, Melbourne calendar; public holidays
-// are NOT skipped -- staff override the date when one falls inside). It can
-// be overridden (with a reason), and it is the date the People Desk tracks
-// as its KPI -- see due-dates.ts.
+// the priority in working days -- Monday-Friday in Melbourne, excluding the
+// Victorian public holidays and Tasco shutdown dates on Admin -> Calendar
+// (lib/calendar/working-days.ts). It can be overridden (with a reason), and
+// it is the date the People Desk tracks as its KPI -- see due-dates.ts.
+//
+// Invariant: an existing ticket's target_due_at is never silently
+// rewritten. A target is only calculated when a ticket is created, when its
+// priority changes and the target is still automatic (not overridden), or
+// when a ticket has no target at all yet (missingTargetFields).
 import type { Priority } from "../ingestion/priority";
+import { addWorkingDays } from "../calendar/working-days";
 
 export const TARGET_WORKING_DAYS: Record<Priority, number> = { P1: 3, P2: 10, P3: 20 };
 
 /** Prefix that marks a target due date as system-set rather than a staff override. */
 export const AUTO_TARGET_REASON_PREFIX = "Automatic:";
 
-const weekdayFormatter = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Melbourne", weekday: "short" });
-
-function isMelbourneWeekend(date: Date): boolean {
-  const day = weekdayFormatter.format(date);
-  return day === "Sat" || day === "Sun";
-}
-
-/**
- * Same time of day, `days` working days later. Steps a calendar day at a
- * time and counts only days that land on Mon-Fri in Melbourne, so a Friday
- * arrival + 3 is Wednesday, and a Saturday arrival + 3 is also Wednesday.
- * Steps are 24h, so across a daylight-saving change the time shifts by an hour.
- */
-export function addWorkingDays(start: Date, days: number): Date {
-  let current = new Date(start.getTime());
-  let counted = 0;
-  while (counted < days) {
-    current = new Date(current.getTime() + 24 * 60 * 60 * 1000);
-    if (!isMelbourneWeekend(current)) counted++;
-  }
-  return current;
+/** P1 = 3, P2 = 10, P3 = 20 working days after receipt, same Melbourne time of day. */
+export function calculateTargetDueDate(receivedAt: Date, priority: Priority, holidays: Set<string>): Date {
+  return addWorkingDays(receivedAt, TARGET_WORKING_DAYS[priority], holidays);
 }
 
 export function autoTargetReason(priority: Priority): string {
@@ -41,9 +29,13 @@ export function isAutoTargetReason(reason: string | null | undefined): boolean {
   return !!reason && reason.startsWith(AUTO_TARGET_REASON_PREFIX);
 }
 
-export function autoTargetDue(receivedAt: Date, priority: Priority): { targetDueAt: Date; targetDueReason: string } {
+export function autoTargetDue(
+  receivedAt: Date,
+  priority: Priority,
+  holidays: Set<string>,
+): { targetDueAt: Date; targetDueReason: string } {
   return {
-    targetDueAt: addWorkingDays(receivedAt, TARGET_WORKING_DAYS[priority]),
+    targetDueAt: calculateTargetDueDate(receivedAt, priority, holidays),
     targetDueReason: autoTargetReason(priority),
   };
 }
@@ -58,8 +50,9 @@ export function autoTargetDue(receivedAt: Date, priority: Priority): { targetDue
 export function missingTargetFields(
   current: { receivedAt: Date; targetDueAt: Date | null },
   priority: Priority,
+  holidays: Set<string>,
 ): { targetDueAt?: Date; targetDueReason?: string } {
-  return current.targetDueAt === null ? autoTargetDue(current.receivedAt, priority) : {};
+  return current.targetDueAt === null ? autoTargetDue(current.receivedAt, priority, holidays) : {};
 }
 
 /**

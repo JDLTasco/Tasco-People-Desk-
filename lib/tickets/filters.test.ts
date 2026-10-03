@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { matchesFilters, sortTickets } from "./filters";
+import { filtersFromSearchParams, matchesFilters, sortTickets } from "./filters";
 import type { TicketListRow } from "./queries";
 
 const NOW = new Date("2026-06-15T00:00:00Z");
@@ -187,5 +187,24 @@ describe("sortTickets (2026-10-03)", () => {
     const x = ticket({ id: "x", assignee: null });
     const y = ticket({ id: "y", assignee: { id: "u", displayName: "Lisa", initials: "LF" } });
     assert.equal(ids(sortTickets([x, y], [{ field: "assignee", direction: "asc" }])), "yx");
+  });
+});
+
+describe("category filter + filtersFromSearchParams (2026-10-03)", () => {
+  it("filters by category, with __none__ for no category", () => {
+    assert.equal(matchesFilters(ticket({ category: { name: "Payroll" } }), { category: ["Payroll"] }), true);
+    assert.equal(matchesFilters(ticket({ category: null }), { category: ["__none__"] }), true);
+    assert.equal(matchesFilters(ticket({ category: { name: "Leave" } }), { category: ["Payroll"] }), false);
+  });
+
+  it("reads drill-down filters from the address bar", () => {
+    const r = filtersFromSearchParams(new URLSearchParams("assignee=Lisa%20Ferguson&priority=P1,P2&due=OVERDUE&sort=due&bogus=x"));
+    assert.deepEqual(r.criteria, { priority: ["P1", "P2"], assignee: ["Lisa Ferguson"], due: "OVERDUE" });
+    assert.deepEqual(r.sort, [{ field: "due", direction: "asc" }]);
+  });
+
+  it("ignores unknown due/sort values", () => {
+    const r = filtersFromSearchParams(new URLSearchParams("due=NEVER&sort=hack"));
+    assert.deepEqual(r, { criteria: {}, sort: [] });
   });
 });

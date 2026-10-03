@@ -34,6 +34,25 @@ export function melbourneParts(date: Date): MelbourneParts {
   };
 }
 
+/**
+ * The UTC instant at which Melbourne's wall clock reads the given date and
+ * time (DST-correct). Finds Melbourne's offset at that moment by asking Intl
+ * what the wall clock shows for a first guess, then corrects; a second pass
+ * settles the rare case where the guess straddles a daylight-saving change.
+ * A wall time that doesn't exist (the skipped hour when clocks go forward)
+ * resolves to an hour later, as clocks do.
+ */
+export function melbourneWallTimeToUtc(year: number, month: number, day: number, hour: number, minute: number): Date {
+  const wanted = Date.UTC(year, month - 1, day, hour, minute);
+  let guess = wanted - 10 * 60 * 60 * 1000; // AEST as a first guess
+  for (let i = 0; i < 2; i++) {
+    const p = melbourneParts(new Date(guess));
+    const shown = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+    guess += wanted - shown;
+  }
+  return new Date(guess);
+}
+
 /** A UTC-midnight Date representing the Melbourne calendar date -- what a Postgres `date` column (no timezone) should receive. */
 export function melbourneDateOnly(date: Date): Date {
   const { year, month, day } = melbourneParts(date);

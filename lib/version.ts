@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.8.1";
+export const APP_VERSION = "1.9.0";
 
 // History:
+// 1.9.0 (2026-10-03) -- business calendar (Vic public holidays + shutdowns,
+//   Admin -> Calendar) for the working-day target; HR dashboard
+//   (Admin -> Dashboard); list filters by category / from the address bar
 // 1.8.1 (2026-10-03) -- darker green Save & exit button
 // 1.8.0 (2026-10-03) -- "Close -- Not a request" renamed "Close -- Info only";
 //   Info only and Autoclose close + archive immediately, nothing to fill in

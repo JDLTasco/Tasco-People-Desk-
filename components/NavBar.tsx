@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
-import { canManageAdminSettings, canViewAuditLog } from "@/lib/rbac";
+import { canManageAdminSettings, canViewAuditLog, canViewDashboard } from "@/lib/rbac";
 import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 import RefreshButton from "./RefreshButton";
@@ -23,12 +23,15 @@ export default async function NavBar() {
   const canAudit = canViewAuditLog(session.user.role);
   // Grouped under one "Admin" menu (2026-10-03) -- same permissions as before.
   const adminLinks = [
+    // HR dashboard (2026-10-03) -- leadership view, ADMIN / HR_LEAD.
+    ...(canViewDashboard(session.user.role) ? [{ href: "/admin/dashboard", label: "Dashboard" }] : []),
     ...(isAdmin
       ? [
           { href: "/admin/users", label: "Users" },
           { href: "/admin/categories", label: "Categories" },
           { href: "/admin/business-units", label: "Business units" },
           { href: "/admin/action-items", label: "Action items" },
+          { href: "/admin/calendar", label: "Calendar" },
           { href: "/admin/failed-sends", label: "Failed sends" },
         ]
       : []),

@@ -4,6 +4,7 @@ import { melbourneDateOnly } from "../timezone";
 import { ticketNoWithSequence } from "../ingestion/ticket-number";
 import { SLA_HOURS } from "./sla";
 import { autoTargetDue } from "./target-due";
+import { loadHolidaySet } from "../calendar/holidays";
 import type { Priority } from "../ingestion/priority";
 
 const MAX_SEQUENCE = 99; // varchar(12) = 10-digit base + 2-digit sequence
@@ -64,7 +65,8 @@ export async function createTicket(input: CreateTicketInput): Promise<CreatedTic
   const requestDate = melbourneDateOnly(input.receivedAt);
   const slaDueAt = new Date(input.receivedAt.getTime() + SLA_HOURS[input.priority] * 60 * 60 * 1000);
   // 2026-10-03: every new ticket gets its automatic target due date (the KPI).
-  const { targetDueAt, targetDueReason } = autoTargetDue(input.receivedAt, input.priority);
+  // Working days skip weekends and the Admin -> Calendar non-working days.
+  const { targetDueAt, targetDueReason } = autoTargetDue(input.receivedAt, input.priority, await loadHolidaySet());
   const retentionPurgeDate = new Date(requestDate);
   retentionPurgeDate.setUTCFullYear(retentionPurgeDate.getUTCFullYear() + 7);
   const subject = input.subject || "(no subject)";

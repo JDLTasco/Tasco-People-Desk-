@@ -24,6 +24,8 @@ export interface TicketFilterCriteria {
   businessUnit?: string[];
   /** "__unassigned__" matches tickets with no assignee. */
   assignee?: string[];
+  /** "__none__" matches tickets with no category set (2026-10-03, dashboard drill-down). */
+  category?: string[];
   due?: DueFilter;
 }
 
@@ -57,6 +59,7 @@ export function matchesFilters(ticket: TicketListRow, criteria: TicketFilterCrit
   if (!anyOf(criteria.businessUnit, ticket.businessUnit?.name ?? "__none__")) return false;
   // Full name only, matching the dropdown (initials suffix removed 2026-09-29).
   if (!anyOf(criteria.assignee, ticket.assignee?.displayName ?? "__unassigned__")) return false;
+  if (!anyOf(criteria.category, ticket.category?.name ?? "__none__")) return false;
   if (!matchesDueFilter(ticket, criteria.due, now)) return false;
   return true;
 }
@@ -129,4 +132,26 @@ export function sortTickets<T extends TicketListRow>(tickets: T[], keys: SortKey
       return a.i - b.i;
     })
     .map(({ t }) => t);
+}
+
+// ---------- Filters from the address bar (dashboard drill-down, 2026-10-03) ----------
+
+const LIST_KEYS = ["status", "priority", "businessUnit", "assignee", "category"] as const;
+const DUE_VALUES: DueFilter[] = ["OVERDUE", "TODAY", "WEEK", "MONTH"];
+
+/** Reads ?status=..&priority=P1,P2&assignee=..&category=..&businessUnit=..&due=..&sort=due into list state. */
+export function filtersFromSearchParams(params: URLSearchParams): {
+  criteria: Pick<TicketFilterCriteria, (typeof LIST_KEYS)[number] | "due">;
+  sort: SortKey[];
+} {
+  const criteria: Pick<TicketFilterCriteria, (typeof LIST_KEYS)[number] | "due"> = {};
+  for (const key of LIST_KEYS) {
+    const raw = params.get(key);
+    if (raw) criteria[key] = raw.split(",").map((v) => v.trim()).filter(Boolean);
+  }
+  const due = params.get("due") as DueFilter | null;
+  if (due && DUE_VALUES.includes(due)) criteria.due = due;
+  const sortField = params.get("sort");
+  const sort: SortKey[] = sortField && sortField in SORT_FIELD_LABELS ? [{ field: sortField as SortField, direction: params.get("dir") === "desc" ? "desc" : "asc" }] : [];
+  return { criteria, sort };
 }
