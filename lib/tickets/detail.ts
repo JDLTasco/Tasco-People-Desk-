@@ -22,7 +22,11 @@ export const TICKET_DETAIL_INCLUDE = {
     // per-direction-timestamp approach lib/archive/render.ts already used
     // correctly for the archive export -- this view just never got it.
     // DB-level order here is arbitrary; re-sorted after fetch.
-    include: { emailLog: { orderBy: { attemptedAt: "asc" as const } } },
+    include: {
+      emailLog: { orderBy: { attemptedAt: "asc" as const } },
+      // Who sent an outbound email (shown on the ticket, 2026-10-03).
+      sentBy: { select: { id: true, displayName: true, entraObjectId: true } },
+    },
   },
   notes: {
     where: { isCurrent: true },

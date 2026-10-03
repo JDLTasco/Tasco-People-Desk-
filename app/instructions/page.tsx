@@ -167,6 +167,14 @@ export default async function InstructionsPage() {
 
       <section className="section-card">
         <h2>Views -- where to find things</h2>
+        <p>
+          Every list has a filter bar. <strong>Status</strong>, <strong>Priority</strong>, <strong>Business unit</strong>{" "}
+          and <strong>Assignee</strong> each open a list of tick boxes -- tick as many as you like (e.g. P1 and P2).
+          A ticket shows if it matches any ticked value in a box, and all the boxes you&apos;ve used. Underneath,{" "}
+          <strong>Sort by</strong> / <strong>then by</strong> sorts the list by up to three things in turn (e.g.
+          priority, then due date). <strong>Clear filters</strong> resets everything. Each staff member has their
+          own colour, shown on the Assignee name and down the left edge of their rows.
+        </p>
         <ul>
           <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>
           <li><strong>My tickets</strong> -- everything assigned to you, closed ones at the bottom. A red number next to it means someone recorded a response on one of your tickets.</li>

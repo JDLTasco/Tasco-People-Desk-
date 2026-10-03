@@ -29,7 +29,14 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
           const due = effectiveDueDate(t.slaDueAt, t.targetDueAt);
           const overdue = isOverdue(t.slaDueAt, t.targetDueAt, t.status);
           return (
-            <tr key={t.id} className={t.responseAlertPending ? "row-response-alert" : undefined}>
+            <tr
+              key={t.id}
+              className={
+                [t.responseAlertPending ? "row-response-alert" : "", t.assigneeColour !== null ? `assignee-colour-${t.assigneeColour}` : ""]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
+            >
               <td>
                 <Link href={`/tickets/${t.id}`}>{t.ticketNo}</Link>
                 {t.responseAlertPending && (
@@ -48,7 +55,14 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
               </td>
               <td>{t.category?.name ?? <em>none</em>}</td>
               <td>{t.businessUnit?.name ?? <em>none</em>}</td>
-              <td>{t.assignee ? t.assignee.displayName : <em>unassigned</em>}</td>
+              <td>
+                {/* A colour per staff member (2026-10-03) -- see lib/users/colours.ts. */}
+                {t.assignee ? (
+                  <span className={`chip chip-assignee assignee-colour-${t.assigneeColour ?? 0}`}>{t.assignee.displayName}</span>
+                ) : (
+                  <em>unassigned</em>
+                )}
+              </td>
               <td className={overdue ? "overdue" : undefined}>
                 {formatAuDateTime(due)} {overdue && "-- OVERDUE"}
               </td>

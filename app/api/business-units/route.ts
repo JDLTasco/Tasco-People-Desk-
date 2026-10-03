@@ -10,7 +10,8 @@ export async function GET(request: Request) {
 
   const businessUnits = await prisma.businessUnit.findMany({
     where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
+    // Alphabetical in every dropdown (John, 2026-10-03).
+    orderBy: { name: "asc" },
   });
   return NextResponse.json({ businessUnits });
 }

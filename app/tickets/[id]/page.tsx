@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { isAutoTargetReason } from "@/lib/tickets/target-due";
+import { getAssigneeColourMap } from "@/lib/users/colours";
 import { validateReopen } from "@/lib/tickets/reopen";
 import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
@@ -26,6 +27,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   const due = effectiveDueDate(ticket.slaDueAt, ticket.targetDueAt);
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
   const lastChange = ticket.statusHistory[ticket.statusHistory.length - 1];
+  const assigneeColour = ticket.assignee ? ((await getAssigneeColourMap()).get(ticket.assignee.id) ?? null) : null;
 
   return (
     <main className="ticket-page">
@@ -107,7 +109,11 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             </div>
             <div>
               <strong>Assignee:</strong>{" "}
-              {ticket.assignee ? ticket.assignee.displayName : <em>unassigned</em>}
+              {ticket.assignee ? (
+                <span className={`chip chip-assignee assignee-colour-${assigneeColour ?? 0}`}>{ticket.assignee.displayName}</span>
+              ) : (
+                <em>unassigned</em>
+              )}
             </div>
             <div className={overdue ? "overdue" : undefined}>
               {/* The target due date is the KPI (2026-10-03); tickets from before
@@ -240,6 +246,15 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                   {m.fromName} ({m.fromAddress})
                   -- {(m.receivedAt ?? m.sentAt) ? formatAuDateTime((m.receivedAt ?? m.sentAt)!) : ""}
                 </div>
+                {/* Who sent it (2026-10-03). Automated emails (acknowledgement,
+                    overdue escalation) are sent by the seeded System user. */}
+                {m.direction === "OUTBOUND" && m.sentBy && (
+                  <div className="text-muted">
+                    {m.sentBy.entraObjectId === "system" ? "Sent automatically by the system" : `Sent by ${m.sentBy.displayName}`}
+                    {m.toRecipients.length > 0 && ` -- to ${m.toRecipients.join(", ")}`}
+                    {m.ccRecipients.length > 0 && ` -- cc ${m.ccRecipients.join(", ")}`}
+                  </div>
+                )}
                 <div>{m.subject}</div>
                 <div style={{ whiteSpace: "pre-wrap" }}>{messageDisplayText(m)}</div>
               </article>

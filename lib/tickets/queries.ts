@@ -4,6 +4,7 @@ import { isOverdue } from "./due-dates";
 import type { Prisma } from "@prisma/client";
 import { OPEN_STATUSES } from "./transitions";
 import { closedLast } from "./sort";
+import { getAssigneeColourMap } from "../users/colours";
 
 const TICKET_LIST_SELECT = {
   id: true,
@@ -23,7 +24,15 @@ const TICKET_LIST_SELECT = {
   assignee: { select: { id: true, displayName: true, initials: true } },
 } satisfies Prisma.TicketSelect;
 
-export type TicketListRow = Prisma.TicketGetPayload<{ select: typeof TICKET_LIST_SELECT }>;
+type TicketListBaseRow = Prisma.TicketGetPayload<{ select: typeof TICKET_LIST_SELECT }>;
+
+/** A list row plus the assignee's colour slot (2026-10-03, see lib/users/colours.ts); null when unassigned. */
+export type TicketListRow = TicketListBaseRow & { assigneeColour: number | null };
+
+async function withColours(rows: TicketListBaseRow[]): Promise<TicketListRow[]> {
+  const colours = rows.some((r) => r.assignee) ? await getAssigneeColourMap() : new Map<string, number>();
+  return rows.map((r) => ({ ...r, assigneeColour: r.assignee ? (colours.get(r.assignee.id) ?? null) : null }));
+}
 
 /**
  * §9: confidential tickets are "hidden entirely from pool, list and search
@@ -46,7 +55,7 @@ function confidentialFilter(userId: string, role: UserRole): Prisma.TicketWhereI
 
 /** Pool (§13): unassigned, sitting in NEW for anyone to self-claim -- the default landing view. */
 export async function getPoolTickets(userId: string, role: UserRole): Promise<TicketListRow[]> {
-  return prisma.ticket.findMany({
+  const rows = await prisma.ticket.findMany({
     where: {
       status: "NEW",
       isDeleted: false,
@@ -55,6 +64,7 @@ export async function getPoolTickets(userId: string, role: UserRole): Promise<Ti
     select: TICKET_LIST_SELECT,
     orderBy: { receivedAt: "asc" },
   });
+  return withColours(rows);
 }
 
 /** My tickets (§13): everything currently assigned to the caller, not yet archived. Closed ones last (John, 2026-09-29). */
@@ -68,7 +78,7 @@ export async function getMyTickets(userId: string): Promise<TicketListRow[]> {
     select: TICKET_LIST_SELECT,
     orderBy: { receivedAt: "asc" },
   });
-  return closedLast(rows);
+  return withColours(closedLast(rows));
 }
 
 /** How many of the caller's tickets have an unacknowledged "response received" alert (nav badge). */
@@ -78,7 +88,7 @@ export async function countResponseAlerts(userId: string): Promise<number> {
 
 /** All open (§13): every active ticket across all officers, regardless of assignment. */
 export async function getAllOpenTickets(userId: string, role: UserRole): Promise<TicketListRow[]> {
-  return prisma.ticket.findMany({
+  const rows = await prisma.ticket.findMany({
     where: {
       status: { in: OPEN_STATUSES },
       isDeleted: false,
@@ -87,6 +97,7 @@ export async function getAllOpenTickets(userId: string, role: UserRole): Promise
     select: TICKET_LIST_SELECT,
     orderBy: { receivedAt: "asc" },
   });
+  return withColours(rows);
 }
 
 /**
@@ -110,7 +121,7 @@ export async function getOverdueTickets(userId: string, role: UserRole): Promise
  * (§10) hasn't been built. Most recently closed first.
  */
 export async function getClosedTickets(userId: string, role: UserRole): Promise<TicketListRow[]> {
-  return prisma.ticket.findMany({
+  const rows = await prisma.ticket.findMany({
     where: {
       status: { in: ["CLOSED", "ARCHIVED"] },
       isDeleted: false,
@@ -119,6 +130,7 @@ export async function getClosedTickets(userId: string, role: UserRole): Promise<
     select: TICKET_LIST_SELECT,
     orderBy: { closedAt: "desc" },
   });
+  return withColours(rows);
 }
 
 /**
@@ -187,12 +199,13 @@ export async function searchArchive(userId: string, role: UserRole, filters: Arc
     };
   }
 
-  return prisma.ticket.findMany({
+  const rows = await prisma.ticket.findMany({
     where,
     select: TICKET_LIST_SELECT,
     orderBy: { requestDate: "desc" },
     take: 200,
   });
+  return withColours(rows);
 }
 
 const LEGAL_HOLD_SELECT = {
@@ -254,5 +267,5 @@ export async function searchTickets(userId: string, role: UserRole, query: strin
     orderBy: { receivedAt: "desc" },
     take: 20,
   });
-  return closedLast(rows);
+  return withColours(closedLast(rows));
 }

@@ -549,3 +549,76 @@ main.ticket-page {
     overflow: visible;
   }
 }
+
+/* Assignee colours (John, 2026-10-03) -- one per staff member, slot chosen
+   in lib/users/colours.ts. Used as a chip on the Assignee column / ticket
+   page and as a coloured left edge on list rows. */
+:root {
+  --assignee-0-bg: #dbeafe; --assignee-0-ink: #1e40af; --assignee-0-edge: #3b82f6;
+  --assignee-1-bg: #dcfce7; --assignee-1-ink: #166534; --assignee-1-edge: #22c55e;
+  --assignee-2-bg: #fce7f3; --assignee-2-ink: #9d174d; --assignee-2-edge: #ec4899;
+  --assignee-3-bg: #ffedd5; --assignee-3-ink: #9a3412; --assignee-3-edge: #f97316;
+  --assignee-4-bg: #ede9fe; --assignee-4-ink: #5b21b6; --assignee-4-edge: #8b5cf6;
+  --assignee-5-bg: #ccfbf1; --assignee-5-ink: #115e59; --assignee-5-edge: #14b8a6;
+  --assignee-6-bg: #fef9c3; --assignee-6-ink: #854d0e; --assignee-6-edge: #eab308;
+  --assignee-7-bg: #fee2e2; --assignee-7-ink: #991b1b; --assignee-7-edge: #ef4444;
+  --assignee-8-bg: #e0e7ff; --assignee-8-ink: #3730a3; --assignee-8-edge: #6366f1;
+  --assignee-9-bg: #ecfccb; --assignee-9-ink: #3f6212; --assignee-9-edge: #84cc16;
+}
+:root[data-theme="dark"] {
+  --assignee-0-bg: #1e2f52; --assignee-0-ink: #a8c7fa; --assignee-0-edge: #5b8def;
+  --assignee-1-bg: #183a28; --assignee-1-ink: #9ee6b4; --assignee-1-edge: #3fbf6f;
+  --assignee-2-bg: #43203a; --assignee-2-ink: #f5a9d0; --assignee-2-edge: #e0609f;
+  --assignee-3-bg: #45291a; --assignee-3-ink: #f8bd8f; --assignee-3-edge: #e8833f;
+  --assignee-4-bg: #31254f; --assignee-4-ink: #c9b6fb; --assignee-4-edge: #9a7cf0;
+  --assignee-5-bg: #163a38; --assignee-5-ink: #8fe3d6; --assignee-5-edge: #2fb5a5;
+  --assignee-6-bg: #3d3416; --assignee-6-ink: #f0d77a; --assignee-6-edge: #cfa92b;
+  --assignee-7-bg: #4a2023; --assignee-7-ink: #f6a9a9; --assignee-7-edge: #e05757;
+  --assignee-8-bg: #262b52; --assignee-8-ink: #b7c0fb; --assignee-8-edge: #7178ec;
+  --assignee-9-bg: #2c3a17; --assignee-9-ink: #c4e690; --assignee-9-edge: #8fbf3a;
+}
+.chip-assignee { border: 1px solid transparent; }
+.assignee-colour-0 { --a-bg: var(--assignee-0-bg); --a-ink: var(--assignee-0-ink); --a-edge: var(--assignee-0-edge); }
+.assignee-colour-1 { --a-bg: var(--assignee-1-bg); --a-ink: var(--assignee-1-ink); --a-edge: var(--assignee-1-edge); }
+.assignee-colour-2 { --a-bg: var(--assignee-2-bg); --a-ink: var(--assignee-2-ink); --a-edge: var(--assignee-2-edge); }
+.assignee-colour-3 { --a-bg: var(--assignee-3-bg); --a-ink: var(--assignee-3-ink); --a-edge: var(--assignee-3-edge); }
+.assignee-colour-4 { --a-bg: var(--assignee-4-bg); --a-ink: var(--assignee-4-ink); --a-edge: var(--assignee-4-edge); }
+.assignee-colour-5 { --a-bg: var(--assignee-5-bg); --a-ink: var(--assignee-5-ink); --a-edge: var(--assignee-5-edge); }
+.assignee-colour-6 { --a-bg: var(--assignee-6-bg); --a-ink: var(--assignee-6-ink); --a-edge: var(--assignee-6-edge); }
+.assignee-colour-7 { --a-bg: var(--assignee-7-bg); --a-ink: var(--assignee-7-ink); --a-edge: var(--assignee-7-edge); }
+.assignee-colour-8 { --a-bg: var(--assignee-8-bg); --a-ink: var(--assignee-8-ink); --a-edge: var(--assignee-8-edge); }
+.assignee-colour-9 { --a-bg: var(--assignee-9-bg); --a-ink: var(--assignee-9-ink); --a-edge: var(--assignee-9-edge); }
+.chip-assignee[class*="assignee-colour-"] { background: var(--a-bg); color: var(--a-ink); border-color: var(--a-edge); }
+tr[class*="assignee-colour-"] > td:first-child { box-shadow: inset 4px 0 0 var(--a-edge); }
+
+/* Multi-choice filter dropdowns + sort controls (2026-10-03) */
+.multi-select { position: relative; display: inline-block; font-size: 0.85rem; }
+.multi-select > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  white-space: nowrap;
+}
+.multi-select > summary::-webkit-details-marker { display: none; }
+.multi-select > summary::after { content: " \25BE"; }
+.multi-select[open] > summary { border-color: var(--tasco-navy); }
+.multi-select.has-selection > summary { font-weight: 600; border-color: var(--tasco-navy); }
+.multi-select-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 12rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.multi-select-panel label { display: block; padding: 0.15rem 0; white-space: nowrap; cursor: pointer; }
+.sort-bar { margin-top: 0.4rem; }

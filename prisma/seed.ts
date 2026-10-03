@@ -19,10 +19,16 @@ const CATEGORIES = [
   "Performance",
   "Training",
   "Compliance",
+  // Added 2026-10-03 (also by migration 20261003000200 on existing databases).
+  "Terminations/Resignations",
+  "Incidents",
+  "Staff Details",
   "Other",
 ];
 
-const BUSINESS_UNITS = ["Head Office", "Retail", "Transport", "Depots", "Other"];
+// "Transport" renamed to "Carriers" and three units added 2026-10-03 (also
+// by migration 20261003000200 on existing databases).
+const BUSINESS_UNITS = ["Head Office", "Retail", "Carriers", "Depots", "Other", "Albury Office", "Sky Garden", "Garment Gallery"];
 
 // Mock users for the dev-mock auth provider (build spec §16: Stages 1-3
 // "proceed... using seeded data and a mocked auth provider" -- §14's real
