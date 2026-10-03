@@ -5,6 +5,7 @@ import {
   autoTargetDue,
   autoTargetReason,
   isAutoTargetReason,
+  missingTargetFields,
   shouldRecalculateTarget,
 } from "./target-due";
 
@@ -57,5 +58,17 @@ describe("shouldRecalculateTarget", () => {
   it("keeps a staff override", () => {
     assert.equal(shouldRecalculateTarget({ targetDueAt: MON_10AM, targetDueReason: "Fair Work deadline" }), false);
     assert.equal(isAutoTargetReason("Fair Work deadline"), false);
+  });
+});
+
+describe("missingTargetFields (2026-10-03 fix)", () => {
+  it("fills an empty target from the current priority, even with no priority change", () => {
+    const f = missingTargetFields({ receivedAt: MON_10AM, targetDueAt: null }, "P3");
+    assert.equal(f.targetDueAt?.toISOString(), "2026-11-01T23:00:00.000Z");
+    assert.equal(f.targetDueReason, "Automatic: P3 = 20 working days");
+  });
+
+  it("leaves an existing target alone", () => {
+    assert.deepEqual(missingTargetFields({ receivedAt: MON_10AM, targetDueAt: FRI_10AM }, "P1"), {});
   });
 });

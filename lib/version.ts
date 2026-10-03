@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.5.0";
+export const APP_VERSION = "1.5.1";
 
 // History:
+// 1.5.1 (2026-10-03) -- fix: an older ticket with no target due date gets
+//   one when claimed/assigned/saved, even if the priority didn't change
 // 1.5.0 (2026-10-03) -- address suggestions in To/CC boxes; Admin -> Address
 //   book; admin screens grouped under one "Admin" menu in the nav bar
 // 1.4.3 (2026-10-03) -- Admin -> Users hides archived users (button to show

@@ -49,6 +49,20 @@ export function autoTargetDue(receivedAt: Date, priority: Priority): { targetDue
 }
 
 /**
+ * A ticket from before 2026-10-03 has no target due date. The first time it
+ * is claimed, assigned or saved, it gets the automatic one for its current
+ * priority -- even if the priority itself didn't change (found 2026-10-03:
+ * choosing P3 on an already-P3 ticket left the date empty). Empty object when
+ * a target is already set.
+ */
+export function missingTargetFields(
+  current: { receivedAt: Date; targetDueAt: Date | null },
+  priority: Priority,
+): { targetDueAt?: Date; targetDueReason?: string } {
+  return current.targetDueAt === null ? autoTargetDue(current.receivedAt, priority) : {};
+}
+
+/**
  * When priority changes, the target due date follows it -- unless a staff
  * member has overridden it, in which case their date stands. A ticket with
  * no target date yet (the tickets that existed before 2026-10-03) gets one.

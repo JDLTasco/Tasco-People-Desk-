@@ -7,7 +7,7 @@ import { canViewerSeeTicket } from "@/lib/tickets/confidential-access";
 import { writeAuditLog } from "@/lib/audit";
 import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/lib/tickets/detail";
 import { dueFieldsForPriorityChange } from "@/lib/tickets/sla";
-import { isAutoTargetReason } from "@/lib/tickets/target-due";
+import { isAutoTargetReason, missingTargetFields } from "@/lib/tickets/target-due";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
@@ -126,6 +126,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
   if (body.targetDueReason !== undefined) {
     setField("targetDueReason", "targetDueReason", body.targetDueReason, current.targetDueReason);
+  }
+
+  // A ticket from before 2026-10-03 with no target due date gets the
+  // automatic one on its first save, even when priority didn't change --
+  // unless this save sets or clears the target itself.
+  if (body.targetDueAt === undefined && data.targetDueAt === undefined) {
+    const fill = missingTargetFields(current, body.priority ?? current.priority);
+    if (fill.targetDueAt) {
+      setField("targetDueAt", "targetDueAt", fill.targetDueAt.toISOString(), null);
+      setField("targetDueReason", "targetDueReason", fill.targetDueReason, current.targetDueReason);
+    }
   }
 
   if (Object.keys(data).length === 0) {

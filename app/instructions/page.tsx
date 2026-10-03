@@ -148,7 +148,8 @@ export default async function InstructionsPage() {
           response date or a WorkCover deadline. An override needs a reason, and once overridden the date no
           longer changes when the priority does. Tickets that arrived before 3 October 2026 have no target date
           and are still measured against the old clock (P1 2 days, P2 7 days, P3 30 days, shown as &quot;Due
-          (SLA)&quot;) until someone sets a target date or changes their priority.
+          (SLA)&quot;) until the ticket is next claimed, assigned or saved -- it then gets its automatic target date
+          from its current priority.
         </p>
       </section>
 

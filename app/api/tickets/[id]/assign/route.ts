@@ -8,6 +8,7 @@ import { validateReassignment } from "@/lib/tickets/transitions";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
 import { dueFieldsForPriorityChange, isPriority } from "@/lib/tickets/sla";
+import { missingTargetFields } from "@/lib/tickets/target-due";
 
 interface AssignBody {
   userId: string;
@@ -52,6 +53,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
     // same as self-claim -- same atomic UPDATE, due dates recalculated (§5).
     if (body.priority !== undefined && !isPriority(body.priority)) return badRequest("priority must be P1, P2 or P3");
     const newPriority = isPriority(body.priority) && body.priority !== ticket.priority ? body.priority : null;
+    // A ticket with no target due date yet gets one now (2026-10-03).
+    const fillTarget = newPriority ? {} : missingTargetFields(ticket, ticket.priority);
 
     const result = await prisma.ticket.updateMany({
       where: { id: ticket.id, assignedToId: null, status: "NEW" },
@@ -61,6 +64,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
         assignedAt: new Date(),
         version: { increment: 1 },
         ...(newPriority ? { priority: newPriority, ...dueFieldsForPriorityChange(ticket, newPriority) } : {}),
+        ...fillTarget,
       },
     });
     if (result.count === 0) {
@@ -85,7 +89,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       entityId: ticket.id,
       ticketId: ticket.id,
       ...(newPriority ? { beforeJson: { priority: ticket.priority } } : {}),
-      afterJson: { assignedToId: body.userId, status: "ALLOCATED", ...(newPriority ? { priority: newPriority } : {}) },
+      afterJson: {
+        assignedToId: body.userId,
+        status: "ALLOCATED",
+        ...(newPriority ? { priority: newPriority } : {}),
+        ...(fillTarget.targetDueAt ? { targetDueAt: fillTarget.targetDueAt.toISOString(), targetDueReason: fillTarget.targetDueReason } : {}),
+      },
     });
 
     // No allocation email any more (2026-10-03) -- the requester got an

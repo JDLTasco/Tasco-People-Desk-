@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiContext } from "@/lib/api-context";
 import { badRequest, conflict, notFound } from "@/lib/http-errors";
 import { dueFieldsForPriorityChange, isPriority } from "@/lib/tickets/sla";
+import { missingTargetFields } from "@/lib/tickets/target-due";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
 
@@ -24,6 +25,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   const body = (await request.json().catch(() => ({}))) as { priority?: unknown };
   if (body.priority !== undefined && !isPriority(body.priority)) return badRequest("priority must be P1, P2 or P3");
   const newPriority = isPriority(body.priority) && body.priority !== existing.priority ? body.priority : null;
+  // A ticket with no target due date yet gets one now (2026-10-03).
+  const fillTarget = newPriority ? {} : missingTargetFields(existing, existing.priority);
 
   const result = await prisma.ticket.updateMany({
     where: { id: params.id, assignedToId: null, status: "NEW" },
@@ -33,6 +36,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       assignedAt: new Date(),
       version: { increment: 1 },
       ...(newPriority ? { priority: newPriority, ...dueFieldsForPriorityChange(existing, newPriority) } : {}),
+      ...fillTarget,
     },
   });
 
@@ -59,7 +63,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     entityId: params.id,
     ticketId: params.id,
     ...(newPriority ? { beforeJson: { priority: existing.priority } } : {}),
-    afterJson: { assignedToId: session.user.id, status: "ALLOCATED", ...(newPriority ? { priority: newPriority } : {}) },
+    afterJson: {
+      assignedToId: session.user.id,
+      status: "ALLOCATED",
+      ...(newPriority ? { priority: newPriority } : {}),
+      ...(fillTarget.targetDueAt ? { targetDueAt: fillTarget.targetDueAt.toISOString(), targetDueReason: fillTarget.targetDueReason } : {}),
+    },
   });
 
   // No requester email here any more (operator amendment, John, 2026-10-03):
