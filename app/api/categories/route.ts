@@ -10,7 +10,9 @@ export async function GET(request: Request) {
 
   const categories = await prisma.category.findMany({
     where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
+    // Alphabetical in every dropdown, "Other" kept last (John, 2026-10-05).
+    orderBy: { name: "asc" },
   });
+  categories.sort((a, b) => Number(a.name === "Other") - Number(b.name === "Other"));
   return NextResponse.json({ categories });
 }
