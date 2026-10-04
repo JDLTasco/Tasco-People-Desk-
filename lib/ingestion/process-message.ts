@@ -8,6 +8,7 @@ import { classifyPriority } from "./priority";
 import { matchSuppressionRule } from "./suppression";
 import { extractTicketNoFromSubject } from "./subject-ticket-match";
 import { validateAttachment } from "./attachments";
+import { isIgnoredImage, loadIgnoredImageHashes } from "./ignored-images";
 import { createTicket } from "../tickets/create-ticket";
 import { writeStatusHistory } from "../tickets/history";
 import { autoResponseReceivedFor } from "../tickets/auto-response";
@@ -37,6 +38,7 @@ async function storeAttachments(
   messageId: string,
   correlationId: string,
 ): Promise<void> {
+  const ignoredImages = message.attachments.length > 0 ? await loadIgnoredImageHashes() : new Set<string>();
   for (const att of message.attachments) {
     const validation = validateAttachment(att);
 
@@ -51,6 +53,10 @@ async function storeAttachments(
     if (validation.scanStatus === "SKIPPED") continue;
 
     const sha256 = createHash("sha256").update(att.content).digest("hex");
+    // Same reasoning for a known signature / footer image (Admin -> Ignored
+    // images, 2026-10-05): exact-content match only, so nothing a person
+    // actually attached or pasted is dropped.
+    if (isIgnoredImage(validation.detectedContentType ?? att.declaredContentType, sha256, ignoredImages)) continue;
     // Stored regardless of outcome -- "nothing is silently lost" (§7.3.1)
     // applies to blocked attachments too; scan_status/download-ability
     // (Stage 7) is what actually gates access, not storage itself.

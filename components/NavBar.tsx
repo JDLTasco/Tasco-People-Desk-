@@ -32,6 +32,7 @@ export default async function NavBar() {
           { href: "/admin/calendar", label: "Calendar" },
           { href: "/admin/block-list", label: "Block list" },
           { href: "/admin/blocked-emails", label: "Blocked emails" },
+          { href: "/admin/ignored-images", label: "Ignored images" },
           { href: "/admin/failed-sends", label: "Failed sends" },
         ]
       : []),

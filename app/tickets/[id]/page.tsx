@@ -5,7 +5,7 @@ import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { isAutoTargetReason } from "@/lib/tickets/target-due";
 import { getAssigneeColourMap } from "@/lib/users/colours";
 import { validateReopen } from "@/lib/tickets/reopen";
-import { canActOnAssignedTicket, canEditTicketMetadata } from "@/lib/rbac";
+import { canActOnAssignedTicket, canEditTicketMetadata, canManageAdminSettings } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
 import { currentActionLabel, displayStatus } from "@/lib/tickets/action-status";
@@ -13,6 +13,7 @@ import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
 import AttachmentRemoveForm from "./attachment-remove-form";
+import IgnoreImageButton from "./ignore-image-button";
 import SaveExitButton from "./save-exit-button";
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
@@ -200,6 +201,12 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                     {canEditMetadata && !ticket.isLegalHold && (
                       <AttachmentRemoveForm ticketId={ticket.id} attachmentId={a.id} filename={a.filename} />
                     )}
+                    {/* Signature / footer logos (2026-10-05) -- ADMIN, emailed images only. */}
+                    {canManageAdminSettings(session.user.role) &&
+                      a.source === "EMAIL" &&
+                      (a.detectedContentType ?? a.declaredContentType ?? "").toLowerCase().startsWith("image/") && (
+                        <IgnoreImageButton attachmentId={a.id} filename={a.filename} />
+                      )}
                   </li>
                 ))}
               </ul>

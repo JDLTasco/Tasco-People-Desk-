@@ -450,6 +450,7 @@ model TicketAttachment {
   removedBy  User?          @relation("AttachmentRemovedBy", fields: [removedById], references: [id])
 
   @@index([ticketId])
+  @@index([sha256])
   @@map("ticket_attachments")
 }
 
@@ -635,4 +636,19 @@ model NonWorkingDay {
   createdBy   String?  @map("created_by") @db.Uuid
 
   @@map("non_working_days")
+}
+
+// Ignored images (John, 2026-10-05): exact email signature / footer images
+// (Tasco logos etc.) that ingestion skips, matched by SHA-256 of the file.
+// Managed on Admin -> Ignored images; switched off, never deleted.
+model IgnoredImage {
+  id              String   @id @default(uuid()) @db.Uuid
+  sha256          String   @unique
+  label           String   @db.VarChar(200)
+  exampleFilename String?  @map("example_filename")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  createdBy       String?  @map("created_by") @db.Uuid
+
+  @@map("ignored_images")
 }
