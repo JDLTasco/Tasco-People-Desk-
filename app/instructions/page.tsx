@@ -341,6 +341,8 @@ export default async function InstructionsPage() {
           <li><strong>Admin -- Deleted</strong>: see soft-deleted tickets (no drill-down back into them, by design).</li>
           <li><strong>Admin -- Audit log</strong>: search every recorded action by ticket number, actor, action type, date range, or correlation ID.</li>
           <li><strong>Admin -- Failed sends</strong>: any outbound email that failed after 3 attempts.</li>
+          <li><strong>Admin -- Block list</strong>: stop obvious non-HR email (newsletters, app sign-up notices, job ads) becoming tickets, by exact sender, whole domain, or words in the subject. Rules are switched off, never deleted. On a ticket from an outside sender, <strong>Block this sender</strong> adds a Sender rule and closes the ticket as Info only in one step.</li>
+          <li><strong>Admin -- Blocked emails</strong>: everything the Block list stopped, and which rule caught it. Nothing is lost -- the email stays in the hrtickets@ mailbox; switch the rule off and it comes in on the next import.</li>
         </ul>
       </section>
     </main>

@@ -516,6 +516,32 @@ export default function TicketActions({
             </button>
           )}
 
+          {/* Block this sender (John, 2026-10-05): ADMIN only, since the
+              block list is ADMIN-maintained (§3). Adds a Sender rule for the
+              requester, then closes as Info only (which archives). Not offered
+              for Tasco's own staff -- blocking one would also drop their
+              replies on other tickets. */}
+          {canCloseEarly && role === "ADMIN" && !requesterEmail.toLowerCase().endsWith("@tascopetroleum.com.au") && (
+            <button
+              disabled={busy}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Block ${requesterEmail}? Future emails from this address won't become tickets (they're listed under Admin -> Blocked emails). This ticket is then closed as Info only and archived -- it can't be reopened.`,
+                  )
+                )
+                  return;
+                void run(async () => {
+                  const blocked = await postJson("/api/admin/suppression-rules", { type: "SENDER", value: requesterEmail });
+                  if (!blocked.ok) return blocked;
+                  return postJson(`/api/tickets/${ticketId}/close-not-a-request`, { version });
+                });
+              }}
+            >
+              Block this sender
+            </button>
+          )}
+
           {/* Reopen within 30 days of closing (2026-09-29) -- any staff member, reason required. */}
           {canReopen && (
             <span>

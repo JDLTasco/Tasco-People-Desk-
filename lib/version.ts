@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.9.3";
+export const APP_VERSION = "1.10.0";
 
 // History:
+// 1.10.0 (2026-10-05) -- Admin -> Block list + Blocked emails; Block this
+//   sender button on tickets (ADMIN, outside senders only)
 // 1.9.3 (2026-10-05) -- category dropdown alphabetical ("Other" last)
 // 1.9.2 (2026-10-03) -- Clear all filters buttons; Definitions in
 //   Instructions; dashboard information panel
