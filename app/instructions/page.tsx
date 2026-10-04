@@ -197,7 +197,7 @@ export default async function InstructionsPage() {
       </section>
 
       <section className="section-card">
-        <h2>HR dashboard (HR Leads and Admins)</h2>
+        <h2>HR dashboard (all staff)</h2>
         <p>
           <strong>Admin &rarr; Dashboard</strong> shows the workload right now (open tickets by priority, status,
           assignee, business unit and category; unassigned; overdue; due in the next 7 working days; average age), what
@@ -206,7 +206,8 @@ export default async function InstructionsPage() {
           before their target due date (an overridden target counts as the target), also broken down by assignee,
           business unit and category. Info only, Autoclose and Withdrawn closures are counted separately and are not
           part of the on-time rate. Click a number or a name to open the matching filtered list. Hover over a bar for its
-          exact value, or use &quot;Show as a table&quot;.
+          exact value, or use &quot;Show as a table&quot;. Everyone sees it; confidential tickets are only counted for
+          people allowed to open them, so figures can differ slightly between users.
         </p>
       </section>
 

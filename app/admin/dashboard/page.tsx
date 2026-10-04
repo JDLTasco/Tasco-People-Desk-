@@ -59,7 +59,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     return (
       <main>
         <h1>Not permitted</h1>
-        <p>Only HR Leads and Admins can view the dashboard.</p>
+        <p>You don&apos;t have access to the dashboard.</p>
       </main>
     );
   }

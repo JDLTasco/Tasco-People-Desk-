@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const ctx = await requireApiContext(request);
   if (ctx instanceof Response) return ctx;
   const { session } = ctx;
-  if (!canViewDashboard(session.user.role)) return forbidden("Only HR Leads and Admins can view the dashboard");
+  if (!canViewDashboard(session.user.role)) return forbidden("You don't have access to the dashboard");
 
   const param = new URL(request.url).searchParams.get("range");
   const range = isTrendRange(param) ? param : "30d";

@@ -145,9 +145,14 @@ export function canViewAuditLog(role: UserRole): boolean {
   return role === "ADMIN" || role === "HR_LEAD";
 }
 
-/** HR Management Dashboard (John, 2026-10-03) -- ADMIN / HR_LEAD only. */
+/**
+ * HR Management Dashboard (John, 2026-10-03) -- every role since 2026-10-05
+ * (was ADMIN / HR_LEAD). Figures already respect the viewer's confidential
+ * visibility (lib/dashboard/load.ts), so HR Officers only count what they
+ * could open anyway.
+ */
 export function canViewDashboard(role: UserRole): boolean {
-  return role === "ADMIN" || role === "HR_LEAD";
+  return role === "ADMIN" || role === "HR_LEAD" || role === "HR_OFFICER";
 }
 
 /** Bulk export -- ADMIN / HR_LEAD only. */

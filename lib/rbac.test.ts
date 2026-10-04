@@ -168,6 +168,6 @@ describe("HR dashboard (2026-10-03)", () => {
   it("ADMIN and HR_LEAD only", () => {
     assert.equal(canViewDashboard(ADMIN), true);
     assert.equal(canViewDashboard(HR_LEAD), true);
-    assert.equal(canViewDashboard(HR_OFFICER), false);
+    assert.equal(canViewDashboard(HR_OFFICER), true);
   });
 });
