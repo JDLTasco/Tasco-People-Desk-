@@ -23,8 +23,6 @@ export default async function NavBar() {
   const canAudit = canViewAuditLog(session.user.role);
   // Grouped under one "Admin" menu (2026-10-03) -- same permissions as before.
   const adminLinks = [
-    // HR dashboard (2026-10-03) -- every role since 2026-10-05.
-    ...(canViewDashboard(session.user.role) ? [{ href: "/admin/dashboard", label: "Dashboard" }] : []),
     ...(isAdmin
       ? [
           { href: "/admin/users", label: "Users" },
@@ -69,6 +67,8 @@ export default async function NavBar() {
       <Link href="/overdue">Overdue</Link>
       <Link href="/closed">Closed</Link>
       <Link href="/archive-search">Archive search</Link>
+      {/* HR dashboard (2026-10-03) -- every role since 2026-10-05, on the main bar rather than the Admin menu. */}
+      {canViewDashboard(session.user.role) && <Link href="/admin/dashboard">Dashboard</Link>}
       <Link href="/instructions">Instructions</Link>
       {adminLinks.length > 0 && <AdminMenu links={adminLinks} />}
       <span className="nav-spacer">

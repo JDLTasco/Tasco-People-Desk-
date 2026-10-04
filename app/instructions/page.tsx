@@ -199,7 +199,7 @@ export default async function InstructionsPage() {
       <section className="section-card">
         <h2>HR dashboard (all staff)</h2>
         <p>
-          <strong>Admin &rarr; Dashboard</strong> shows the workload right now (open tickets by priority, status,
+          <strong>Dashboard</strong> (on the menu bar) shows the workload right now (open tickets by priority, status,
           assignee, business unit and category; unassigned; overdue; due in the next 7 working days; average age), what
           was created and closed this month, and trends over 7 days, 30 days, 90 days or 12 months: inbound vs closed,
           average time to resolve, and the <strong>on-time rate</strong> -- the share of resolved tickets closed on or
