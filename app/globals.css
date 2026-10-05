@@ -624,6 +624,10 @@ main.ticket-page {
 .priority-edge-P2 { --p-edge: var(--tasco-amber); }
 .priority-edge-P3 { --p-edge: var(--tasco-navy); }
 tr[class*="priority-edge-"] > td:first-child { box-shadow: inset 5px 0 0 var(--p-edge); }
+/* Long unbroken text (e.g. a requester's email address) may wrap, so the
+   list still fits once the Received column was added (2026-10-05). */
+table.ticket-list td[data-label="Requester"],
+table.ticket-list td[data-label="Subject"] { overflow-wrap: anywhere; }
 
 /* Multi-choice filter dropdowns + sort controls (2026-10-03) */
 .multi-select { position: relative; display: inline-block; font-size: 0.85rem; }

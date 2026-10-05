@@ -219,7 +219,8 @@ export default async function InstructionsPage() {
           and <strong>Assignee</strong> each open a list of tick boxes -- tick as many as you like (e.g. P1 and P2).
           A ticket shows if it matches any ticked value in a box, and all the boxes you&apos;ve used. Underneath,{" "}
           <strong>Sort by</strong> / <strong>then by</strong> sorts the list by up to three things in turn (e.g.
-          priority, then due date). <strong>Clear filters</strong> resets everything. Each staff member has their
+          priority, then due date) -- choose <strong>Date received</strong> to sort by the Received column (when
+          the email arrived, or when a + New ticket was logged). <strong>Clear filters</strong> resets everything. Each staff member has their
           own colour, shown on the Assignee name. The coloured strip down the left edge of each row shows its
           priority: red P1, amber P2, navy P3.
         </p>

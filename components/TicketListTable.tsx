@@ -14,6 +14,7 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
       <thead>
         <tr>
           <th>Ticket</th>
+          <th>Received</th>
           <th>Subject</th>
           <th>Requester</th>
           <th>Status</th>
@@ -46,6 +47,8 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
                   <span title="New response recorded -- not yet opened by the assignee"> 🔔</span>
                 )}
               </td>
+              {/* When the email arrived, or when a + New ticket was logged (John, 2026-10-05). */}
+              <td data-label="Received">{formatAuDateTime(t.receivedAt)}</td>
               <td data-label="Subject">
                 {t.subject} {t.isConfidential && <span title="Confidential">🔒</span>}
               </td>
