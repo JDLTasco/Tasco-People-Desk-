@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.11.1";
+export const APP_VERSION = "1.12.0";
 
 // History:
+// 1.12.0 (2026-10-05) -- burgundy Cancel beside Save & exit: leave a ticket
+//   without saving
 // 1.11.1 (2026-10-05) -- fix: after a priority change, Save & exit no longer
 //   asks for a target due reason (automatic date change)
 // 1.11.0 (2026-10-05) -- Admin -> Ignored images: skip email signature / footer

@@ -285,7 +285,10 @@ export default async function InstructionsPage() {
             right. It saves anything you haven&apos;t saved yet -- changes in the Metadata panel, a new choice in the
             Current action drop-down, and a note you&apos;ve typed but not added -- then takes you back to{" "}
             <strong>My tickets</strong> for the next one. If something can&apos;t be saved (for example Response
-            received with no note), it stays on the ticket and tells you why.
+            received with no note), it stays on the ticket and tells you why. Changed your mind? The burgundy{" "}
+            <strong>Cancel</strong> button beside it leaves without saving -- the ticket stays as it was last saved.
+            (Anything you already applied with its own button, such as Claim, an action or an added note, was saved
+            at the time and stays.)
           </li>
           <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
           <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
