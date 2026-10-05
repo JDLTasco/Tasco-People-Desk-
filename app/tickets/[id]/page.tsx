@@ -16,6 +16,22 @@ import AttachmentRemoveForm from "./attachment-remove-form";
 import IgnoreImageButton from "./ignore-image-button";
 import SaveExitButton from "./save-exit-button";
 
+// Correspondence label (John, 2026-10-05): outbound emails are named by type
+// (was a plain "EMAIL OUT"), so the Outcome stands out from the rest.
+const OUTBOUND_LABELS: Record<string, string> = {
+  OUTCOME: "OUTCOME SENT",
+  REQUESTER_QUESTION: "QUESTION SENT",
+  ACKNOWLEDGEMENT: "ACKNOWLEDGEMENT",
+  CLOSED_RESOLVED: "CLOSED NOTICE",
+  ALLOCATION: "ALLOCATION",
+  SLA_ESCALATION: "OVERDUE ALERT",
+};
+function correspondenceLabel(m: { messageType: string; direction: string }): string {
+  if (m.messageType === "MANUAL") return "MANUAL ENTRY";
+  if (m.direction === "INBOUND") return "EMAIL IN";
+  return OUTBOUND_LABELS[m.messageType] ?? "EMAIL OUT";
+}
+
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession();
   if (!session?.user) return null;
@@ -250,11 +266,9 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             <h2>Correspondence <small>(newest first)</small></h2>
             {ticket.messages.length === 0 && <p>No messages yet.</p>}
             {[...ticket.messages].reverse().map((m) => (
-              <article key={m.id} className="item-card">
+              <article key={m.id} className={m.messageType === "OUTCOME" ? "item-card message-outcome" : "item-card"}>
                 <div>
-                  <strong>
-                    [{m.messageType === "MANUAL" ? "MANUAL ENTRY" : m.direction === "INBOUND" ? "EMAIL IN" : "EMAIL OUT"}]
-                  </strong>{" "}
+                  <strong>[{correspondenceLabel(m)}]</strong>{" "}
                   {m.fromName} ({m.fromAddress})
                   -- {(m.receivedAt ?? m.sentAt) ? formatAuDateTime((m.receivedAt ?? m.sentAt)!) : ""}
                 </div>

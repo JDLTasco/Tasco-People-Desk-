@@ -88,13 +88,20 @@ export interface OutcomeEmailInput {
  * subject, the curated outcome_for_requester text." Operator amendment
  * (John, 2026-10-03): notes are internal only and can never be included
  * (the "requester-visible note" opt-in was removed).
+ * Operator amendment (John, 2026-10-05): made easy to tell apart from HR's
+ * other emails -- subject ends "Outcome of your enquiry" (was "Resolved"),
+ * and the body opens with a heading (a purple bar in the HTML version;
+ * inline style, since email clients ignore stylesheets).
  */
 export function renderOutcomeEmail(input: OutcomeEmailInput): RenderedEmail {
-  const subject = `[${input.ticketNo}] ${input.displaySubject} -- Resolved`;
+  const subject = `[${input.ticketNo}] ${input.displaySubject} -- Outcome of your enquiry`;
   const header = `Ticket number: ${input.ticketNo}\nSubject: ${input.displaySubject}`;
   const parts = [header, input.outcomeForRequester];
-  const bodyText = `${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`;
-  const bodyHtml = `${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`;
+  const bodyText = `OUTCOME OF YOUR ENQUIRY\n\n${parts.join("\n\n")}\n\n${TRACKING_NOTE_TEXT}\n\n${FOOTER_TEXT}`;
+  const headingHtml =
+    `<p style="background:#6b21a8;color:#ffffff;font-weight:bold;font-size:16px;padding:8px 12px;margin:0 0 12px;">` +
+    `Outcome of your enquiry</p>`;
+  const bodyHtml = `${headingHtml}\n${parts.map(htmlParagraphs).join("\n")}\n${TRACKING_NOTE_HTML}\n${FOOTER_HTML}`;
   return { subject, bodyText, bodyHtml };
 }
 

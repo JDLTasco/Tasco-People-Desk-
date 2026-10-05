@@ -43,7 +43,9 @@ describe("renderOutcomeEmail", () => {
       outcomeForRequester: "Your leave has been approved.",
     });
     assert.match(email.bodyText, /Your leave has been approved\./);
-    assert.match(email.subject, /Resolved/);
+    assert.match(email.subject, /-- Outcome of your enquiry$/);
+    assert.match(email.bodyText, /^OUTCOME OF YOUR ENQUIRY/);
+    assert.match(email.bodyHtml, /Outcome of your enquiry/);
   });
 });
 

@@ -220,7 +220,8 @@ export default async function InstructionsPage() {
           A ticket shows if it matches any ticked value in a box, and all the boxes you&apos;ve used. Underneath,{" "}
           <strong>Sort by</strong> / <strong>then by</strong> sorts the list by up to three things in turn (e.g.
           priority, then due date). <strong>Clear filters</strong> resets everything. Each staff member has their
-          own colour, shown on the Assignee name and down the left edge of their rows.
+          own colour, shown on the Assignee name. The coloured strip down the left edge of each row shows its
+          priority: red P1, amber P2, navy P3.
         </p>
         <ul>
           <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>
@@ -293,7 +294,7 @@ export default async function InstructionsPage() {
           </li>
           <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
           <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong> and type the reason. To take over a colleague&apos;s ticket, pick yourself under <strong>Reassign</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
-          <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the resolution, check who it goes To and CC, review the exact email that will send, and confirm.</li>
+          <li>When resolved, click the purple <strong>Send outcome to employee</strong> button (shown once the ticket is in action) to write up the results of the enquiry, check who it goes To and CC, review the exact email that will send, and confirm. The email&apos;s subject ends &quot;Outcome of your enquiry&quot; and it opens with a purple heading; in Correspondence it shows as a purple <strong>[OUTCOME SENT]</strong> card.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email is for information only or genuinely not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
           <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>

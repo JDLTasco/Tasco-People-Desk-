@@ -32,7 +32,9 @@ export default function TicketListTable({ tickets }: { tickets: TicketListRow[] 
             <tr
               key={t.id}
               className={
-                [t.responseAlertPending ? "row-response-alert" : "", t.assigneeColour !== null ? `assignee-colour-${t.assigneeColour}` : ""]
+                // Left edge colour follows priority (John, 2026-10-05; was the
+                // assignee's colour, which still shows on the Assignee chip).
+                [t.responseAlertPending ? "row-response-alert" : "", `priority-edge-${t.priority}`]
                   .filter(Boolean)
                   .join(" ") || undefined
               }

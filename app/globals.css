@@ -608,7 +608,22 @@ main.ticket-page {
 .assignee-colour-8 { --a-bg: var(--assignee-8-bg); --a-ink: var(--assignee-8-ink); --a-edge: var(--assignee-8-edge); }
 .assignee-colour-9 { --a-bg: var(--assignee-9-bg); --a-ink: var(--assignee-9-ink); --a-edge: var(--assignee-9-edge); }
 .chip-assignee[class*="assignee-colour-"] { background: var(--a-bg); color: var(--a-ink); border-color: var(--a-edge); }
-tr[class*="assignee-colour-"] > td:first-child { box-shadow: inset 4px 0 0 var(--a-edge); }
+/* Outcome email (John, 2026-10-05): purple, matching the OUTCOME status chip --
+   the send button and the sent email's card in Correspondence. */
+.btn-outcome { background: #6b21a8; border-color: #6b21a8; color: #fff; }
+.btn-outcome:hover:not(:disabled) { background: #581c87; border-color: #581c87; }
+.item-card.message-outcome {
+  background: var(--chip-outcome-bg);
+  border: 2px solid var(--chip-outcome-ink);
+  border-left-width: 6px;
+}
+.item-card.message-outcome > div:first-child strong { color: var(--chip-outcome-ink); }
+
+/* List rows: left edge coloured by priority (John, 2026-10-05; was by assignee). */
+.priority-edge-P1 { --p-edge: var(--tasco-red); }
+.priority-edge-P2 { --p-edge: var(--tasco-amber); }
+.priority-edge-P3 { --p-edge: var(--tasco-navy); }
+tr[class*="priority-edge-"] > td:first-child { box-shadow: inset 5px 0 0 var(--p-edge); }
 
 /* Multi-choice filter dropdowns + sort controls (2026-10-03) */
 .multi-select { position: relative; display: inline-block; font-size: 0.85rem; }
@@ -778,9 +793,9 @@ tr[class*="assignee-colour-"] > td:first-child { box-shadow: inset 4px 0 0 var(-
     text-align: left;
   }
   table.ticket-list td:first-child { background: var(--tasco-navy-pale); font-weight: 600; }
-  /* The assignee colour edge moves to the card's left side. */
-  table.ticket-list tr[class*="assignee-colour-"] { border-left: 5px solid var(--a-edge); }
-  table.ticket-list tr[class*="assignee-colour-"] > td:first-child { box-shadow: none; }
+  /* The priority colour edge moves to the card's left side. */
+  table.ticket-list tr[class*="priority-edge-"] { border-left: 5px solid var(--p-edge); }
+  table.ticket-list tr[class*="priority-edge-"] > td:first-child { box-shadow: none; }
 
   .recipient-input { width: 100% !important; }
   .ticket-page h1 { font-size: 1.1rem; word-break: break-word; }

@@ -69,8 +69,8 @@ export default function OutcomeDispatchModal({
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)}>
-        Draft outcome
+      <button type="button" className="btn-outcome" onClick={() => setOpen(true)}>
+        Send outcome to employee
       </button>
     );
   }
@@ -104,7 +104,11 @@ export default function OutcomeDispatchModal({
   return createPortal(
     <div className="modal-overlay">
       <div className="modal section-card">
-        <h2>Send outcome -- {ticketNo}</h2>
+        <h2>Send outcome to employee -- {ticketNo}</h2>
+        <p>
+          The results of the enquiry, for the person who raised it. Sending moves the ticket to <strong>Outcome
+          sent</strong>; then use <strong>Close -- Resolved</strong> to close it.
+        </p>
         {error && (
           <p role="alert" className="banner banner-error">
             {error}
@@ -154,7 +158,7 @@ export default function OutcomeDispatchModal({
           <div style={{ whiteSpace: "pre-wrap" }}>{rendered.bodyText}</div>
         </div>
 
-        <button type="button" disabled={busy || !outcomeText.trim() || !to.trim()} onClick={() => void send()}>
+        <button type="button" className="btn-outcome" disabled={busy || !outcomeText.trim() || !to.trim()} onClick={() => void send()}>
           Approve &amp; Send Outcome
         </button>{" "}
         <button type="button" className="secondary" disabled={busy} onClick={() => setOpen(false)}>

@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "1.12.1";
+export const APP_VERSION = "1.13.0";
 
 // History:
+// 1.13.0 (2026-10-05) -- "Send outcome to employee" (purple): outcome email
+//   subject "Outcome of your enquiry" + purple heading, purple [OUTCOME SENT]
+//   card; outbound emails labelled by type; list row edge colour = priority
 // 1.12.1 (2026-10-05) -- On Hold (any action item) needs a reason, saved as a
 //   note; Reassign lists yourself, so you can take over a colleague's ticket
 // 1.12.0 (2026-10-05) -- burgundy Cancel beside Save & exit: leave a ticket
