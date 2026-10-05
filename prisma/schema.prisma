@@ -223,6 +223,8 @@ model User {
   isActive      Boolean   @default(true) @map("is_active")
   firstSeenAt   DateTime  @default(now()) @map("first_seen_at")
   lastLoginAt   DateTime? @map("last_login_at")
+  /// Admin-chosen colour slot 0-9 (2026-10-05); null = automatic -- see lib/users/colours.ts.
+  colourSlot    Int?      @map("colour_slot")
 
   // Reverse relations — every FK to users from tickets/notes/etc. is named
   // explicitly so Prisma can disambiguate the many relations to this model.

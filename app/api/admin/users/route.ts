@@ -5,6 +5,7 @@ import { badRequest, forbidden } from "@/lib/http-errors";
 import { canManageAdminSettings } from "@/lib/rbac";
 import { writeAuditLog } from "@/lib/audit";
 import { SYSTEM_ENTRA_OBJECT_ID } from "@/lib/ingestion/process-message";
+import { isColourSlot } from "@/lib/users/colour-names";
 
 // §3: "Manage users, roles, ..." -- ADMIN only. §13's Admin "users" screen.
 export async function GET(request: Request) {
@@ -26,6 +27,8 @@ interface CreateUserBody {
   upn: string;
   role: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
   entraObjectId?: string;
+  /** Optional 0-9; omitted/null = automatic colour (2026-10-05). */
+  colourSlot?: number | null;
 }
 
 // Real accounts are normally created automatically at first Entra sign-in
@@ -49,6 +52,9 @@ export async function POST(request: Request) {
   if (!body?.displayName || !body.initials || !body.upn || !body.role) {
     return badRequest("displayName, initials, upn, and role are all required");
   }
+  if (body.colourSlot !== undefined && body.colourSlot !== null && !isColourSlot(body.colourSlot)) {
+    return badRequest("colourSlot must be 0-9, or null for automatic");
+  }
 
   const entraObjectId = body.entraObjectId?.trim() || `manual-${crypto.randomUUID()}`;
 
@@ -59,6 +65,7 @@ export async function POST(request: Request) {
       displayName: body.displayName,
       initials: body.initials,
       role: body.role,
+      colourSlot: body.colourSlot ?? null,
     },
   });
 
@@ -68,7 +75,7 @@ export async function POST(request: Request) {
     action: "USER_CREATED",
     entity: "user",
     entityId: user.id,
-    afterJson: { displayName: user.displayName, upn: user.upn, role: user.role },
+    afterJson: { displayName: user.displayName, upn: user.upn, role: user.role, colourSlot: user.colourSlot },
   });
 
   return NextResponse.json({ user }, { status: 201 });

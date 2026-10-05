@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { formatAuDateTime } from "@/lib/format-date";
+import { ASSIGNEE_COLOUR_NAMES } from "@/lib/users/colour-names";
 
 type Role = "ADMIN" | "HR_LEAD" | "HR_OFFICER";
 
@@ -16,13 +17,17 @@ interface AdminUser {
   isActive: boolean;
   entraObjectId: string;
   lastLoginAt: string | null;
+  /** Admin-chosen colour, or null = automatic. */
+  colourSlot: number | null;
+  /** The colour actually shown (chosen, or the automatic one). */
+  effectiveColour: number;
 }
 
 const ROLES: Role[] = ["ADMIN", "HR_LEAD", "HR_OFFICER"];
 
 async function patchUser(
   id: string,
-  body: { role?: Role; isActive?: boolean; displayName?: string; upn?: string; entraObjectId?: string },
+  body: { role?: Role; isActive?: boolean; displayName?: string; upn?: string; entraObjectId?: string; colourSlot?: number | null },
 ) {
   const res = await fetch(`/api/admin/users/${id}`, {
     method: "PATCH",
@@ -42,6 +47,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
   const [initials, setInitials] = useState("");
   const [upn, setUpn] = useState("");
   const [role, setRole] = useState<Role>("HR_OFFICER");
+  const [colour, setColour] = useState(""); // "" = automatic
 
   // Archived users are hidden unless asked for (John, 2026-10-03).
   const [showArchived, setShowArchived] = useState(false);
@@ -114,6 +120,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
             <th>Initials</th>
             <th>UPN / email</th>
             <th>Role</th>
+            <th>Colour</th>
             <th>Status</th>
             <th>Last login</th>
             <th></th>
@@ -231,6 +238,30 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
                   ))}
                 </select>
               </td>
+              {/* Staff colour (John, 2026-10-05): shown on the Assignee chip
+                  everywhere. "Automatic" = the slot from the user list order. */}
+              <td>
+                <span style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+                  <span className={`chip chip-assignee assignee-colour-${u.effectiveColour}`}>
+                    {ASSIGNEE_COLOUR_NAMES[u.effectiveColour]}
+                  </span>
+                  <select
+                    disabled={busy}
+                    value={u.colourSlot === null ? "" : String(u.colourSlot)}
+                    aria-label={`Colour for ${u.displayName}`}
+                    onChange={(e) =>
+                      run(() => patchUser(u.id, { colourSlot: e.target.value === "" ? null : Number(e.target.value) }))
+                    }
+                  >
+                    <option value="">Automatic</option>
+                    {ASSIGNEE_COLOUR_NAMES.map((name, i) => (
+                      <option key={name} value={i}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </td>
               <td>
                 <span className={u.isActive ? "chip chip-status-ALLOCATED" : "chip chip-status-CLOSED"}>
                   {u.isActive ? "Active" : "Archived"}
@@ -261,7 +292,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
               const res = await fetch("/api/admin/users", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ displayName, initials, upn, role }),
+                body: JSON.stringify({ displayName, initials, upn, role, colourSlot: colour === "" ? null : Number(colour) }),
               });
               const data = await res.json().catch(() => ({}));
               if (res.ok) {
@@ -269,6 +300,7 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
                 setInitials("");
                 setUpn("");
                 setRole("HR_OFFICER");
+                setColour("");
               }
               return { ok: res.ok, status: res.status, data };
             });
@@ -302,6 +334,20 @@ export default function UserAdminPanel({ users }: { users: AdminUser[] }) {
                 </option>
               ))}
             </select>
+          </label>
+          <br />
+          <label>
+            Colour (shown on their tickets)
+            <br />
+            <select value={colour} onChange={(e) => setColour(e.target.value)}>
+              <option value="">Automatic</option>
+              {ASSIGNEE_COLOUR_NAMES.map((name, i) => (
+                <option key={name} value={i}>
+                  {name}
+                </option>
+              ))}
+            </select>{" "}
+            {colour !== "" && <span className={`chip chip-assignee assignee-colour-${colour}`}>{ASSIGNEE_COLOUR_NAMES[Number(colour)]}</span>}
           </label>
           <br />
           <button type="submit" disabled={busy || !displayName || !initials || !upn} style={{ marginTop: "0.75rem" }}>

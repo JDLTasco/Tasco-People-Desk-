@@ -221,7 +221,7 @@ export default async function InstructionsPage() {
           <strong>Sort by</strong> / <strong>then by</strong> sorts the list by up to three things in turn (e.g.
           priority, then due date) -- choose <strong>Date received</strong> to sort by the Received column (when
           the email arrived, or when a + New ticket was logged). <strong>Clear filters</strong> resets everything. Each staff member has their
-          own colour, shown on the Assignee name. The coloured strip down the left edge of each row shows its
+          own colour, shown on the Assignee name (an Admin can pick it on Admin &rarr; Users). The coloured strip down the left edge of each row shows its
           priority: red P1, amber P2, navy P3.
         </p>
         <ul>

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { canManageAdminSettings } from "@/lib/rbac";
 import { SYSTEM_ENTRA_OBJECT_ID } from "@/lib/ingestion/process-message";
+import { getAssigneeColourMap } from "@/lib/users/colours";
 import UserAdminPanel from "./user-admin-panel";
 
 // §3/§13: Admin "users" screen -- ADMIN only. §16 doesn't assign this to a
@@ -23,6 +24,7 @@ export default async function AdminUsersPage() {
     where: { entraObjectId: { not: SYSTEM_ENTRA_OBJECT_ID } },
     orderBy: { displayName: "asc" },
   });
+  const colours = await getAssigneeColourMap();
 
   return (
     <main>
@@ -42,6 +44,8 @@ export default async function AdminUsersPage() {
           isActive: u.isActive,
           entraObjectId: u.entraObjectId,
           lastLoginAt: u.lastLoginAt ? u.lastLoginAt.toISOString() : null,
+          colourSlot: u.colourSlot,
+          effectiveColour: colours.get(u.id) ?? 0,
         }))}
       />
     </main>

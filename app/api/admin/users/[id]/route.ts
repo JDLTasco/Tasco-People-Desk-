@@ -6,6 +6,7 @@ import { canManageAdminSettings } from "@/lib/rbac";
 import { hasFreshStepUp } from "@/lib/session";
 import { writeAuditLog } from "@/lib/audit";
 import { SYSTEM_ENTRA_OBJECT_ID } from "@/lib/ingestion/process-message";
+import { isColourSlot } from "@/lib/users/colour-names";
 
 interface PatchBody {
   role?: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
@@ -13,6 +14,8 @@ interface PatchBody {
   displayName?: string;
   upn?: string;
   entraObjectId?: string;
+  /** 0-9, or null for automatic (John, 2026-10-05) -- lib/users/colour-names.ts. */
+  colourSlot?: number | null;
 }
 
 // §3: ADMIN only. Role changes are one of §6's seven step-up-gated
@@ -40,9 +43,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       body.isActive === undefined &&
       body.displayName === undefined &&
       body.upn === undefined &&
-      body.entraObjectId === undefined)
+      body.entraObjectId === undefined &&
+      body.colourSlot === undefined)
   ) {
-    return badRequest("role, isActive, displayName, and/or upn+entraObjectId is required");
+    return badRequest("role, isActive, displayName, colourSlot, and/or upn+entraObjectId is required");
+  }
+  if (body.colourSlot !== undefined && body.colourSlot !== null && !isColourSlot(body.colourSlot)) {
+    return badRequest("colourSlot must be 0-9, or null for automatic");
   }
   if (body.displayName !== undefined && !body.displayName.trim()) {
     return badRequest("displayName cannot be blank");
@@ -92,7 +99,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const activeChanged = body.isActive !== undefined && body.isActive !== target.isActive;
   const displayNameChanged = body.displayName !== undefined && body.displayName.trim() !== target.displayName;
 
-  if (!roleChanged && !activeChanged && !displayNameChanged && !identityChanged) {
+  const colourChanged = body.colourSlot !== undefined && body.colourSlot !== target.colourSlot;
+
+  if (!roleChanged && !activeChanged && !displayNameChanged && !identityChanged && !colourChanged) {
     return NextResponse.json({ user: target });
   }
 
@@ -104,6 +113,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       displayName: displayNameChanged ? body.displayName!.trim() : undefined,
       upn: identityChanged ? body.upn!.trim() : undefined,
       entraObjectId: identityChanged ? body.entraObjectId!.trim() : undefined,
+      colourSlot: colourChanged ? body.colourSlot : undefined,
     },
   });
 
@@ -142,6 +152,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       entityId: target.id,
       beforeJson: { displayName: target.displayName },
       afterJson: { displayName: updated.displayName },
+    });
+  }
+  if (colourChanged) {
+    await writeAuditLog({
+      correlationId,
+      actorId: session.user.id,
+      action: "USER_COLOUR_CHANGED",
+      entity: "user",
+      entityId: target.id,
+      beforeJson: { colourSlot: target.colourSlot },
+      afterJson: { colourSlot: updated.colourSlot },
     });
   }
   if (identityChanged) {

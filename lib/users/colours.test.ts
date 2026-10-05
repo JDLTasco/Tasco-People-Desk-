@@ -19,4 +19,9 @@ describe("colourSlots", () => {
     const ids = Array.from({ length: ASSIGNEE_COLOUR_COUNT + 1 }, (_, i) => `u${i}`);
     assert.equal(colourSlots(ids).get(`u${ASSIGNEE_COLOUR_COUNT}`), 0);
   });
+
+  it("an admin-chosen colour wins; everyone else keeps their automatic slot", () => {
+    const slots = colourSlots(["a", "b", "c"], new Map([["b", 4]]));
+    assert.deepEqual([slots.get("a"), slots.get("b"), slots.get("c")], [0, 4, 2]);
+  });
 });
