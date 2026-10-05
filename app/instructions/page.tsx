@@ -79,7 +79,8 @@ export default async function InstructionsPage() {
               <li>
                 <strong>Action items</strong> such as <strong>On Hold</strong> -- labels an Admin manages under
                 Admin &rarr; Action items. Each appears in the Current action dropdown; the label then shows in
-                place of IN_ACTION on the ticket and in every list. Anyone can set one; only the assignee, HR Leads
+                place of IN_ACTION on the ticket and in every list. Setting one needs a reason (e.g. why it&apos;s on
+                hold), saved as an internal note. Anyone can set one; only the assignee, HR Leads
                 and Admins can clear it. It clears by itself when the ticket moves to any other status, and the due
                 date keeps running while it&apos;s set.
               </li>
@@ -291,7 +292,7 @@ export default async function InstructionsPage() {
             at the time and stays.)
           </li>
           <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
-          <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
+          <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong> and type the reason. To take over a colleague&apos;s ticket, pick yourself under <strong>Reassign</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
           <li>When resolved, use the <strong>outcome dispatch preview</strong> to draft the resolution, check who it goes To and CC, review the exact email that will send, and confirm.</li>
           <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
           <li>If the email is for information only or genuinely not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>

@@ -152,6 +152,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             categoryId={ticket.categoryId}
             businessUnitId={ticket.businessUnitId}
             isAssignedTicket={isAssignedTicket}
+            assignedToId={ticket.assignedToId}
             canEditMetadata={canEditMetadata}
             canMerge={canMerge}
             role={session.user.role}

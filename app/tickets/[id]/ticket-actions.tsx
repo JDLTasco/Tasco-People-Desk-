@@ -22,6 +22,7 @@ interface Props {
   categoryId: string | null;
   businessUnitId: string | null;
   isAssignedTicket: boolean;
+  assignedToId: string | null;
   canEditMetadata: boolean;
   canMerge: boolean;
   role: "ADMIN" | "HR_LEAD" | "HR_OFFICER";
@@ -76,6 +77,7 @@ export default function TicketActions({
   categoryId,
   businessUnitId,
   isAssignedTicket,
+  assignedToId,
   canEditMetadata,
   canMerge,
   role,
@@ -203,9 +205,14 @@ export default function TicketActions({
     actionOptions.push({ value: `item:${actionStatusId}`, label: actionStatusName ?? "Action item", allowed: true });
   }
 
+  // Response received and every action item (e.g. On Hold) need a note typed
+  // in the box under the dropdown (action items: John, 2026-10-05).
+  const needsActionNote = (target: string) => target === "RESPONSE_RECEIVED" || target.startsWith("item:");
+  const selectedActionName = actionOptions.find((o) => o.value === selectedAction)?.label ?? "";
+
   function changeAction(target: string, v: number): Promise<ApiResult> {
     if (target.startsWith("item:")) {
-      return postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: target.slice(5) });
+      return postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: target.slice(5), reason: responseNote });
     }
     if (target === "IN_ACTION" && status === "IN_ACTION") {
       return postJson(`/api/tickets/${ticketId}/action-status`, { version: v, actionStatusId: null });
@@ -232,6 +239,9 @@ export default function TicketActions({
     if (isWorking && selectedAction !== currentAction) {
       if (selectedAction === "RESPONSE_RECEIVED" && !responseNote.trim()) {
         return { ok: false, error: "type what the requester said for Response received (Current action), or change it back." };
+      }
+      if (selectedAction.startsWith("item:") && !responseNote.trim()) {
+        return { ok: false, error: `type a reason for ${selectedActionName} (Current action), or change it back.` };
       }
       const result = await changeAction(selectedAction, saved.version);
       if (!result.ok) {
@@ -408,7 +418,7 @@ export default function TicketActions({
             ))}
           </select>{" "}
           <button
-            disabled={busy || selectedAction === currentAction || (selectedAction === "RESPONSE_RECEIVED" && !responseNote.trim())}
+            disabled={busy || selectedAction === currentAction || (needsActionNote(selectedAction) && !responseNote.trim())}
             onClick={() =>
               runWithSave(async (v) => {
                 const result = await changeAction(selectedAction, v);
@@ -419,12 +429,16 @@ export default function TicketActions({
           >
             Update action
           </button>
-          {selectedAction === "RESPONSE_RECEIVED" && selectedAction !== currentAction && (
+          {needsActionNote(selectedAction) && selectedAction !== currentAction && (
             <div style={{ marginTop: "0.5rem" }}>
               <textarea
                 value={responseNote}
                 onChange={(e) => setResponseNote(e.target.value)}
-                placeholder="What did the requester say? (required -- saved as an internal note; the assignee gets an alert)"
+                placeholder={
+                  selectedAction === "RESPONSE_RECEIVED"
+                    ? "What did the requester say? (required -- saved as an internal note; the assignee gets an alert)"
+                    : `Reason for ${selectedActionName} (required -- saved as an internal note)`
+                }
                 rows={3}
                 style={{ width: "100%", maxWidth: "40rem" }}
               />
@@ -602,10 +616,13 @@ export default function TicketActions({
       {(status === "ALLOCATED" || isWorking) && (
         <div style={{ marginBottom: "1rem" }}>
           <h3>Reassign</h3>
+          {/* Lists everyone except the current assignee -- including yourself,
+              so an officer can take over a colleague's ticket (John, 2026-10-05;
+              it used to hide the signed-in user instead). */}
           <select value={selectedAssignee} onChange={(e) => setSelectedAssignee(e.target.value)}>
             <option value="">(choose a user)</option>
             {users
-              .filter((u) => u.id !== userId)
+              .filter((u) => u.id !== assignedToId)
               .map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.displayName}

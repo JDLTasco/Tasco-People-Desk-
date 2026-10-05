@@ -11,7 +11,11 @@ interface ActionStatusBody {
   version: number;
   /** The action item to set, or null to clear the current one. */
   actionStatusId: string | null;
-  /** Optional, recorded in status history. */
+  /**
+   * Required when setting an action item (e.g. why it's On Hold -- John,
+   * 2026-10-05, same as Response received's note); optional when clearing.
+   * Recorded in status history and saved as an internal note.
+   */
   reason?: string;
 }
 
@@ -31,6 +35,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
   const targetId = body.actionStatusId;
   const reason = body.reason?.trim() || undefined;
+  if (targetId && !reason) {
+    return badRequest("A reason is required when setting an action item (e.g. why the ticket is on hold)");
+  }
 
   const ticket = await prisma.ticket.findUnique({
     where: { id: params.id },
@@ -66,6 +73,20 @@ export async function POST(request: Request, { params }: { params: { id: string 
   }
 
   const label = target ? `Action item: ${target.name}` : `Action item cleared: ${ticket.actionStatus?.name ?? ""}`;
+  if (target && reason) {
+    const note = await prisma.ticketNote.create({
+      data: { ticketId: ticket.id, authorId: session.user.id, body: `${target.name}: ${reason}`, visibility: "INTERNAL" },
+    });
+    await writeAuditLog({
+      correlationId,
+      actorId: session.user.id,
+      action: "TICKET_NOTE_CREATED",
+      entity: "ticket_note",
+      entityId: note.id,
+      ticketId: ticket.id,
+      afterJson: { body: note.body, visibility: note.visibility },
+    });
+  }
   await writeStatusHistory({
     ticketId: ticket.id,
     fromStatus: ticket.status,
