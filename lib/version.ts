@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.0.0";
+export const APP_VERSION = "2.0.1";
 
 // History:
+// 2.0.1 (2026-10-05) -- choosing a new priority shows the new target due date
+//   straight away (before Save changes)
 // 2.0.0 (2026-10-05) -- Received date column on every ticket list (sortable
 //   via Sort by -> Date received); version 2.0 at John's request
 // 1.13.0 (2026-10-05) -- "Send outcome to employee" (purple): outcome email

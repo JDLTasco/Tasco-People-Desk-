@@ -619,6 +619,10 @@ main.ticket-page {
 }
 .item-card.message-outcome > div:first-child strong { color: var(--chip-outcome-ink); }
 
+/* Target due preview after a priority change, before saving (2026-10-05). */
+input.target-preview { background: var(--tasco-amber-pale); border-color: var(--tasco-amber); }
+.target-preview-note { color: var(--tasco-amber); font-size: 0.85rem; }
+
 /* List rows: left edge coloured by priority (John, 2026-10-05; was by assignee). */
 .priority-edge-P1 { --p-edge: var(--tasco-red); }
 .priority-edge-P2 { --p-edge: var(--tasco-amber); }

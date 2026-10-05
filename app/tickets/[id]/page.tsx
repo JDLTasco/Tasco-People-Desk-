@@ -4,6 +4,7 @@ import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { effectiveDueDate, isOverdue } from "@/lib/tickets/due-dates";
 import { isAutoTargetReason } from "@/lib/tickets/target-due";
 import { getAssigneeColourMap } from "@/lib/users/colours";
+import { loadHolidaySet } from "@/lib/calendar/holidays";
 import { validateReopen } from "@/lib/tickets/reopen";
 import { canActOnAssignedTicket, canEditTicketMetadata, canManageAdminSettings } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
@@ -46,6 +47,8 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
   const lastChange = ticket.statusHistory[ticket.statusHistory.length - 1];
   const assigneeColour = ticket.assignee ? ((await getAssigneeColourMap()).get(ticket.assignee.id) ?? null) : null;
+  // For the target-date preview when priority is changed (2026-10-05).
+  const holidayKeys = Array.from(await loadHolidaySet());
 
   return (
     <main className="ticket-page">
@@ -179,6 +182,8 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             ccRecipients={ticket.ccRecipients}
             targetDueAt={ticket.targetDueAt ? ticket.targetDueAt.toISOString() : null}
             targetDueReason={ticket.targetDueReason}
+            receivedAt={ticket.receivedAt.toISOString()}
+            holidayKeys={holidayKeys}
             attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
             isConfidential={ticket.isConfidential}
             isLegalHold={ticket.isLegalHold}

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import OutcomeDispatchModal from "./outcome-dispatch-modal";
 import MergeTicketForm from "./merge-ticket-form";
 import QuestionModal from "./question-modal";
-import { isAutoTargetReason } from "@/lib/tickets/target-due";
+import { autoTargetDue, isAutoTargetReason, shouldRecalculateTarget } from "@/lib/tickets/target-due";
 import { registerSaver, type SaveResult } from "@/components/pending-saves";
 
 interface OutcomeAttachment {
@@ -33,6 +33,9 @@ interface Props {
   ccRecipients: string[];
   targetDueAt: string | null;
   targetDueReason: string | null;
+  /** For previewing the automatic target date when priority is changed. */
+  receivedAt: string;
+  holidayKeys: string[];
   attachments: OutcomeAttachment[];
   isConfidential: boolean;
   isLegalHold: boolean;
@@ -88,6 +91,8 @@ export default function TicketActions({
   ccRecipients,
   targetDueAt,
   targetDueReason,
+  receivedAt,
+  holidayKeys,
   attachments,
   isConfidential,
   isLegalHold,
@@ -155,6 +160,20 @@ export default function TicketActions({
     return changes;
   }
   const hasPendingChanges = Object.keys(pendingChanges()).length > 0;
+
+  // Preview (John, 2026-10-05): picking a new priority shows the new automatic
+  // target date straight away instead of only after saving. Display only --
+  // the same calculation the server runs on save (lib/tickets/target-due.ts,
+  // same holiday calendar), so nothing extra is sent. Not shown when the date
+  // was set by hand (it doesn't follow priority) or is being edited now.
+  const holidays = useMemo(() => new Set(holidayKeys), [holidayKeys]);
+  const targetPreview =
+    canEditMetadata &&
+    selectedPriority !== priority &&
+    shouldRecalculateTarget({ targetDueAt: targetDueAt ? new Date(targetDueAt) : null, targetDueReason }) &&
+    targetDue === originalDue
+      ? autoTargetDue(new Date(receivedAt), selectedPriority, holidays)
+      : null;
 
   type ApiResult = { ok: boolean; status: number; data: { error?: string; ticket?: { version: number } } };
 
@@ -360,7 +379,8 @@ export default function TicketActions({
           Target due (KPI):{" "}
           <input
             type="datetime-local"
-            value={targetDue}
+            value={targetPreview ? toLocalInputValue(targetPreview.targetDueAt.toISOString()) : targetDue}
+            className={targetPreview ? "target-preview" : undefined}
             onChange={(e) => {
               setTargetDue(e.target.value);
               // Overriding the automatic date needs a real reason.
@@ -371,13 +391,18 @@ export default function TicketActions({
         <label>
           Reason (required when you change the date):{" "}
           <input
-            value={targetDueReasonText}
+            value={targetPreview ? targetPreview.targetDueReason : targetDueReasonText}
             onChange={(e) => setTargetDueReasonText(e.target.value)}
             placeholder="e.g. Fair Work response date"
-            readOnly={isAutoTargetReason(targetDueReasonText)}
+            readOnly={!!targetPreview || isAutoTargetReason(targetDueReasonText)}
             style={{ width: "16rem" }}
           />
         </label>{" "}
+        {targetPreview && (
+          <strong className="target-preview-note">
+            New date for {selectedPriority} -- saved when you click Save changes (or any Action button).
+          </strong>
+        )}{" "}
         {targetDue && (
           <button
             type="button"
