@@ -115,11 +115,17 @@ export default function TicketActions({
   const originalDue = targetDueAt ? toLocalInputValue(targetDueAt) : "";
   const [targetDue, setTargetDue] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [targetDueReasonText, setTargetDueReasonText] = useState(targetDueReason ?? "");
+  // The reason is re-synced along with the date whenever the saved values
+  // change (found 2026-10-05: after a priority change the server moves the
+  // automatic date and its "Automatic: ..." reason, but the old reason stayed
+  // in the box, so the page saw a phantom target-date edit and Save & exit
+  // demanded a reason for a change nobody made).
   useEffect(() => {
     setTargetDue(originalDue);
+    setTargetDueReasonText(targetDueReason ?? "");
     setMounted(true);
-  }, [originalDue]);
-  const [targetDueReasonText, setTargetDueReasonText] = useState(targetDueReason ?? "");
+  }, [originalDue, targetDueReason]);
   const [legalHoldReasonText, setLegalHoldReasonText] = useState("");
   const [deleteReasonText, setDeleteReasonText] = useState("");
   const [responseNote, setResponseNote] = useState("");
