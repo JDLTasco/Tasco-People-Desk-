@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.2.2";
+export const APP_VERSION = "2.3.0";
 
 // History:
+// 2.3.0 (2026-10-06) -- Procedure moved to its own page; Instructions is now a
+//   drop-down menu (Instructions / Procedure)
 // 2.2.2 (2026-10-06) -- fix: merging refused with "version, intoTicketId, and
 //   intoVersion are all required" (ticket search didn't return the version)
 // 2.2.1 (2026-10-06) -- Instructions brought up to date; new Procedure section

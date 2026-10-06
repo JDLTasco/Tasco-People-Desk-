@@ -70,7 +70,15 @@ export default async function NavBar() {
       <Link href="/archive-search">Archive search</Link>
       {/* HR dashboard (2026-10-03) -- every role since 2026-10-05, on the main bar rather than the Admin menu. */}
       {canViewDashboard(session.user.role) && <Link href="/admin/dashboard">Dashboard</Link>}
-      <Link href="/instructions">Instructions</Link>
+      {/* Procedure split onto its own page under an Instructions drop-down (2026-10-06). */}
+      <AdminMenu
+        label="Instructions"
+        activePrefix="/instructions"
+        links={[
+          { href: "/instructions", label: "Instructions" },
+          { href: "/instructions/procedure", label: "Procedure" },
+        ]}
+      />
       {adminLinks.length > 0 && <AdminMenu links={adminLinks} />}
       <span className="nav-spacer">
         {session.user.name} ({session.user.role})
