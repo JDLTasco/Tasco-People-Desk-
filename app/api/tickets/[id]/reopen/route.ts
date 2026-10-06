@@ -6,6 +6,7 @@ import { canViewerSeeTicket } from "@/lib/tickets/confidential-access";
 import { reopenTargetStatus, validateReopen } from "@/lib/tickets/reopen";
 import { writeAuditLog } from "@/lib/audit";
 import { writeStatusHistory } from "@/lib/tickets/history";
+import { loadHolidaySet } from "@/lib/calendar/holidays";
 
 interface Body {
   version: number;
@@ -13,7 +14,8 @@ interface Body {
 }
 
 // Operator addition (John, 2026-09-29): any HR staff member may reopen a
-// CLOSED ticket within 30 days of closure, with a mandatory reason -- see
+// CLOSED ticket within its reply window (2 working days of closure since
+// 2026-10-06; was 30 days), with a mandatory reason -- see
 // lib/tickets/reopen.ts for the window and where the ticket lands. Unlike
 // the ADMIN-only reversal, no step-up is needed.
 export async function POST(request: Request, { params }: { params: { id: string } }) {
@@ -29,7 +31,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!ticket || ticket.isDeleted) return notFound();
   if (!canViewerSeeTicket(session.user.role, session.user.id, ticket)) return notFound();
 
-  const check = validateReopen(ticket);
+  const check = validateReopen(ticket, await loadHolidaySet());
   if (!check.ok) return badRequest(check.error!);
 
   const toStatus = reopenTargetStatus(ticket);

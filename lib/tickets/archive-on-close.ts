@@ -1,7 +1,7 @@
 // "Close -- Info only" (close reason NOT_A_REQUEST) and "Close -- Autoclose"
 // archive the ticket straight away (John, 2026-10-03): they're closed with
 // no priority/category/target date needed and go straight to the archive,
-// skipping the 30-day reopen window every other closed ticket gets
+// skipping the 2 working-day reply window every other closed ticket gets
 // (lib/tickets/reopen.ts). If the archive write fails the ticket stays
 // CLOSED and the nightly archive-closed job retries it (it picks these
 // close reasons up regardless of age).

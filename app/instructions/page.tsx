@@ -100,8 +100,8 @@ export default async function InstructionsPage() {
             Withdrawn (the requester no longer wants it actioned).
           </li>
           <li>
-            <strong>ARCHIVED</strong> -- happens automatically 30 days after closure, via an overnight job (an
-            ADMIN can also trigger it on demand). See &quot;Closed vs. Archived&quot; below -- they are genuinely
+            <strong>ARCHIVED</strong> -- happens automatically 2 working days after closure if the requester
+            hasn&apos;t replied, via an overnight job (an ADMIN can also trigger it on demand). See &quot;Closed vs. Archived&quot; below -- they are genuinely
             different things.
           </li>
         </ol>
@@ -242,14 +242,23 @@ export default async function InstructionsPage() {
         <h2>Closed vs. Archived -- these are not the same thing</h2>
         <p>
           <strong>CLOSED</strong> is the normal end of a ticket&apos;s working life. It&apos;s still a completely
-          live, visible record. For <strong>30 days</strong> after closing, any staff member can
-          <strong>Reopen</strong> it (a reason is required). It goes back to its assignee as IN ACTION (or
-          ALLOCATED if it has no category yet), or back to the Pool if it was never assigned. A ticket that was
-          merged into another can&apos;t be reopened -- work on the ticket it was merged into instead.
+          live, visible record. For <strong>2 working days</strong> after closing (Monday-Friday, skipping the
+          days on Admin -&gt; Calendar), any staff member can <strong>Reopen</strong> it (a reason is required). It
+          goes back to its assignee as IN ACTION (or ALLOCATED if it has no category yet), or back to the Pool if
+          it was never assigned. A ticket that was merged into another can&apos;t be reopened -- work on the
+          ticket it was merged into instead.
+        </p>
+        <p>
+          <strong>Reply windows.</strong> After the outcome is sent (OUTCOME), the requester has 2 working days
+          to reply. If they don&apos;t, the ticket closes automatically, and they then have another 2 working days
+          before it is archived. A reply inside either window <strong>reopens the ticket automatically</strong> --
+          back to its assignee as RESPONSE RECEIVED, with the usual alert. A reply that arrives after that starts a
+          <strong>new ticket</strong>, with a note pointing back to the old one. (Info only and Autoclose tickets
+          are archived straight away, so any reply to those is always a new ticket.)
         </p>
         <p>
           <strong>ARCHIVED</strong> happens later, automatically. An overnight job picks up tickets closed more
-          than 30 days ago (an ADMIN can also archive on demand) and writes them out to permanent, durable files containing the full correspondence,
+          than 2 working days ago (an ADMIN can also archive on demand) and writes them out to permanent, durable files containing the full correspondence,
           notes, and metadata -- this is what actually starts the 7-year retention clock, and it&apos;s what makes
           a ticket read-only in the portal for everyone except ADMIN from that point on.
         </p>
@@ -321,7 +330,7 @@ export default async function InstructionsPage() {
             <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>&quot;Info only&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Reopen a closed ticket (within 30 days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Reopen a closed ticket (within 2 working days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Set / clear confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if granted or assigned</td></tr>
             <tr><td>Set / clear legal hold</td><td>Yes</td><td>No</td><td>No</td></tr>

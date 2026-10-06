@@ -187,7 +187,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             attachments={ticket.attachments.map((a) => ({ id: a.id, filename: a.filename }))}
             isConfidential={ticket.isConfidential}
             isLegalHold={ticket.isLegalHold}
-            canReopen={validateReopen(ticket).ok}
+            canReopen={validateReopen(ticket, new Set(holidayKeys)).ok}
             actionStatusId={ticket.actionStatusId}
             actionStatusName={ticket.actionStatus?.name ?? null}
           />

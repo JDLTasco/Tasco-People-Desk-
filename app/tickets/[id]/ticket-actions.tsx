@@ -39,7 +39,7 @@ interface Props {
   attachments: OutcomeAttachment[];
   isConfidential: boolean;
   isLegalHold: boolean;
-  /** CLOSED within the last 30 days and not merged away -- see lib/tickets/reopen.ts. */
+  /** CLOSED within its 2 working-day reply window and not merged away -- see lib/tickets/reopen.ts. */
   canReopen: boolean;
   /** Current action item (e.g. "On Hold"), only ever set while IN_ACTION -- see lib/tickets/action-status.ts. */
   actionStatusId: string | null;
@@ -606,7 +606,7 @@ export default function TicketActions({
             </button>
           )}
 
-          {/* Reopen within 30 days of closing (2026-09-29) -- any staff member, reason required. */}
+          {/* Reopen within 2 working days of closing (2026-10-06; was 30 days) -- any staff member, reason required. */}
           {canReopen && (
             <span>
               <input

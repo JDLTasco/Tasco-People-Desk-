@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.1.1";
+export const APP_VERSION = "2.2.0";
 
 // History:
+// 2.2.0 (2026-10-06) -- reply windows: Outcome closes after 2 working days with no
+//   reply, Closed archives 2 working days later; a reply inside a window reopens
+//   the ticket, a later reply starts a new ticket pointing back to the old one
 // 2.1.1 (2026-10-06) -- fix: P3 target date previews on tickets with no date yet;
 //   merging (and saving) no longer refused with "Give a reason for overriding..."
 // 2.1.0 (2026-10-05) -- Admin -> Users: pick each staff member's colour (or

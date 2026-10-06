@@ -12,6 +12,9 @@ import { isIgnoredImage, loadIgnoredImageHashes } from "./ignored-images";
 import { createTicket } from "../tickets/create-ticket";
 import { writeStatusHistory } from "../tickets/history";
 import { autoResponseReceivedFor } from "../tickets/auto-response";
+import { REPLY_WINDOW_WORKING_DAYS, replyDecision } from "../tickets/reopen";
+import type { TicketStatus } from "../tickets/transitions";
+import { loadHolidaySet } from "../calendar/holidays";
 import { sendAcknowledgementEmail, shouldSendAcknowledgement } from "../email/acknowledgement";
 import { HR_MAILBOX_ADDRESS } from "../email/send";
 
@@ -150,11 +153,14 @@ export async function processInboundMessage(
 
   // §7.3 step 3: threading -- conversation_id lives on ticket_messages, so
   // matching "an existing non-archived ticket" means matching through its messages.
+  // Newest first (2026-10-06): a late reply can start a new ticket in the
+  // same conversation as a closed one, and later replies belong to the new one.
   let existingTicket = await prisma.ticket.findFirst({
     where: {
       messages: { some: { conversationId: message.conversationId } },
       status: { not: "ARCHIVED" },
     },
+    orderBy: { receivedAt: "desc" },
   });
 
   // Operator addition (not in v1.3 spec): fallback when conversation_id
@@ -164,13 +170,47 @@ export async function processInboundMessage(
   // it arrived as a fresh email or lost its threading headers along the
   // way. Matches on subject alone, no sender/requester check -- an
   // explicit operator decision (asked, not guessed), see STATUS.md.
-  if (!existingTicket) {
-    const ticketNo = extractTicketNoFromSubject(message.subject);
-    if (ticketNo) {
-      existingTicket = await prisma.ticket.findFirst({
-        where: { ticketNo, status: { not: "ARCHIVED" } },
-      });
+  const subjectTicketNo = extractTicketNoFromSubject(message.subject);
+  if (!existingTicket && subjectTicketNo) {
+    existingTicket = await prisma.ticket.findFirst({
+      where: { ticketNo: subjectTicketNo, status: { not: "ARCHIVED" } },
+    });
+  }
+
+  // A reply to a ticket that was merged away belongs on the ticket it joined.
+  if (existingTicket?.mergedIntoTicketId) {
+    const joined = await prisma.ticket.findFirst({
+      where: { id: existingTicket.mergedIntoTicketId, status: { not: "ARCHIVED" } },
+    });
+    if (joined) existingTicket = joined;
+  }
+
+  // Reply windows (John, 2026-10-06 -- see lib/tickets/reopen.ts): inside 2
+  // working days of the outcome / close, a reply reopens the ticket; after
+  // that (or once it's archived) it starts a new ticket pointing back to it.
+  let previousTicket: { id: string; ticketNo: string; status: string } | null = null;
+  let reopenTo: TicketStatus | null = null;
+  if (existingTicket) {
+    const fromHrMailbox = message.fromAddress.trim().toLowerCase() === HR_MAILBOX_ADDRESS.toLowerCase();
+    const decision = replyDecision(existingTicket, fromHrMailbox, await loadHolidaySet());
+    if (decision.kind === "NEW_TICKET") {
+      previousTicket = existingTicket;
+      existingTicket = null;
+    } else if (decision.kind === "REOPEN") {
+      reopenTo = decision.toStatus;
     }
+  } else {
+    previousTicket = await prisma.ticket.findFirst({
+      where: {
+        status: "ARCHIVED",
+        OR: [
+          { messages: { some: { conversationId: message.conversationId } } },
+          ...(subjectTicketNo ? [{ ticketNo: subjectTicketNo }] : []),
+        ],
+      },
+      orderBy: { receivedAt: "desc" },
+      select: { id: true, ticketNo: true, status: true },
+    });
   }
 
   if (existingTicket) {
@@ -194,7 +234,11 @@ export async function processInboundMessage(
       },
     });
     await storeAttachments(message, existingTicket.id, reply.id, correlationId);
-    await markResponseReceived(existingTicket, message, correlationId);
+    if (reopenTo) {
+      await reopenOnReply(existingTicket, reopenTo, message, correlationId);
+    } else {
+      await markResponseReceived(existingTicket, message, correlationId);
+    }
     return { action: "THREADED", ticketId: existingTicket.id, messageId: reply.id };
   }
 
@@ -223,6 +267,21 @@ export async function processInboundMessage(
   });
 
   await storeAttachments(message, created.ticketId, created.firstMessageId, correlationId);
+
+  // A reply that came after an old ticket's reply window (2026-10-06) starts
+  // this new ticket -- say where it came from, so the history is one click away.
+  if (previousTicket) {
+    await prisma.ticketNote.create({
+      data: {
+        ticketId: created.ticketId,
+        authorId: await getSystemUserId(),
+        body:
+          `Follow-up to ticket ${previousTicket.ticketNo}, which was ` +
+          `${previousTicket.status === "ARCHIVED" ? "archived" : "closed"} -- this reply came after its ` +
+          `${REPLY_WINDOW_WORKING_DAYS} working-day reply window, so it started a new ticket.`,
+      },
+    });
+  }
 
   await writeAuditLog({
     correlationId,
@@ -295,5 +354,55 @@ async function markResponseReceived(
     ticketId: ticket.id,
     beforeJson: { status: ticket.status },
     afterJson: { status: "RESPONSE_RECEIVED", responseAlertPending: true, trigger: "EMAIL_REPLY", from: message.fromAddress },
+  });
+}
+
+/**
+ * A requester reply inside the reply window (2026-10-06): an OUTCOME or
+ * CLOSED ticket goes back to work -- RESPONSE_RECEIVED with the alert for an
+ * assigned, categorised ticket (see replyReopenStatus). Conditional on the
+ * status read a moment ago, so a staff change made in between wins.
+ */
+async function reopenOnReply(
+  ticket: { id: string; status: string; assignedToId: string | null; closeReason: string | null; closedAt: Date | null },
+  toStatus: TicketStatus,
+  message: NormalizedMessage,
+  correlationId: string,
+): Promise<void> {
+  const systemId = await getSystemUserId();
+  const from = message.fromName ? `${message.fromName} (${message.fromAddress})` : message.fromAddress;
+  const result = await prisma.ticket.updateMany({
+    where: { id: ticket.id, status: ticket.status as "OUTCOME" | "CLOSED" },
+    data: {
+      status: toStatus,
+      closeReason: null,
+      closedAt: null,
+      responseAlertPending: !!ticket.assignedToId,
+      version: { increment: 1 },
+    },
+  });
+  if (result.count === 0) return;
+
+  const reason =
+    `Email reply received from ${from} within ${REPLY_WINDOW_WORKING_DAYS} working days of ` +
+    `${ticket.status === "OUTCOME" ? "the outcome" : "closing"} -- reopened automatically`;
+  await writeStatusHistory({
+    ticketId: ticket.id,
+    fromStatus: ticket.status as "OUTCOME" | "CLOSED",
+    toStatus,
+    actorId: systemId,
+    reason,
+    correlationId,
+  });
+  await writeAuditLog({
+    correlationId,
+    actorId: systemId,
+    action: "TICKET_REOPENED",
+    entity: "ticket",
+    entityId: ticket.id,
+    ticketId: ticket.id,
+    beforeJson: { status: ticket.status, closeReason: ticket.closeReason, closedAt: ticket.closedAt?.toISOString() ?? null },
+    afterJson: { status: toStatus, trigger: "EMAIL_REPLY", from: message.fromAddress },
+    reason,
   });
 }
