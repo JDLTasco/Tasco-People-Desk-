@@ -17,6 +17,9 @@ export default async function InstructionsPage() {
         This page explains how the system works day to day and what to do at each stage of a ticket. It&apos;s
         visible to every signed-in role -- ADMIN, HR_LEAD and HR_OFFICER all see the same content.
       </p>
+      <p>
+        New here? Start with the <a href="#procedure">Procedure</a> -- the whole process, start to finish, in one place.
+      </p>
 
       <section className="section-card">
         <h2>What this system is</h2>
@@ -26,11 +29,14 @@ export default async function InstructionsPage() {
           tracked, and is eventually archived for the 7-year retention period HR records require.
         </p>
         <p>
-          <strong>Current limitation:</strong> the real mailbox connection isn&apos;t live yet (that depends on IT/
-          Entra setup outside this app). Until then, test tickets are created through a dev-only tool rather than
-          real inbound email, and outbound emails are logged as attempted-but-not-actually-delivered. The rest of
-          this page describes how the system behaves once that connection is live, since none of the ticket
-          workflow itself depends on it.
+          <strong>Where things stand right now:</strong> sign-in is live (your normal Tasco Microsoft account).
+          Real emails to HR are brought in as tickets by an import an Admin runs, rather than arriving on their
+          own every few minutes, and <strong>sending email is switched off</strong> while HR finishes testing --
+          acknowledgements, questions and outcomes are recorded on the ticket and listed under Admin &rarr; Failed
+          sends instead of being delivered. Email attachments can be seen on a ticket but can&apos;t be opened
+          until IT switches on malware scanning. Everything else on this page already works exactly as described;
+          once the mailbox connection is switched on, emails flow in and out automatically with no change to how
+          you work a ticket.
         </p>
       </section>
 
@@ -91,7 +97,10 @@ export default async function InstructionsPage() {
           <li>
             <strong>OUTCOME</strong> -- the resolution has been drafted and sent to the requester via the dispatch
             preview (see below). It goes to the requester by default; To and CC can be changed. Notes are never
-            included -- they are internal only.
+            included -- they are internal only. The requester then has <strong>2 working days</strong> to reply: a
+            reply reopens the ticket (back to its assignee as RESPONSE_RECEIVED); no reply and it{" "}
+            <strong>closes automatically</strong> overnight (see &quot;Reply windows&quot; below). You can also close
+            it yourself straight away with <strong>Close -- Resolved</strong>.
           </li>
           <li>
             <strong>CLOSED</strong> -- the matter is finished. A ticket can also reach CLOSED directly from an
@@ -107,8 +116,12 @@ export default async function InstructionsPage() {
         </ol>
         <p>
           A ticket can also be <strong>merged</strong> into another one if two emails turn out to be the same
-          matter -- the merged-away ticket closes with its own distinct reason and its content moves into the
-          other ticket&apos;s correspondence.
+          matter. On the duplicate, click <strong>Merge into another ticket</strong>, search for the ticket to keep
+          by its number or subject, tick it and click <strong>Confirm merge</strong>. Any unsaved changes on the
+          duplicate are saved first. Its emails, notes and attachments move into the ticket you kept, which stays
+          the case number; the duplicate closes with the reason &quot;Merged&quot; and shows a link to the other
+          ticket. Replies to the duplicate&apos;s emails land on the kept ticket. Confidential tickets can&apos;t be
+          merged, and you can&apos;t merge into an archived ticket. A merge can&apos;t be undone.
         </p>
       </section>
 
@@ -141,7 +154,8 @@ export default async function InstructionsPage() {
         </ul>
         <p>
           Priority is set in the Metadata panel by any HR staff member, at any time -- changing it moves the
-          automatic target due date to match. There is one <strong>Save changes</strong> button for priority,
+          automatic target due date to match, and the new date shows in the box (highlighted) as soon as you pick
+          the priority, before you save. There is one <strong>Save changes</strong> button for priority,
           category, business unit and target due date, and pressing any Action button (Claim, Start action, Close,
           etc.) also saves whatever you&apos;ve changed there first.
         </p>
@@ -305,10 +319,93 @@ export default async function InstructionsPage() {
           <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
           <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong> and type the reason. To take over a colleague&apos;s ticket, pick yourself under <strong>Reassign</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
           <li>When resolved, click the purple <strong>Send outcome to employee</strong> button (shown once the ticket is in action) to write up the results of the enquiry, check who it goes To and CC, review the exact email that will send, and confirm. The email&apos;s subject ends &quot;Outcome of your enquiry&quot; and it opens with a purple heading; in Correspondence it shows as a purple <strong>[OUTCOME SENT]</strong> card.</li>
-          <li>Click <strong>Close -- Resolved</strong> -- this also sends the requester a short standardised closing confirmation, separate from the outcome email you already sent above.</li>
+          <li>
+            Then either click <strong>Close -- Resolved</strong> yourself -- this also sends the requester a short
+            standardised closing confirmation, separate from the outcome email -- or leave it: if the requester
+            doesn&apos;t reply within 2 working days the ticket closes by itself overnight, and is archived 2 working
+            days after that. If they do reply in that time, it comes back to you as Response received.
+          </li>
           <li>If the email is for information only or genuinely not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
           <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>
         </ol>
+      </section>
+
+      <section className="section-card" id="procedure">
+        <h2>Procedure -- how everything works, start to finish</h2>
+        <p>
+          The whole process in order: what the system does by itself, and what you do at each point. Times are
+          Melbourne time; &quot;working day&quot; means Monday to Friday, skipping the days on Admin &rarr; Calendar.
+        </p>
+
+        <h3>1. An email arrives</h3>
+        <ol>
+          <li>The email is checked against the <strong>Block list</strong>. If a rule matches, it is not made into a ticket; it&apos;s listed under Admin &rarr; Blocked emails.</li>
+          <li>Automatic replies (out-of-office and similar) are ignored.</li>
+          <li>
+            If it is a reply to an existing ticket -- same email thread, or the <code>[ticket number]</code> is in
+            the subject -- it is added to that ticket&apos;s correspondence. A reply to a ticket being worked marks it{" "}
+            <strong>Response received</strong> and alerts the assignee. For outcome and closed tickets, see step 5.
+          </li>
+          <li>
+            Otherwise a <strong>new ticket</strong> is created in the <a href="/pool">Pool</a> as NEW, priority P3
+            (P1 if the subject says &quot;Urgent&quot;), with an automatic target due date. Known signature images
+            (Admin &rarr; Ignored images) are left off. The requester gets an acknowledgement email with the ticket
+            number.
+          </li>
+          <li>A ticket can also be logged by hand with <strong>+ New ticket</strong> (e.g. after a phone call) -- tick or untick the acknowledgement email.</li>
+        </ol>
+
+        <h3>2. Triage -- take ownership and set it up</h3>
+        <ol>
+          <li>Check the <a href="/pool">Pool</a> regularly (it&apos;s the landing page). Open a ticket and read it.</li>
+          <li>If it isn&apos;t an HR matter: <strong>Close -- Info only</strong> (information only, wrong address) or <strong>Close -- Autoclose</strong> (spam). Both archive straight away and send nothing. An Admin can use <strong>Block this sender</strong> for repeat junk from outside Tasco.</li>
+          <li>If it duplicates another ticket: <strong>Merge into another ticket</strong> (see &quot;The ticket lifecycle&quot;).</li>
+          <li>Otherwise <strong>Claim</strong> it, or <strong>Assign to</strong> a colleague. It becomes ALLOCATED.</li>
+          <li>Set the real <strong>Priority</strong>, a <strong>Category</strong> (required before work can start) and a <strong>Business unit</strong> if relevant. The target due date follows the priority: P1 3, P2 10, P3 20 working days from arrival. Override it, with a reason, only for a real external deadline.</li>
+        </ol>
+
+        <h3>3. Work the ticket</h3>
+        <ol>
+          <li>Click <strong>Start action</strong> -- it becomes IN_ACTION.</li>
+          <li>Record what you do as <strong>internal notes</strong> (never sent outside HR).</li>
+          <li>Need information? <strong>Email a question</strong> (to the requester, or change To to ask someone else) -- the ticket becomes Awaiting response. Asked another way? Set Current action to <strong>Awaiting response</strong>.</li>
+          <li>When they answer: an emailed reply sets <strong>Response received</strong> and alerts you automatically; for a phone call or conversation, choose Response received and type what they said.</li>
+          <li>Waiting on something else? Set an action item such as <strong>On Hold</strong>, with the reason. The due date keeps running.</li>
+          <li>Handing over? Anyone can <strong>Reassign</strong> -- including picking yourself to take over a colleague&apos;s ticket.</li>
+          <li>Leaving the ticket for now? <strong>Save &amp; exit</strong> saves everything unsaved; <strong>Cancel</strong> leaves without saving.</li>
+        </ol>
+
+        <h3>4. Resolve it</h3>
+        <ol>
+          <li>Click <strong>Send outcome to employee</strong>, write the outcome, check To and CC, review the email and confirm. The ticket becomes OUTCOME.</li>
+          <li>If the requester withdraws before then, use <strong>Close -- Withdrawn</strong> instead (no email).</li>
+        </ol>
+
+        <h3>5. After the outcome -- reply windows (automatic)</h3>
+        <ol>
+          <li><strong>OUTCOME:</strong> the requester has 2 working days to reply. Example: outcome sent Thursday 3pm &rarr; the window ends Monday 3pm.</li>
+          <li><strong>A reply inside the window</strong> reopens the ticket automatically -- back to its assignee as Response received, with the alert. Carry on from step 3.</li>
+          <li><strong>No reply:</strong> the overnight job closes it (Closed -- Resolved, dated when the window ended). You can also close it yourself any time with <strong>Close -- Resolved</strong>, which sends a short closing confirmation.</li>
+          <li><strong>CLOSED:</strong> a second 2 working-day window. A reply in it reopens the ticket the same way; staff can also <strong>Reopen</strong> it by hand, with a reason.</li>
+          <li><strong>No reply again:</strong> the overnight job <strong>archives</strong> it -- written to the permanent record, read-only, and the 7-year retention starts.</li>
+          <li><strong>A reply after that</strong> (or to an archived ticket) starts a <strong>new ticket</strong> in the Pool, with a note &quot;Follow-up to ticket &hellip;&quot; so the history is one click away. Replies to Info only or Autoclose tickets always start a new ticket; replies to a merged ticket go to the ticket it was merged into.</li>
+        </ol>
+
+        <h3>6. What runs by itself</h3>
+        <ul>
+          <li><strong>01:00 nightly</strong> -- closes OUTCOME tickets whose window has ended, then archives CLOSED tickets whose window has ended (and Info only / Autoclose tickets straight away). The deadlines are exact; the job runs once a night, so a ticket can close or archive up to a day after its window ends. A reply after the window still makes a new ticket.</li>
+          <li><strong>02:00 daily</strong> -- removes archived records whose 7-year retention has ended, unless they are on legal hold.</li>
+          <li><strong>06:00 daily</strong> -- overdue escalation: one reminder a day for a ticket past its due date (at most three per ticket); overdue tickets nobody has taken go to the HR Lead.</li>
+          <li><strong>Every 15 minutes, once the mailbox connection is switched on</strong> -- picks up new emails (until then an Admin runs an import).</li>
+        </ul>
+
+        <h3>7. Routine checks</h3>
+        <ul>
+          <li><strong>Every day:</strong> the Pool, your <strong>My tickets</strong> (a red number means a response came in), and <strong>Overdue</strong>.</li>
+          <li><strong>Every week:</strong> the <strong>Dashboard</strong> -- workload, overdue, on-time rate.</li>
+          <li><strong>Admins, weekly:</strong> Admin &rarr; Failed sends and Blocked emails (anything wrongly blocked? switch the rule off).</li>
+          <li><strong>Admins, yearly:</strong> add next year&apos;s public holidays and shutdown days on Admin &rarr; Calendar.</li>
+        </ul>
       </section>
 
       <section className="section-card">
@@ -331,13 +428,15 @@ export default async function InstructionsPage() {
             <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>&quot;Info only&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Reopen a closed ticket (within 2 working days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Merge a ticket into another</td><td>Yes</td><td>Yes</td><td>If you&apos;re assigned to the ticket</td></tr>
+            <tr><td>HR dashboard</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Set / clear confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if granted or assigned</td></tr>
             <tr><td>Set / clear legal hold</td><td>Yes</td><td>No</td><td>No</td></tr>
             <tr><td>Reverse a status transition</td><td>Yes (step-up required)</td><td>No</td><td>No</td></tr>
             <tr><td>Soft-delete a ticket</td><td>Yes (step-up required)</td><td>No</td><td>No</td></tr>
-            <tr><td>Manage users, categories, business units</td><td>Yes</td><td>No</td><td>No</td></tr>
-            <tr><td>View audit log</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Manage users and colours, categories, business units, action items, calendar, block list, ignored images</td><td>Yes</td><td>No</td><td>No</td></tr>
+            <tr><td>View audit log, legal holds list, address book</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>Bulk export (CSV)</td><td>Yes</td><td>Yes</td><td>No</td></tr>
           </tbody>
         </table>
@@ -351,7 +450,9 @@ export default async function InstructionsPage() {
       <section className="section-card">
         <h2>Admin tasks (ADMIN only, listed here for visibility)</h2>
         <ul>
-          <li><strong>Admin -- Users</strong>: create/pre-provision users, change roles, set a person&apos;s real display name, archive/restore a user.</li>
+          <li><strong>Admin -- Users</strong>: create/pre-provision users, change roles, set a person&apos;s real display name, pick their colour (or Automatic), archive/restore a user.</li>
+          <li><strong>Admin -- Calendar</strong>: the non-working days (Victorian public holidays, Tasco shutdowns) skipped when counting working days -- for target due dates, the reply windows and the dashboard. Add next year&apos;s dates each year.</li>
+          <li><strong>Admin -- Address book</strong> (ADMIN and HR_LEAD): every address the People Desk has seen (requesters, CCs, anyone who emailed or was emailed by HR) -- the list the To and CC suggestions come from. Built from the tickets themselves, so it&apos;s always up to date; read-only.</li>
           <li><strong>Admin -- Categories</strong> / <strong>Business units</strong> / <strong>Action items</strong>: add new ones, rename existing ones, deactivate (never delete -- existing tickets keep their history either way).</li>
           <li><strong>Admin -- Legal holds</strong>: see every ticket currently under hold, oldest first.</li>
           <li><strong>Admin -- Deleted</strong>: see soft-deleted tickets (no drill-down back into them, by design).</li>
