@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.2.1";
+export const APP_VERSION = "2.2.2";
 
 // History:
+// 2.2.2 (2026-10-06) -- fix: merging refused with "version, intoTicketId, and
+//   intoVersion are all required" (ticket search didn't return the version)
 // 2.2.1 (2026-10-06) -- Instructions brought up to date; new Procedure section
 //   (the whole process start to finish)
 // 2.2.0 (2026-10-06) -- reply windows: Outcome closes after 2 working days with no

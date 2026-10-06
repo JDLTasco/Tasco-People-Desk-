@@ -18,6 +18,9 @@ const TICKET_LIST_SELECT = {
   targetDueAt: true,
   isConfidential: true,
   responseAlertPending: true,
+  // The merge picker (merge-ticket-form.tsx) sends the chosen ticket's version
+  // back as intoVersion -- without it every merge was refused (2026-10-06).
+  version: true,
   category: { select: { name: true } },
   businessUnit: { select: { name: true } },
   actionStatus: { select: { name: true } },
