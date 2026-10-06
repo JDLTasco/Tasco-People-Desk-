@@ -21,6 +21,11 @@ export function calculateTargetDueDate(receivedAt: Date, priority: Priority, hol
   return addWorkingDays(receivedAt, TARGET_WORKING_DAYS[priority], holidays);
 }
 
+/** Same minute (the ticket page's date box has no seconds; automatic dates do). */
+export function sameMinute(a: Date, b: Date): boolean {
+  return Math.floor(a.getTime() / 60_000) === Math.floor(b.getTime() / 60_000);
+}
+
 export function autoTargetReason(priority: Priority): string {
   return `${AUTO_TARGET_REASON_PREFIX} ${priority} = ${TARGET_WORKING_DAYS[priority]} working days`;
 }

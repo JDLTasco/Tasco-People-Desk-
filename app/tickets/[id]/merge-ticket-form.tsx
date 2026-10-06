@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 interface Props {
   ticketId: string;
   ticketNo: string;
-  version: number;
+  /** Saves the Actions panel's pending detail changes first, like every other action button (2026-10-06). */
+  saveChanges: () => Promise<{ version: number } | { error: string }>;
 }
 
 interface SearchResult {
@@ -21,7 +22,7 @@ interface SearchResult {
 // original v1.3 spec. This ticket is the one that will stop being the
 // prominent case number if merged; the officer searches for the ticket
 // it should merge INTO.
-export default function MergeTicketForm({ ticketId, ticketNo, version }: Props) {
+export default function MergeTicketForm({ ticketId, ticketNo, saveChanges }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -46,10 +47,16 @@ export default function MergeTicketForm({ ticketId, ticketNo, version }: Props) 
     if (!selected) return;
     setBusy(true);
     setError(null);
+    const saved = await saveChanges();
+    if ("error" in saved) {
+      setBusy(false);
+      setError(`Not merged -- ${saved.error}`);
+      return;
+    }
     const res = await fetch(`/api/tickets/${ticketId}/merge`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version, intoTicketId: selected.id, intoVersion: selected.version }),
+      body: JSON.stringify({ version: saved.version, intoTicketId: selected.id, intoVersion: selected.version }),
     });
     setBusy(false);
     const data = await res.json().catch(() => ({}));

@@ -143,37 +143,54 @@ export default function TicketActions({
   const canCloseEarly = status === "NEW" || status === "ALLOCATED" || isWorking;
   const isAssigneeOrLead = isAssignedTicket || role === "ADMIN" || role === "HR_LEAD";
 
+  // Preview (John, 2026-10-05): picking a new priority shows the new automatic
+  // target date straight away instead of only after saving. Display only --
+  // the same calculation the server runs on save (lib/tickets/target-due.ts,
+  // same holiday calendar). Not shown when the date was set by hand (it
+  // doesn't follow priority) or is being edited now.
+  // 2026-10-06 fix: also shown for an open ticket that has NO target date yet
+  // (the tickets from before 2026-10-03). It used to need a priority change,
+  // so choosing P3 on a ticket that was already P3 left the box empty.
+  const holidays = useMemo(() => new Set(holidayKeys), [holidayKeys]);
+  const isOpen = status !== "CLOSED" && status !== "ARCHIVED";
+  const targetMissing = targetDueAt === null;
+  const targetPreview =
+    canEditMetadata &&
+    isOpen &&
+    (selectedPriority !== priority || targetMissing) &&
+    shouldRecalculateTarget({ targetDueAt: targetDueAt ? new Date(targetDueAt) : null, targetDueReason }) &&
+    targetDue === originalDue
+      ? autoTargetDue(new Date(receivedAt), selectedPriority, holidays)
+      : null;
+
   // Only the fields actually changed are sent, so an unchanged form never
   // writes an empty audit row (2026-09-29: one Save button for all details,
   // and every action button saves pending changes first).
   function pendingChanges(): Record<string, unknown> {
     const changes: Record<string, unknown> = {};
     if (canEditMetadata) {
-      if (selectedPriority !== priority) changes.priority = selectedPriority;
+      // A previewed date on a ticket with no target yet is saved by sending
+      // the (unchanged) priority: the server then fills the automatic date
+      // (missingTargetFields in PATCH /api/tickets/[id]).
+      if (selectedPriority !== priority || (targetPreview && targetMissing)) changes.priority = selectedPriority;
       if ((selectedCategory || null) !== categoryId) changes.categoryId = selectedCategory || null;
       if ((selectedBusinessUnit || null) !== businessUnitId) changes.businessUnitId = selectedBusinessUnit || null;
     }
-    if (mounted && targetDue !== originalDue || (targetDue && targetDueReasonText !== (targetDueReason ?? ""))) {
+    // The date is only sent when its minute really changed; a reason edited on
+    // its own is sent alone (2026-10-06: re-sending the same date, which the
+    // box holds without seconds, looked like an override to the server and was
+    // refused with "Give a reason for overriding..." while the reason box
+    // was still locked on the automatic text).
+    const dateChanged = mounted && targetDue !== originalDue;
+    if (dateChanged) {
       changes.targetDueAt = targetDue ? new Date(targetDue).toISOString() : null;
       changes.targetDueReason = targetDue ? targetDueReasonText : null;
+    } else if (targetDue && targetDueReasonText !== (targetDueReason ?? "")) {
+      changes.targetDueReason = targetDueReasonText;
     }
     return changes;
   }
   const hasPendingChanges = Object.keys(pendingChanges()).length > 0;
-
-  // Preview (John, 2026-10-05): picking a new priority shows the new automatic
-  // target date straight away instead of only after saving. Display only --
-  // the same calculation the server runs on save (lib/tickets/target-due.ts,
-  // same holiday calendar), so nothing extra is sent. Not shown when the date
-  // was set by hand (it doesn't follow priority) or is being edited now.
-  const holidays = useMemo(() => new Set(holidayKeys), [holidayKeys]);
-  const targetPreview =
-    canEditMetadata &&
-    selectedPriority !== priority &&
-    shouldRecalculateTarget({ targetDueAt: targetDueAt ? new Date(targetDueAt) : null, targetDueReason }) &&
-    targetDue === originalDue
-      ? autoTargetDue(new Date(receivedAt), selectedPriority, holidays)
-      : null;
 
   type ApiResult = { ok: boolean; status: number; data: { error?: string; ticket?: { version: number } } };
 
@@ -394,7 +411,9 @@ export default function TicketActions({
             value={targetPreview ? targetPreview.targetDueReason : targetDueReasonText}
             onChange={(e) => setTargetDueReasonText(e.target.value)}
             placeholder="e.g. Fair Work response date"
-            readOnly={!!targetPreview || isAutoTargetReason(targetDueReasonText)}
+            // Locked only while the date is the automatic one -- never while a
+            // date change is waiting for its reason (2026-10-06).
+            readOnly={!!targetPreview || (isAutoTargetReason(targetDueReasonText) && targetDue === originalDue)}
             style={{ width: "16rem" }}
           />
         </label>{" "}
@@ -611,7 +630,15 @@ export default function TicketActions({
 
       {canMerge && (status === "NEW" || status === "ALLOCATED" || isWorking || status === "OUTCOME") && (
         <div style={{ marginBottom: "1rem" }}>
-          <MergeTicketForm ticketId={ticketId} ticketNo={ticketNo} version={version} />
+          <MergeTicketForm
+            ticketId={ticketId}
+            ticketNo={ticketNo}
+            saveChanges={async () => {
+              const saved = await saveChanges();
+              if ("ok" in saved) return { error: saved.data?.error ?? `Saving changes failed (${saved.status})` };
+              return saved;
+            }}
+          />
         </div>
       )}
 

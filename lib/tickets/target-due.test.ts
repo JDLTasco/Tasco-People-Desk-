@@ -6,6 +6,7 @@ import {
   calculateTargetDueDate,
   isAutoTargetReason,
   missingTargetFields,
+  sameMinute,
   shouldRecalculateTarget,
 } from "./target-due";
 
@@ -58,5 +59,13 @@ describe("missingTargetFields (2026-10-03 fix)", () => {
 
   it("leaves an existing target alone (never silently rewritten)", () => {
     assert.deepEqual(missingTargetFields({ receivedAt: MON_10AM, targetDueAt: FRI_10AM }, "P1", WITH_CUP), {});
+  });
+});
+
+describe("sameMinute (2026-10-06 fix)", () => {
+  it("a date sent back from the minutes-only box matches the stored date with seconds", () => {
+    const stored = new Date("2026-11-01T23:58:27.718Z");
+    assert.equal(sameMinute(new Date("2026-11-01T23:58:00.000Z"), stored), true);
+    assert.equal(sameMinute(new Date("2026-11-01T23:59:00.000Z"), stored), false);
   });
 });

@@ -7,7 +7,7 @@ import { canViewerSeeTicket } from "@/lib/tickets/confidential-access";
 import { writeAuditLog } from "@/lib/audit";
 import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/lib/tickets/detail";
 import { dueFieldsForPriorityChange } from "@/lib/tickets/sla";
-import { isAutoTargetReason, missingTargetFields } from "@/lib/tickets/target-due";
+import { isAutoTargetReason, missingTargetFields, sameMinute } from "@/lib/tickets/target-due";
 import { loadHolidaySet } from "@/lib/calendar/holidays";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
@@ -72,6 +72,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     body.businessUnitId !== undefined;
   if (touchesRestrictedFields && !canEditTicketMetadata(session.user.role)) {
     return badRequest("Not permitted to edit this ticket's metadata");
+  }
+
+  // The ticket page's date box holds minutes only, but automatic target dates
+  // carry seconds -- the same date sent back is not a change (2026-10-06: it
+  // was treated as an override and refused with "Give a reason for
+  // overriding the automatic target due date" during a merge).
+  if (body.targetDueAt && current.targetDueAt && sameMinute(new Date(body.targetDueAt), current.targetDueAt)) {
+    body.targetDueAt = undefined;
   }
 
   // §5: "target_due_reason is mandatory whenever target_due_at is set."

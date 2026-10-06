@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.1.0";
+export const APP_VERSION = "2.1.1";
 
 // History:
+// 2.1.1 (2026-10-06) -- fix: P3 target date previews on tickets with no date yet;
+//   merging (and saving) no longer refused with "Give a reason for overriding..."
 // 2.1.0 (2026-10-05) -- Admin -> Users: pick each staff member's colour (or
 //   Automatic); Dianne Nichols set to Purple
 // 2.0.1 (2026-10-05) -- choosing a new priority shows the new target due date
