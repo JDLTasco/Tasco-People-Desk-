@@ -164,8 +164,9 @@ main {
   padding: 1.5rem;
   /* Was max-width: 1000px. Half the viewport + 500px leaves exactly half the
      empty margin the old cap did on any screen wider than 1000px (e.g. 230px
-     each side instead of 460px on a 1920px monitor) -- John, 2026-10-03. */
-  max-width: calc(50% + 500px);
+     each side instead of 460px on a 1920px monitor) -- John, 2026-10-03.
+     Halved again 2026-10-07: 75% + 250px leaves 115px each side at 1920px. */
+  max-width: calc(75% + 250px);
   margin: 0 auto;
 }
 h1 {
