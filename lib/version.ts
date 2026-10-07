@@ -1,9 +1,10 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.3.2";
+export const APP_VERSION = "2.3.3";
 
 // History:
+// 2.3.3 (2026-10-07) -- ticket page as wide as the list pages
 // 2.3.2 (2026-10-07) -- list pages wider: side margins halved again
 // 2.3.1 (2026-10-07) -- fix: merge search ignored what HR Officers typed and
 //   could show stale results; now also searches requester name/email.

@@ -461,10 +461,9 @@ button.secondary:hover:not(:disabled) {
 
 /* Ticket page split layout (2026-10-01): left column (details, actions,
    attachments, notes, history) stays in view while the correspondence on
-   the right scrolls with the page. Falls back to one column when narrow. */
-main.ticket-page {
-  max-width: 1600px;
-}
+   the right scrolls with the page. Falls back to one column when narrow.
+   Its old 1600px cap was removed 2026-10-07 so it is as wide as the list
+   pages (main's own max-width). */
 .ticket-split {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
