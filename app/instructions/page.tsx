@@ -117,7 +117,7 @@ export default async function InstructionsPage() {
         <p>
           A ticket can also be <strong>merged</strong> into another one if two emails turn out to be the same
           matter. On the duplicate, click <strong>Merge into another ticket</strong>, search for the ticket to keep
-          by its number or subject, tick it and click <strong>Confirm merge</strong>. Any unsaved changes on the
+          by its number, subject, or the requester&apos;s name or email, tick it and click <strong>Confirm merge</strong>. Any unsaved changes on the
           duplicate are saved first. Its emails, notes and attachments move into the ticket you kept, which stays
           the case number; the duplicate closes with the reason &quot;Merged&quot; and shows a link to the other
           ticket. Replies to the duplicate&apos;s emails land on the kept ticket. Confidential tickets can&apos;t be

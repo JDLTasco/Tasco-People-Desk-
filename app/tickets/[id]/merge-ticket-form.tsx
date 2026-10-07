@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -14,6 +14,7 @@ interface SearchResult {
   id: string;
   ticketNo: string;
   subject: string;
+  requesterName: string | null;
   status: string;
   version: number;
 }
@@ -30,16 +31,27 @@ export default function MergeTicketForm({ ticketId, ticketNo, saveChanges }: Pro
   const [selected, setSelected] = useState<SearchResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  // Every keystroke starts a search; only the newest one may show its results.
+  // Without this a slow earlier search (e.g. for "2") could land last and
+  // overwrite the right results, so typing seemed to change nothing (2026-10-07).
+  const latestSearch = useRef(0);
 
   async function search(q: string) {
     setQuery(q);
     setSelected(null);
+    const searchNo = ++latestSearch.current;
     if (!q.trim()) {
       setResults([]);
+      setSearching(false);
       return;
     }
-    const res = await fetch(`/api/tickets/search?q=${encodeURIComponent(q)}`);
-    const data = await res.json().catch(() => ({ tickets: [] }));
+    setSearching(true);
+    const res = await fetch(`/api/tickets/search?q=${encodeURIComponent(q.trim())}`).catch(() => null);
+    const data = res ? await res.json().catch(() => ({ tickets: [] })) : { tickets: [] };
+    if (searchNo !== latestSearch.current) return;
+    setSearching(false);
     setResults((data.tickets ?? []).filter((t: SearchResult) => t.id !== ticketId));
   }
 
@@ -89,22 +101,25 @@ export default function MergeTicketForm({ ticketId, ticketNo, saveChanges }: Pro
         </p>
       )}
       <label>
-        Search by ticket number or subject:{" "}
+        Search by ticket number, subject, or requester name/email:{" "}
         <input value={query} onChange={(e) => void search(e.target.value)} style={{ width: "16rem" }} />
       </label>
-      {results.length > 0 && (
+      {searching && <p>Searching...</p>}
+      {!searching && results.length > 0 && (
         <ul>
           {results.map((t) => (
             <li key={t.id}>
               <label>
                 <input type="radio" name="merge-target" checked={selected?.id === t.id} onChange={() => setSelected(t)} />{" "}
-                {t.ticketNo} -- {t.subject} ({t.status})
+                {t.ticketNo} -- {t.subject}
+                {t.requesterName ? ` -- ${t.requesterName}` : ""} ({t.status})
               </label>
             </li>
           ))}
         </ul>
       )}
-      {query.trim() && results.length === 0 && <p>No matching tickets.</p>}
+      {!searching && results.length === 50 && <p>Showing the 50 newest matches -- type more to narrow it down.</p>}
+      {!searching && query.trim() && results.length === 0 && <p>No matching tickets.</p>}
       <button type="button" disabled={busy || !selected} onClick={() => void confirmMerge()}>
         Confirm merge
       </button>{" "}

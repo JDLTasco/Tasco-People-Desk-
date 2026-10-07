@@ -184,10 +184,16 @@ export async function searchArchive(userId: string, role: UserRole, filters: Arc
     where.closeReason = { notIn: excludedCloseReasons };
   }
   if (filters.ticketNo) where.ticketNo = { contains: filters.ticketNo, mode: "insensitive" };
+  // Under AND, not where.OR -- that overwrote confidentialFilter()'s own OR and
+  // let a requester search show HR Officers confidential tickets (2026-10-07).
   if (filters.requester) {
-    where.OR = [
-      { requesterName: { contains: filters.requester, mode: "insensitive" } },
-      { requesterEmail: { contains: filters.requester, mode: "insensitive" } },
+    where.AND = [
+      {
+        OR: [
+          { requesterName: { contains: filters.requester, mode: "insensitive" } },
+          { requesterEmail: { contains: filters.requester, mode: "insensitive" } },
+        ],
+      },
     ];
   }
   if (filters.subject) where.subject = { contains: filters.subject, mode: "insensitive" };
@@ -259,16 +265,31 @@ export async function getDeletedTickets(): Promise<DeletedTicketRow[]> {
 export async function searchTickets(userId: string, role: UserRole, query: string): Promise<TicketListRow[]> {
   const q = query.trim();
   if (!q) return [];
+  // The search OR and confidentialFilter()'s own OR must sit under AND -- spread
+  // side by side, the second silently replaced the first, so HR Officers' search
+  // words were ignored (2026-10-07). Confidential and already-merged-away tickets
+  // are left out because the merge itself refuses them.
   const rows = await prisma.ticket.findMany({
     where: {
       isDeleted: false,
+      isConfidential: false,
+      mergedIntoTicketId: null,
       status: { not: "ARCHIVED" },
-      OR: [{ ticketNo: { contains: q, mode: "insensitive" } }, { subject: { contains: q, mode: "insensitive" } }],
-      ...confidentialFilter(userId, role),
+      AND: [
+        {
+          OR: [
+            { ticketNo: { contains: q, mode: "insensitive" } },
+            { subject: { contains: q, mode: "insensitive" } },
+            { requesterName: { contains: q, mode: "insensitive" } },
+            { requesterEmail: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        confidentialFilter(userId, role),
+      ],
     },
     select: TICKET_LIST_SELECT,
     orderBy: { receivedAt: "desc" },
-    take: 20,
+    take: 50,
   });
   return withColours(closedLast(rows));
 }
