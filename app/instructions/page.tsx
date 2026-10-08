@@ -232,6 +232,14 @@ export default async function InstructionsPage() {
           Terminations/Resignations category and a <strong>Termination date</strong> box appears next to Business unit.
           Tickets without a date yet show &quot;not set&quot; at the bottom.
         </p>
+        <p>
+          <strong>Customise dashboard</strong> (top right) lets you arrange the dashboard your way: drag a section by
+          its <strong>⠿</strong> handle to a new spot (or use ◀ ▶), set it to full, half or third width, or
+          <strong> Hide</strong> it (hidden sections are listed at the top while customising, with a Show button).
+          Press <strong>Done</strong> when finished. Your arrangement is saved to your own account, so it follows you to
+          any computer; <strong>Reset to standard</strong> puts it back. On a phone sections always show one under
+          another.
+        </p>
       </section>
 
       <section className="section-card">

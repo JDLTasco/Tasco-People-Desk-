@@ -227,6 +227,8 @@ model User {
   colourSlot    Int?      @map("colour_slot")
   /// Their own ticket list column order + widths (2026-10-08); null = default -- see lib/tickets/list-layout.ts.
   ticketListLayout Json?  @map("ticket_list_layout")
+  /// Their own dashboard section order/widths/hidden (2026-10-08); null = standard -- see lib/dashboard/layout.ts.
+  dashboardLayout  Json?  @map("dashboard_layout")
 
   // Reverse relations — every FK to users from tickets/notes/etc. is named
   // explicitly so Prisma can disambiguate the many relations to this model.

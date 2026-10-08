@@ -7,6 +7,9 @@ import { formatAuDateTime } from "@/lib/format-date";
 import { loadUpcomingTerminations } from "@/lib/dashboard/terminations";
 import { BarList, ComplianceChart, TrendTable, VolumeChart, type BarRow } from "./charts";
 import UpcomingTerminations from "./upcoming-terminations";
+import DashboardSections from "./dashboard-sections";
+import { parseDashboardLayout } from "@/lib/dashboard/layout";
+import { prisma } from "@/lib/prisma";
 
 // HR Management Dashboard (John, 2026-10-03) -- ADMIN / HR_LEAD. All figures
 // come from lib/dashboard (soft-deleted excluded, §9-filtered per viewer).
@@ -67,9 +70,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   }
 
   const range: TrendRange = isTrendRange(searchParams.range) ? searchParams.range : "30d";
-  const [d, terminations] = await Promise.all([
+  const [d, terminations, me] = await Promise.all([
     loadDashboard(session.user.id, session.user.role, range),
     loadUpcomingTerminations(session.user.id, session.user.role),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { dashboardLayout: true } }),
   ]);
   const w = d.workload;
   const tp = d.throughput;
@@ -78,13 +82,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     new Date(iso).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Australia/Melbourne" });
   const monthName = new Date(d.generatedAt).toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "Australia/Melbourne" });
 
-  return (
-    <main className="dashboard">
-      <div className="dash-head">
-        <h1>HR dashboard</h1>
-        <span className="text-muted">Updated {formatAuDateTime(new Date(d.generatedAt))}</span>
-      </div>
 
+  // Each section is its own block so it can be moved, resized or hidden
+  // (John, 2026-10-08) -- see dashboard-sections.tsx and lib/dashboard/layout.ts.
+  const sections = {
+    workload: (
       <section aria-labelledby="workload-h">
         <h2 id="workload-h">Workload now</h2>
         <div className="dash-tiles">
@@ -102,38 +104,45 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           />
         </div>
       </section>
-
+    ),
+    terminations: (
       <section className="section-card highlight-card" aria-labelledby="terminations-h">
         <h2 id="terminations-h">Upcoming terminations</h2>
         <UpcomingTerminations rows={terminations} />
       </section>
-
-      <div className="dash-grid">
-        <section className="section-card">
-          <h2>Open tickets by status</h2>
-          <BarList
-            caption="Open tickets by status"
-            rows={w.byStatus.map((s) => ({
-              label: s.label,
-              value: s.count,
-              href: `/all-open?${q("status", s.key.startsWith("item:") ? s.key.slice(5) : s.key)}`,
-            }))}
-          />
-        </section>
-        <section className="section-card">
-          <h2>Open tickets by assignee</h2>
-          <BarList caption="Open tickets by assignee" rows={countRows(d.distributions.byAssignee, "assignee")} />
-        </section>
-        <section className="section-card">
-          <h2>Open tickets by business unit</h2>
-          <BarList caption="Open tickets by business unit" rows={countRows(d.distributions.byBusinessUnit, "businessUnit")} />
-        </section>
-        <section className="section-card">
-          <h2>Open tickets by category</h2>
-          <BarList caption="Open tickets by category" rows={countRows(d.distributions.byCategory, "category")} />
-        </section>
-      </div>
-
+    ),
+    byStatus: (
+      <section className="section-card">
+        <h2>Open tickets by status</h2>
+        <BarList
+          caption="Open tickets by status"
+          rows={w.byStatus.map((s) => ({
+            label: s.label,
+            value: s.count,
+            href: `/all-open?${q("status", s.key.startsWith("item:") ? s.key.slice(5) : s.key)}`,
+          }))}
+        />
+      </section>
+    ),
+    byAssignee: (
+      <section className="section-card">
+        <h2>Open tickets by assignee</h2>
+        <BarList caption="Open tickets by assignee" rows={countRows(d.distributions.byAssignee, "assignee")} />
+      </section>
+    ),
+    byBusinessUnit: (
+      <section className="section-card">
+        <h2>Open tickets by business unit</h2>
+        <BarList caption="Open tickets by business unit" rows={countRows(d.distributions.byBusinessUnit, "businessUnit")} />
+      </section>
+    ),
+    byCategory: (
+      <section className="section-card">
+        <h2>Open tickets by category</h2>
+        <BarList caption="Open tickets by category" rows={countRows(d.distributions.byCategory, "category")} />
+      </section>
+    ),
+    thisMonth: (
       <section aria-labelledby="month-h">
         <h2 id="month-h">This month</h2>
         <div className="dash-tiles">
@@ -143,7 +152,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           {tp.closedThisMonth.other > 0 && <Tile label="Merged / other closures" value={tp.closedThisMonth.other} />}
         </div>
       </section>
-
+    ),
+    trends: (
       <section aria-labelledby="trend-h" className="dash-trends">
         <div className="dash-head">
           <h2 id="trend-h">Trends and target-date compliance</h2>
@@ -179,7 +189,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </div>
         <TrendTable points={d.trends} />
       </section>
-
+    ),
+    compliance: (
       <section aria-labelledby="comp-h">
         <h2 id="comp-h">Target-date compliance, {rangeText}</h2>
         <p className="text-muted">
@@ -201,8 +212,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           </section>
         </div>
       </section>
-
-      {/* Information panel (John, 2026-10-03): when the figures were taken and what period they cover. */}
+    ),
+    // Information panel (John, 2026-10-03): when the figures were taken and what period they cover.
+    info: (
       <dl className="dash-info" aria-label="About these figures">
         <div>
           <dt>Last refreshed</dt>
@@ -223,6 +235,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <dd>As at the refresh time</dd>
         </div>
       </dl>
+    ),
+  };
+
+  return (
+    <main className="dashboard">
+      <div className="dash-head">
+        <h1>HR dashboard</h1>
+        <span className="text-muted">Updated {formatAuDateTime(new Date(d.generatedAt))}</span>
+      </div>
+      <DashboardSections sections={sections} initialLayout={parseDashboardLayout(me?.dashboardLayout ?? null)} />
     </main>
   );
 }
