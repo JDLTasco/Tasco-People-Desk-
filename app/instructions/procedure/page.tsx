@@ -37,7 +37,7 @@ export default async function ProcedurePage() {
 
         <h3>2. Triage -- take ownership and set it up</h3>
         <ol>
-          <li>Check the <a href="/pool">Pool</a> regularly (it&apos;s the landing page). Open a ticket and read it.</li>
+          <li>Check the <a href="/pool">Pool</a> regularly (the Dashboard you land on shows how many are waiting). Open a ticket and read it.</li>
           <li>If it isn&apos;t an HR matter: <strong>Close -- Info only</strong> (information only, wrong address) or <strong>Close -- Autoclose</strong> (spam). Both archive straight away and send nothing. An Admin can use <strong>Block this sender</strong> for repeat junk from outside Tasco.</li>
           <li>If it duplicates another ticket: <strong>Merge into another ticket</strong> (see &quot;The ticket lifecycle&quot;).</li>
           <li>Otherwise <strong>Claim</strong> it, or <strong>Assign to</strong> a colleague. It becomes ALLOCATED.</li>

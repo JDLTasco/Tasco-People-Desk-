@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
-// §13: Pool is "the default landing view."
+// The dashboard is the opening screen for everyone (John, 2026-10-08; was
+// the Pool, §13's original "default landing view"). A link to a specific
+// page still goes straight there after sign-in.
 export default function Home() {
-  redirect("/pool");
+  redirect("/admin/dashboard");
 }

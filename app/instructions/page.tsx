@@ -214,7 +214,7 @@ export default async function InstructionsPage() {
       <section className="section-card">
         <h2>HR dashboard (all staff)</h2>
         <p>
-          <strong>Dashboard</strong> (on the menu bar) shows the workload right now (open tickets by priority, status,
+          <strong>Dashboard</strong> (on the menu bar, and the first page you see after signing in) shows the workload right now (open tickets by priority, status,
           assignee, business unit and category; unassigned; overdue; due in the next 7 working days; average age), what
           was created and closed this month, and trends over 7 days, 30 days, 90 days or 12 months: inbound vs closed,
           average time to resolve, and the <strong>on-time rate</strong> -- the share of resolved tickets closed on or
@@ -251,7 +251,7 @@ export default async function InstructionsPage() {
           double-clicking a line) puts it back to the standard layout.
         </p>
         <ul>
-          <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>
+          <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign.</li>
           <li><strong>My tickets</strong> -- everything assigned to you, closed ones at the bottom. A red number next to it means someone recorded a response on one of your tickets.</li>
           <li><strong>All open</strong> -- every ticket that isn&apos;t CLOSED or ARCHIVED, across all officers.</li>
           <li><strong>Overdue</strong> -- tickets past their target due date (or, for tickets from before 3 October 2026 with no target date, their old SLA date).</li>

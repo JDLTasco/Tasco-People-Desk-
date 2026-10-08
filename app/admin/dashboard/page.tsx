@@ -103,7 +103,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         </div>
       </section>
 
-      <section className="section-card" aria-labelledby="terminations-h">
+      <section className="section-card highlight-card" aria-labelledby="terminations-h">
         <h2 id="terminations-h">Upcoming terminations</h2>
         <UpcomingTerminations rows={terminations} />
       </section>
