@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.11.0";
+export const APP_VERSION = "2.11.1";
 
 // History:
+// 2.11.1 (2026-10-08) -- dashboard From/To dates sit right under the period
+//   choices on the right, instead of on the left
 // 2.11.0 (2026-10-08) -- dashboard reporting period: Last month, This quarter,
 //   Last quarter and any From/To dates; Instructions and Procedure wording
 //   tidied for consistency and grammar

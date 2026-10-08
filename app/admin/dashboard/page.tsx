@@ -159,32 +159,35 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       <section aria-labelledby="trend-h" className="dash-trends">
         <div className="dash-head">
           <h2 id="trend-h">Trends and target-date compliance</h2>
-          <nav className="dash-range" aria-label="Reporting period">
-            {[...TREND_RANGES.map((r) => ({ key: r as string, label: RANGE_LABELS[r] })), ...PERIOD_PRESETS].map((r) => (
-              <Link
-                key={r.key}
-                href={`/admin/dashboard?range=${r.key}`}
-                aria-current={r.key === period.key ? "page" : undefined}
-                className={r.key === period.key ? "active" : undefined}
-              >
-                {r.label}
-              </Link>
-            ))}
-          </nav>
+          {/* Quick choices with the From/To dates right under them (John, 2026-10-08). */}
+          <div className="dash-period">
+            <nav className="dash-range" aria-label="Reporting period">
+              {[...TREND_RANGES.map((r) => ({ key: r as string, label: RANGE_LABELS[r] })), ...PERIOD_PRESETS].map((r) => (
+                <Link
+                  key={r.key}
+                  href={`/admin/dashboard?range=${r.key}`}
+                  aria-current={r.key === period.key ? "page" : undefined}
+                  className={r.key === period.key ? "active" : undefined}
+                >
+                  {r.label}
+                </Link>
+              ))}
+            </nav>
+            {/* Any From/To dates, e.g. for month-end or quarter-end reporting (2026-10-08). */}
+            <form className="dash-dates" method="get" action="/admin/dashboard">
+              <label>
+                From <input type="date" name="from" defaultValue={period.from} required />
+              </label>
+              <label>
+                To <input type="date" name="to" defaultValue={period.to} required />
+              </label>
+              <button type="submit" className={period.key === "custom" ? undefined : "secondary"}>
+                Show
+              </button>
+              <span className="text-muted">Showing {rangeText}</span>
+            </form>
+          </div>
         </div>
-        {/* Any From/To dates, e.g. for month-end or quarter-end reporting (2026-10-08). */}
-        <form className="dash-dates" method="get" action="/admin/dashboard">
-          <label>
-            From <input type="date" name="from" defaultValue={period.from} required />
-          </label>
-          <label>
-            To <input type="date" name="to" defaultValue={period.to} required />
-          </label>
-          <button type="submit" className={period.key === "custom" ? undefined : "secondary"}>
-            Show
-          </button>
-          <span className="text-muted">Showing {rangeText}</span>
-        </form>
         {periodError && (
           <p role="alert" className="banner banner-error">
             {periodError} Showing the last 30 days instead.
