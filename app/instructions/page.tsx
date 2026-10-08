@@ -236,7 +236,9 @@ export default async function InstructionsPage() {
           priority, then due date) -- choose <strong>Date received</strong> to sort by the Received column (when
           the email arrived, or when a + New ticket was logged). <strong>Clear filters</strong> resets everything. Each staff member has their
           own colour, shown on the Assignee name (an Admin can pick it on Admin &rarr; Users). The coloured strip down the left edge of each row shows its
-          priority: red P1, amber P2, navy P3.
+          priority: red P1, amber P2, navy P3. To make a column wider or narrower, drag the thin line at the right
+          edge of its heading -- the columns to its right make room. Your widths are remembered on this computer
+          for every list; <strong>Reset column widths</strong> (or double-clicking a line) puts them back.
         </p>
         <ul>
           <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>

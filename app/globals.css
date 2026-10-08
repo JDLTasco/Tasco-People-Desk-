@@ -633,6 +633,40 @@ tr[class*="priority-edge-"] > td:first-child { box-shadow: inset 5px 0 0 var(--p
 table.ticket-list td[data-label="Requester"],
 table.ticket-list td[data-label="Subject"] { overflow-wrap: anywhere; }
 
+/* Drag-to-resize list columns (John, 2026-10-08). Once a column has been
+   dragged the table switches to fixed widths, so long text wraps inside its
+   column instead of pushing the others. */
+table.ticket-list th { position: relative; }
+table.ticket-list-fixed { table-layout: fixed; }
+table.ticket-list-fixed th,
+table.ticket-list-fixed td { overflow-wrap: anywhere; overflow: hidden; }
+/* Headings only break between words; a squeezed one is clipped (full name on hover). */
+table.ticket-list-fixed th { overflow-wrap: normal; }
+.col-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 9px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 1;
+  touch-action: none;
+}
+.col-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 4px;
+  width: 1px;
+  background: var(--border);
+}
+.col-resize-handle:hover::after,
+body.col-resizing .col-resize-handle::after { width: 3px; left: 3px; background: var(--tasco-navy); }
+body.col-resizing { cursor: col-resize; user-select: none; }
+.col-reset { display: flex; justify-content: flex-end; margin-top: -0.5rem; }
+.col-reset button { font-size: 0.8rem; padding: 0.2rem 0.6rem; }
+
 /* Multi-choice filter dropdowns + sort controls (2026-10-03) */
 .multi-select { position: relative; display: inline-block; font-size: 0.85rem; }
 .multi-select > summary {
@@ -766,6 +800,9 @@ table.ticket-list td[data-label="Subject"] { overflow-wrap: anywhere; }
   .filter-bar .multi-select > summary { width: 100%; box-sizing: border-box; }
   .multi-select-panel { left: 0; right: 0; min-width: 0; }
   .sort-bar > span { flex: 1 1 100%; }
+  /* Phone cards have no columns to resize. */
+  table.ticket-list colgroup,
+  .col-reset { display: none; }
 
   /* Ticket lists become stacked cards, one per ticket. */
   table.ticket-list thead { display: none; }
