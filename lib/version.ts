@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.4.0";
+export const APP_VERSION = "2.5.0";
 
 // History:
+// 2.5.0 (2026-10-08) -- ticket list columns can also be moved by dragging the
+//   heading; layout saved to each person's account (any computer)
 // 2.4.0 (2026-10-08) -- ticket list columns can be dragged wider/narrower
 //   (Pool, My tickets, All open, Overdue, Closed); remembered per browser
 // 2.3.3 (2026-10-07) -- ticket page as wide as the list pages

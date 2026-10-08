@@ -664,6 +664,12 @@ table.ticket-list-fixed th { overflow-wrap: normal; }
 .col-resize-handle:hover::after,
 body.col-resizing .col-resize-handle::after { width: 3px; left: 3px; background: var(--tasco-navy); }
 body.col-resizing { cursor: col-resize; user-select: none; }
+/* Drag a heading sideways to move its column (2026-10-08): a navy bar marks where it will land. */
+table.ticket-list th { cursor: grab; touch-action: none; }
+body.col-moving, body.col-moving table.ticket-list th { cursor: grabbing; user-select: none; }
+table.ticket-list th.col-dragging { background: var(--tasco-navy); color: #fff; opacity: 0.85; }
+table.ticket-list th.col-drop-before { box-shadow: inset 4px 0 0 var(--tasco-navy); }
+table.ticket-list th.col-drop-after { box-shadow: inset -4px 0 0 var(--tasco-navy); }
 .col-reset { display: flex; justify-content: flex-end; margin-top: -0.5rem; }
 .col-reset button { font-size: 0.8rem; padding: 0.2rem 0.6rem; }
 

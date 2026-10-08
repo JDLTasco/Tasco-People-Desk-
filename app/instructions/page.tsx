@@ -237,8 +237,10 @@ export default async function InstructionsPage() {
           the email arrived, or when a + New ticket was logged). <strong>Clear filters</strong> resets everything. Each staff member has their
           own colour, shown on the Assignee name (an Admin can pick it on Admin &rarr; Users). The coloured strip down the left edge of each row shows its
           priority: red P1, amber P2, navy P3. To make a column wider or narrower, drag the thin line at the right
-          edge of its heading -- the columns to its right make room. Your widths are remembered on this computer
-          for every list; <strong>Reset column widths</strong> (or double-clicking a line) puts them back.
+          edge of its heading -- the columns to its right make room. To move a column, drag its heading left or
+          right and let go where the navy bar shows. Your layout is saved to your own account, so it&apos;s the
+          same on every list and every computer (other staff keep theirs); <strong>Reset columns</strong> (or
+          double-clicking a line) puts it back to the standard layout.
         </p>
         <ul>
           <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign. Default landing page.</li>
