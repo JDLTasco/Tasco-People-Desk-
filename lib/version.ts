@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.9.0";
+export const APP_VERSION = "2.9.1";
 
 // History:
+// 2.9.1 (2026-10-08) -- fix: signing in always opens the Dashboard (it went
+//   back to whatever page the browser was on, e.g. My tickets); a link to a
+//   specific ticket still opens that ticket
 // 2.9.0 (2026-10-08) -- sign-in page: Tasco Petroleum logo, notice about the
 //   humanresources@ mailbox, "Powered by JDL" + version at the bottom
 // 2.8.0 (2026-10-08) -- Customise dashboard: drag sections into any order,

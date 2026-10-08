@@ -1,6 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import SignInForm from "./sign-in-form";
 
+// Where to go after signing in (John, 2026-10-08): always the Dashboard,
+// except a link to one particular ticket (e.g. from an email), which still
+// opens that ticket. Before this, signing in from any page -- such as a
+// browser tab reopened on My tickets -- went back to that page.
+function afterSignIn(callbackUrl: string | undefined): string {
+  if (callbackUrl && /^\/tickets\/[0-9a-f-]{36}$/i.test(callbackUrl)) return callbackUrl;
+  return "/";
+}
+
 export default async function SignInPage({
   searchParams,
 }: {
@@ -24,7 +33,7 @@ export default async function SignInPage({
       azureAdConfigured={azureAdConfigured}
       mockUsers={mockUsers}
       error={searchParams.error}
-      callbackUrl={searchParams.callbackUrl ?? "/"}
+      callbackUrl={afterSignIn(searchParams.callbackUrl)}
     />
   );
 }
