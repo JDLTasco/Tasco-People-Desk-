@@ -159,10 +159,15 @@ export interface Throughput {
   resolvedInRange: number;
 }
 
-export function throughput(rows: DashboardTicket[], now: Date, rangeStart: Date, holidays: Set<string>): Throughput {
+/** Resolved tickets closed in [start, end) -- no upper limit when `end` is left out. */
+function resolvedIn(rows: DashboardTicket[], start: Date, end?: Date): DashboardTicket[] {
+  return rows.filter((t) => isResolved(t) && t.closedAt! >= start && (!end || t.closedAt! < end));
+}
+
+export function throughput(rows: DashboardTicket[], now: Date, rangeStart: Date, holidays: Set<string>, rangeEnd?: Date): Throughput {
   const monthStart = melbourneMonthStart(now);
   const closedMonth = rows.filter((t) => isClosedish(t) && t.closedAt! >= monthStart);
-  const resolvedRange = rows.filter((t) => isResolved(t) && t.closedAt! >= rangeStart);
+  const resolvedRange = resolvedIn(rows, rangeStart, rangeEnd);
   const durations = resolvedRange.map((t) => (t.closedAt!.getTime() - t.receivedAt.getTime()) / DAY_MS);
   const workDurations = resolvedRange.map((t) => workingDaysBetween(t.receivedAt, t.closedAt!, holidays));
   const resolvedMonth = closedMonth.filter((t) => t.closeReason === "RESOLVED").length;
@@ -205,8 +210,8 @@ function complianceBy(resolved: DashboardTicket[], pick: (t: DashboardTicket) =>
     .sort((a, b) => b.resolved - a.resolved || a.label.localeCompare(b.label));
 }
 
-export function complianceMatrix(rows: DashboardTicket[], rangeStart: Date) {
-  const resolved = rows.filter((t) => isResolved(t) && t.closedAt! >= rangeStart);
+export function complianceMatrix(rows: DashboardTicket[], rangeStart: Date, rangeEnd?: Date) {
+  const resolved = resolvedIn(rows, rangeStart, rangeEnd);
   return {
     byAssignee: complianceBy(resolved, (t) => t.assignee?.displayName ?? null, "Unassigned"),
     byBusinessUnit: complianceBy(resolved, (t) => t.businessUnit?.name ?? null, "(none set)"),
@@ -231,9 +236,15 @@ function melbourneDayStart(date: Date): Date {
   return melbourneWallTimeToUtc(p.year, p.month, p.day, 0, 0);
 }
 
+export interface TrendBucket {
+  label: string;
+  start: Date;
+  end: Date;
+}
+
 /** Bucket boundaries for a range: 7d = 7 days, 30d/90d = weeks (Mon-start), 12m = calendar months. Last bucket ends at `now`. */
-export function trendBuckets(range: TrendRange, now: Date): { label: string; start: Date; end: Date }[] {
-  const out: { label: string; start: Date; end: Date }[] = [];
+export function trendBuckets(range: TrendRange, now: Date): TrendBucket[] {
+  const out: TrendBucket[] = [];
   const dayLabel = (d: Date) => {
     const k = melbourneDateKey(d);
     return `${k.slice(8, 10)}/${k.slice(5, 7)}`;
@@ -268,8 +279,9 @@ export function trendBuckets(range: TrendRange, now: Date): { label: string; sta
   return out;
 }
 
-export function trends(rows: DashboardTicket[], range: TrendRange, now: Date): TrendPoint[] {
-  return trendBuckets(range, now).map((b) => {
+export function trends(rows: DashboardTicket[], range: TrendRange | TrendBucket[], now: Date): TrendPoint[] {
+  const buckets = Array.isArray(range) ? range : trendBuckets(range, now);
+  return buckets.map((b) => {
     const inB = (d: Date | null) => !!d && d >= b.start && d < b.end;
     const closed = rows.filter((t) => isClosedish(t) && inB(t.closedAt));
     const resolved = closed.filter((t) => t.closeReason === "RESOLVED");
@@ -289,17 +301,28 @@ export function rangeStart(range: TrendRange, now: Date): Date {
   return trendBuckets(range, now)[0].start;
 }
 
-export function buildDashboard(rows: DashboardTicket[], range: TrendRange, now: Date, holidays: Set<string>) {
-  const start = rangeStart(range, now);
+/**
+ * `range` is a quick range ("30d") or any reporting period with its own bars
+ * (lib/dashboard/period.ts, 2026-10-08). The period only affects trends,
+ * on-time rate, time to resolve and compliance -- workload is always "now"
+ * and "This month" the current month.
+ */
+export function buildDashboard(
+  rows: DashboardTicket[],
+  range: TrendRange | { start: Date; end: Date; buckets: TrendBucket[] },
+  now: Date,
+  holidays: Set<string>,
+) {
+  const p = typeof range === "string" ? { start: rangeStart(range, now), end: undefined, buckets: trendBuckets(range, now) } : range;
   return {
     generatedAt: now.toISOString(),
-    range,
-    rangeStart: start.toISOString(),
+    rangeStart: p.start.toISOString(),
+    rangeEnd: (p.end ?? now).toISOString(),
     workload: workload(rows, now, holidays),
     distributions: distributions(rows),
-    throughput: throughput(rows, now, start, holidays),
-    compliance: complianceMatrix(rows, start),
-    trends: trends(rows, range, now),
+    throughput: throughput(rows, now, p.start, holidays, p.end),
+    compliance: complianceMatrix(rows, p.start, p.end),
+    trends: trends(rows, p.buckets, now),
   };
 }
 

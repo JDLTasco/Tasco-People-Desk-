@@ -7,9 +7,10 @@ import { prisma } from "../prisma";
 import type { UserRole } from "../roles";
 import { confidentialFilter } from "../tickets/queries";
 import { loadHolidaySet } from "../calendar/holidays";
-import { buildDashboard, type DashboardTicket, type TrendRange } from "./metrics";
+import { buildDashboard, type DashboardTicket } from "./metrics";
+import type { ReportPeriod } from "./period";
 
-export async function loadDashboard(userId: string, role: UserRole, range: TrendRange, now: Date = new Date()) {
+export async function loadDashboard(userId: string, role: UserRole, period: ReportPeriod, now: Date = new Date()) {
   const [rows, holidays] = await Promise.all([
     prisma.ticket.findMany({
       where: { isDeleted: false, ...confidentialFilter(userId, role) },
@@ -30,5 +31,5 @@ export async function loadDashboard(userId: string, role: UserRole, range: Trend
     }),
     loadHolidaySet(),
   ]);
-  return buildDashboard(rows as DashboardTicket[], range, now, holidays);
+  return buildDashboard(rows as DashboardTicket[], period, now, holidays);
 }

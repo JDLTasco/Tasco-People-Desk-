@@ -12,10 +12,11 @@ export default async function InstructionsPage() {
 
   return (
     <main>
-      <h1>Instructions -- How Tasco People Desk works</h1>
+      <h1>Instructions -- how Tasco People Desk works</h1>
       <p>
-        This page explains how the system works day to day and what to do at each stage of a ticket. It&apos;s
-        visible to every signed-in role -- ADMIN, HR_LEAD and HR_OFFICER all see the same content.
+        This page explains how the system works day to day and what to do at each stage of a ticket. Every
+        signed-in role (ADMIN, HR_LEAD and HR_OFFICER) sees the same content. Below, these roles are called Admins,
+        HR Leads and HR Officers.
       </p>
       <p>
         New here? Start with the <a href="/instructions/procedure">Procedure</a> (also under the Instructions menu) -- the whole process, start to finish, in one place.
@@ -30,8 +31,9 @@ export default async function InstructionsPage() {
         </p>
         <p>
           <strong>Where things stand right now:</strong> sign-in is live (your normal Tasco Microsoft account).
-          Real emails to HR are brought in as tickets by an import an Admin runs, rather than arriving on their
-          own every few minutes, and <strong>sending email is switched off</strong> while HR finishes testing --
+          Real emails to HR become tickets when someone presses <strong>Check mailbox</strong> (or an Admin runs an
+          import), rather than arriving on their own every few minutes, and <strong>sending email is switched
+          off</strong> while HR finishes testing --
           acknowledgements, questions and outcomes are recorded on the ticket and listed under Admin &rarr; Failed
           sends instead of being delivered. Email attachments can be seen on a ticket but can&apos;t be opened
           until IT switches on malware scanning. Everything else on this page already works exactly as described;
@@ -42,15 +44,15 @@ export default async function InstructionsPage() {
 
       <section className="section-card">
         <h2>The ticket lifecycle</h2>
-        <p>Every ticket moves through these statuses in order. Nothing skips a step.</p>
+        <p>Most tickets move through these statuses in order. The exceptions (closing early, merging) are explained below.</p>
         <ol>
           <li>
             <strong>NEW</strong> -- just arrived, sitting unassigned in the <a href="/pool">Pool</a>. The requester
             automatically gets an acknowledgement email straight away, with the ticket number, &quot;Expected
             response: as soon as practical&quot;, and a note asking them to keep the ticket number in the subject line
             when they reply (see &quot;Replying to a requester&quot; below). For a ticket you create yourself with{" "}
-            <strong>+ New ticket</strong>, untick &quot;Send the requester an acknowledgement email&quot; if they don&apos;t need one. Anyone can self-assign it, or assign it
-            to someone else.
+            <strong>+ New ticket</strong>, untick &quot;Send the requester an acknowledgement email&quot; if they don&apos;t
+            need one. Anyone can claim it for themselves or assign it to someone else.
           </li>
           <li>
             <strong>ALLOCATED</strong> -- a person now owns it. No email goes to the requester at this point (they
@@ -60,7 +62,7 @@ export default async function InstructionsPage() {
             <strong>IN_ACTION</strong> -- the assignee has started working it. <strong>A category must be set
             before a ticket can move here</strong> -- there&apos;s no way around this, by design. While in action, a
             ticket can also be in one of the states below. Pick one from the <strong>Current action</strong>{" "}
-            dropdown and click <strong>Update action</strong>; the ticket&apos;s current action is always shown in the
+            drop-down and click <strong>Update action</strong>; the ticket&apos;s current action is always shown in the
             banner at the top of the ticket, with who set it and when.
             <ul>
               <li>
@@ -84,41 +86,41 @@ export default async function InstructionsPage() {
               </li>
               <li>
                 <strong>Action items</strong> such as <strong>On Hold</strong> -- labels an Admin manages under
-                Admin &rarr; Action items. Each appears in the Current action dropdown; the label then shows in
+                Admin &rarr; Action items. Each appears in the Current action drop-down; the label then shows in
                 place of IN_ACTION on the ticket and in every list. Setting one needs a reason (e.g. why it&apos;s on
                 hold), saved as an internal note. Anyone can set one; only the assignee, HR Leads
                 and Admins can clear it. It clears by itself when the ticket moves to any other status, and the due
                 date keeps running while it&apos;s set.
               </li>
             </ul>
-            The assignee picks <strong>In action</strong> in the dropdown to carry on working it. Use the Status filter on
-            any list to find tickets in either state.
+            The assignee picks <strong>In action</strong> in the drop-down to carry on working on it. Use the Status
+            filter on any list to find tickets in any of these states.
           </li>
           <li>
             <strong>OUTCOME</strong> -- the resolution has been drafted and sent to the requester via the dispatch
             preview (see below). It goes to the requester by default; To and CC can be changed. Notes are never
             included -- they are internal only. The requester then has <strong>2 working days</strong> to reply: a
-            reply reopens the ticket (back to its assignee as RESPONSE_RECEIVED); no reply and it{" "}
+            reply reopens the ticket (back to its assignee as Response received); if there is no reply, it{" "}
             <strong>closes automatically</strong> overnight (see &quot;Reply windows&quot; below). You can also close
             it yourself straight away with <strong>Close -- Resolved</strong>.
           </li>
           <li>
             <strong>CLOSED</strong> -- the matter is finished. A ticket can also reach CLOSED directly from an
-            earlier status via &quot;Info only&quot; close (for information only, wrong address, genuinely not an HR matter),
-            Autoclose (similar, kept as a separate reason purely so the two can be told apart in reporting), or
-            Withdrawn (the requester no longer wants it actioned).
+            earlier status with <strong>Info only</strong> (for information only, sent to the wrong address, or not an
+            HR matter), <strong>Autoclose</strong> (similar, kept as a separate reason only so the two can be told
+            apart in reporting) or <strong>Withdrawn</strong> (the requester no longer wants it actioned).
           </li>
           <li>
             <strong>ARCHIVED</strong> -- happens automatically 2 working days after closure if the requester
-            hasn&apos;t replied, via an overnight job (an ADMIN can also trigger it on demand). See &quot;Closed vs. Archived&quot; below -- they are genuinely
-            different things.
+            hasn&apos;t replied, through an overnight job (an Admin can also archive on demand). See &quot;Closed vs.
+            Archived&quot; below -- they are different things.
           </li>
         </ol>
         <p>
           A ticket can also be <strong>merged</strong> into another one if two emails turn out to be the same
           matter. On the duplicate, click <strong>Merge into another ticket</strong>, search for the ticket to keep
-          by its number, subject, or the requester&apos;s name or email, tick it and click <strong>Confirm merge</strong>. Any unsaved changes on the
-          duplicate are saved first. Its emails, notes and attachments move into the ticket you kept, which stays
+          by its number, subject, or the requester&apos;s name or email, tick it and click <strong>Confirm
+          merge</strong>. Any unsaved changes on the duplicate are saved first. Its emails, notes and attachments move into the ticket you kept, which stays
           the case number; the duplicate closes with the reason &quot;Merged&quot; and shows a link to the other
           ticket. Replies to the duplicate&apos;s emails land on the kept ticket. Confidential tickets can&apos;t be
           merged, and you can&apos;t merge into an archived ticket. A merge can&apos;t be undone.
@@ -130,21 +132,19 @@ export default async function InstructionsPage() {
         <p>When a ticket first arrives, its priority is set automatically:</p>
         <ul>
           <li>
-            Subject contains <strong>&quot;Urgent&quot;</strong> (any case) → <strong>P1</strong>, 48-hour/2-day
-            SLA.
+            Subject contains <strong>&quot;Urgent&quot;</strong> (any capitalisation) → <strong>P1</strong>.
           </li>
           <li>
-            Anything else → defaults to <strong>P3</strong> (the longest, safest clock) provisionally. Real
-            priority for a non-urgent ticket is meant to be decided by whoever allocates it, not guessed from the
-            subject line -- use the Priority selector in the ticket&apos;s Metadata panel to set it properly once
-            you&apos;ve actually read the request.
+            Anything else → <strong>P3</strong> for now (the longest timeframe). The real priority of a non-urgent
+            ticket should be set by whoever takes it on, not guessed from the subject line -- use the Priority
+            selector in the ticket&apos;s Metadata panel once you&apos;ve read the request.
           </li>
         </ul>
         <p>
           Every ticket gets a <strong>target due date</strong> automatically from its priority, counted in working
           days -- Monday to Friday, skipping Victorian public holidays and any Tasco shutdown days listed on{" "}
-          <strong>Admin &rarr; Calendar</strong> (an Admin keeps that list up to date). This is
-          the date the People Desk tracks as its KPI: it drives the Due date, the Overdue list and overdue alerts.
+          <strong>Admin &rarr; Calendar</strong> (an Admin keeps that list up to date). This is the date the
+          People Desk tracks as its KPI: it drives the Due date, the Overdue list and overdue alerts.
           Requesters are only ever told &quot;as soon as practical&quot;.
         </p>
         <ul>
@@ -153,7 +153,7 @@ export default async function InstructionsPage() {
           <li><strong>P3</strong> -- 20 working days</li>
         </ul>
         <p>
-          Priority is set in the Metadata panel by any HR staff member, at any time -- changing it moves the
+          Any HR staff member can set the priority in the Metadata panel at any time. Changing it moves the
           automatic target due date to match, and the new date shows in the box (highlighted) as soon as you pick
           the priority, before you save. There is one <strong>Save changes</strong> button for priority,
           category, business unit and target due date, and pressing any Action button (Claim, Start action, Close,
@@ -191,8 +191,8 @@ export default async function InstructionsPage() {
           <dt>Working day</dt>
           <dd>
             Monday to Friday in Melbourne time, <strong>except</strong> the dates listed on{" "}
-            <strong>Admin &rarr; Calendar</strong> -- Victorian public holidays and any Tasco shutdown days. Saturdays,
-            Sundays and listed dates are skipped. Target due dates are counted from the moment the ticket arrived and fall
+            <strong>Admin &rarr; Calendar</strong> (Victorian public holidays and any Tasco shutdown days). Weekends and
+            listed dates are skipped. Target due dates are counted from the moment the ticket arrived and fall
             at the same time of day: a P1 that arrives at 10:00 on a Monday is due at 10:00 on Thursday (3 working days).
             A ticket that arrives on a weekend or holiday starts counting from the next working day. &quot;Working
             days&quot; on the dashboard (average age, time to resolve, due in the next 7 working days) are counted the
@@ -203,7 +203,7 @@ export default async function InstructionsPage() {
             A ticket is <strong>on time</strong> if it was closed with <strong>Close -- Resolved</strong> on or before
             its target due date. If the target date was overridden, the overridden date is the one that counts; for a
             ticket from before 3 October 2026 with no target date, its old SLA date counts. Tickets closed as Info only,
-            Autoclose or Withdrawn, and merged tickets, are not counted either way. The dashboard&apos;s{" "}
+            Autoclose or Withdrawn, and merged tickets, are not counted at all. The dashboard&apos;s{" "}
             <strong>on-time rate</strong> is the number of on-time tickets divided by all tickets resolved in the
             selected period. An open ticket isn&apos;t counted until it is resolved -- if it is past its target due date
             in the meantime it shows as <strong>Overdue</strong>.
@@ -214,10 +214,11 @@ export default async function InstructionsPage() {
       <section className="section-card">
         <h2>HR dashboard (all staff)</h2>
         <p>
-          <strong>Dashboard</strong> (on the menu bar, and the first page you see after signing in) shows the workload right now (open tickets by priority, status,
-          assignee, business unit and category; unassigned; overdue; due in the next 7 working days; average age), what
-          was created and closed this month, and trends over 7 days, 30 days, 90 days or 12 months: inbound vs closed,
-          average time to resolve, and the <strong>on-time rate</strong> -- the share of resolved tickets closed on or
+          The <strong>Dashboard</strong> (on the menu bar, and the first page you see after signing in) shows the
+          workload right now (open tickets by priority, status, assignee, business unit and category; unassigned;
+          overdue; due in the next 7 working days; average age), what was created and closed this month, and, for
+          the reporting period you choose, trends (inbound vs closed), average time to resolve and the{" "}
+          <strong>on-time rate</strong> -- the share of resolved tickets closed on or
           before their target due date (an overridden target counts as the target), also broken down by assignee,
           business unit and category. Info only, Autoclose and Withdrawn closures are counted separately and are not
           part of the on-time rate. Click a number or a name to open the matching filtered list. Hover over a bar for its
@@ -225,9 +226,19 @@ export default async function InstructionsPage() {
           people allowed to open them, so figures can differ slightly between users.
         </p>
         <p>
+          <strong>Reporting period.</strong> Choose 7 days, 30 days, 90 days or 12 months, or, for month-end and
+          quarter-end reporting, <strong>Last month</strong>, <strong>This quarter</strong> or{" "}
+          <strong>Last quarter</strong> (calendar quarters: Jan-Mar, Apr-Jun, Jul-Sep, Oct-Dec, which match the
+          financial-year quarters). For any other period, enter <strong>From</strong> and <strong>To</strong> dates
+          and press <strong>Show</strong> -- both dates are included in full. The period applies to the trends,
+          on-time rate, time to resolve and target-date compliance; &quot;Workload now&quot; and &quot;This
+          month&quot; always show the current position. The chosen period is part of the page address, so you can
+          bookmark it.
+        </p>
+        <p>
           <strong>Check mailbox</strong> (the orange button with the envelope, top right on every page) brings in new
-          emails from the HR mailbox straight away instead of waiting. It takes a few seconds to a minute; when it
-          finishes a message shows how many new tickets were created and how many replies were added to existing
+          emails from the HR mailbox straight away instead of waiting. It takes from a few seconds to a minute. When it
+          finishes, a message shows how many new tickets were created and how many replies were added to existing
           tickets, and the page refreshes. Emails already brought in are skipped, so pressing it twice does no harm. If
           someone else&apos;s check is already running, the button waits for that one instead of starting another.
         </p>
@@ -243,9 +254,9 @@ export default async function InstructionsPage() {
           <strong>Customise dashboard</strong> (top right) lets you arrange the dashboard your way: drag a section by
           its <strong>⠿</strong> handle to a new spot (or use ◀ ▶), set it to full, half or third width, or
           <strong> Hide</strong> it (hidden sections are listed at the top while customising, with a Show button).
-          Press <strong>Done</strong> when finished. Your arrangement is saved to your own account, so it follows you to
-          any computer; <strong>Reset to standard</strong> puts it back. On a phone sections always show one under
-          another.
+          Press <strong>Done</strong> when you&apos;ve finished. Your arrangement is saved to your own account, so it
+          follows you to any computer; <strong>Reset to standard</strong> puts it back. On a phone, sections always
+          show one under another.
         </p>
       </section>
 
@@ -254,27 +265,26 @@ export default async function InstructionsPage() {
         <p>
           Every list has a filter bar. <strong>Status</strong>, <strong>Priority</strong>, <strong>Business unit</strong>{" "}
           and <strong>Assignee</strong> each open a list of tick boxes -- tick as many as you like (e.g. P1 and P2).
-          A ticket shows if it matches any ticked value in a box, and all the boxes you&apos;ve used. Underneath,{" "}
+          A ticket is shown if it matches at least one ticked value in every box you&apos;ve used. Underneath,{" "}
           <strong>Sort by</strong> / <strong>then by</strong> sorts the list by up to three things in turn (e.g.
           priority, then due date) -- choose <strong>Date received</strong> to sort by the Received column (when
-          the email arrived, or when a + New ticket was logged). <strong>Clear filters</strong> resets everything. Each staff member has their
-          own colour, shown on the Assignee name (an Admin can pick it on Admin &rarr; Users). The coloured strip down the left edge of each row shows its
-          priority: red P1, amber P2, navy P3. To make a column wider or narrower, drag the thin line at the right
+          the email arrived, or when a + New ticket was logged). <strong>Clear all filters</strong> resets everything.
+          Each staff member has their own colour, shown on the Assignee name (an Admin can pick it on Admin &rarr;
+          Users). The coloured strip down the left edge of each row shows its priority: red P1, amber P2, navy P3. To make a column wider or narrower, drag the thin line at the right
           edge of its heading -- the columns to its right make room. To move a column, drag its heading left or
           right and let go where the navy bar shows. Your layout is saved to your own account, so it&apos;s the
           same on every list and every computer (other staff keep theirs); <strong>Reset columns</strong> (or
           double-clicking a line) puts it back to the standard layout.
         </p>
         <ul>
-          <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to self-assign.</li>
+          <li><strong>Pool</strong> -- unassigned NEW tickets, available for anyone to claim.</li>
           <li><strong>My tickets</strong> -- everything assigned to you, closed ones at the bottom. A red number next to it means someone recorded a response on one of your tickets.</li>
           <li><strong>All open</strong> -- every ticket that isn&apos;t CLOSED or ARCHIVED, across all officers.</li>
           <li><strong>Overdue</strong> -- tickets past their target due date (or, for tickets from before 3 October 2026 with no target date, their old SLA date).</li>
           <li><strong>Closed</strong> -- every CLOSED or ARCHIVED ticket, across all officers, most recent first.</li>
           <li>
             <strong>Archive search</strong> -- full-text search specifically over <em>archived</em> tickets (see
-            below), with checkboxes to include &quot;Info only&quot; and Autoclose closures, which are excluded
-            by default.
+            below), with tick boxes to include Info only and Autoclose closures, which are left out by default.
           </li>
         </ul>
       </section>
@@ -283,9 +293,9 @@ export default async function InstructionsPage() {
         <h2>Closed vs. Archived -- these are not the same thing</h2>
         <p>
           <strong>CLOSED</strong> is the normal end of a ticket&apos;s working life. It&apos;s still a completely
-          live, visible record. For <strong>2 working days</strong> after closing (Monday-Friday, skipping the
-          days on Admin -&gt; Calendar), any staff member can <strong>Reopen</strong> it (a reason is required). It
-          goes back to its assignee as IN ACTION (or ALLOCATED if it has no category yet), or back to the Pool if
+          live, visible record. For <strong>2 working days</strong> after closing (Monday to Friday, skipping the
+          days on Admin &rarr; Calendar), any staff member can <strong>Reopen</strong> it (a reason is required). It
+          goes back to its assignee as In action (or Allocated if it has no category yet), or back to the Pool if
           it was never assigned. A ticket that was merged into another can&apos;t be reopened -- work on the
           ticket it was merged into instead.
         </p>
@@ -293,32 +303,32 @@ export default async function InstructionsPage() {
           <strong>Reply windows.</strong> After the outcome is sent (OUTCOME), the requester has 2 working days
           to reply. If they don&apos;t, the ticket closes automatically, and they then have another 2 working days
           before it is archived. A reply inside either window <strong>reopens the ticket automatically</strong> --
-          back to its assignee as RESPONSE RECEIVED, with the usual alert. A reply that arrives after that starts a
+          back to its assignee as Response received, with the usual alert. A reply that arrives after that starts a{" "}
           <strong>new ticket</strong>, with a note pointing back to the old one. (Info only and Autoclose tickets
           are archived straight away, so any reply to those is always a new ticket.)
         </p>
         <p>
           <strong>ARCHIVED</strong> happens later, automatically. An overnight job picks up tickets closed more
-          than 2 working days ago (an ADMIN can also archive on demand) and writes them out to permanent, durable files containing the full correspondence,
-          notes, and metadata -- this is what actually starts the 7-year retention clock, and it&apos;s what makes
-          a ticket read-only in the portal for everyone except ADMIN from that point on.
+          than 2 working days ago (an Admin can also archive on demand) and writes them out to permanent files
+          containing the full correspondence, notes and metadata. This is what starts the 7-year retention clock,
+          and from then on the ticket is read-only for everyone except Admins.
         </p>
-        <p>The Closed page lists both. Archive Search only searches the ones that have actually been archived.</p>
+        <p>The Closed page lists both. Archive search only searches tickets that have been archived.</p>
       </section>
 
       <section className="section-card">
         <h2>Confidential tickets and legal hold</h2>
         <ul>
           <li>
-            An HR_LEAD or ADMIN can mark a ticket <strong>confidential</strong>. Unauthorised viewers get a plain
-            404, not an access-denied message -- the ticket appears not to exist to them at all.
+            An HR Lead or Admin can mark a ticket <strong>confidential</strong>. Anyone not allowed to see it gets a
+            plain &quot;not found&quot; page, not an access-denied message -- to them, the ticket appears not to exist.
           </li>
           <li>
-            Every view of a confidential ticket is logged, including by ADMIN -- there is no &quot;break glass&quot;
-            exception. The audit trail is the control.
+            Every view of a confidential ticket is logged, including views by Admins -- there is no &quot;break
+            glass&quot; exception. The audit trail is the control.
           </li>
           <li>
-            <strong>Legal hold</strong> (ADMIN only) suspends the 7-year retention purge on a ticket indefinitely,
+            <strong>Legal hold</strong> (Admins only) suspends the 7-year retention purge on a ticket indefinitely,
             for as long as it&apos;s needed -- typically for active litigation, an investigation, or a
             whistleblower matter.
           </li>
@@ -332,7 +342,7 @@ export default async function InstructionsPage() {
           <li>Claim it, or use <strong>Assign to</strong> to give it to a colleague. Any unsaved changes in the Metadata panel are saved when you press Claim.</li>
           <li>Read the request properly, then set its real <strong>Priority</strong> and <strong>Category</strong> in the Metadata panel -- category is mandatory before you can start action.</li>
           <li>Set a <strong>Business unit</strong> if relevant (optional, never blocks progress). Check the automatic <strong>target due date</strong> and override it (with a reason) if there&apos;s a specific external deadline.</li>
-          <li>Click <strong>Start action</strong> once you begin working it.</li>
+          <li>Click <strong>Start action</strong> once you begin working on it.</li>
           <li>
             When you&apos;re done with a ticket for now, press the green <strong>Save &amp; exit</strong> button at the top
             right. It saves anything you haven&apos;t saved yet -- changes in the Metadata panel, a new choice in the
@@ -343,7 +353,7 @@ export default async function InstructionsPage() {
             (Anything you already applied with its own button, such as Claim, an action or an added note, was saved
             at the time and stays.)
           </li>
-          <li>Use <strong>internal notes</strong> to record progress. Notes are internal documents only -- they can never be sent outside HR.</li>
+          <li>Use <strong>internal notes</strong> to record progress. Notes are internal only -- they are never sent outside HR.</li>
           <li>To ask the requester -- or someone else, such as their manager -- something, use <strong>Email a question</strong> (or set the Current action to <strong>Awaiting response</strong> if you asked another way). To park a ticket, set it to <strong>On Hold</strong> and type the reason. To take over a colleague&apos;s ticket, pick yourself under <strong>Reassign</strong>. An emailed reply marks the ticket <strong>Response received</strong> automatically; if they come back by phone or in person, set it yourself.</li>
           <li>When resolved, click the purple <strong>Send outcome to employee</strong> button (shown once the ticket is in action) to write up the results of the enquiry, check who it goes To and CC, review the exact email that will send, and confirm. The email&apos;s subject ends &quot;Outcome of your enquiry&quot; and it opens with a purple heading; in Correspondence it shows as a purple <strong>[OUTCOME SENT]</strong> card.</li>
           <li>
@@ -352,8 +362,8 @@ export default async function InstructionsPage() {
             doesn&apos;t reply within 2 working days the ticket closes by itself overnight, and is archived 2 working
             days after that. If they do reply in that time, it comes back to you as Response received.
           </li>
-          <li>If the email is for information only or genuinely not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
-          <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong> -- also doesn&apos;t notify the requester, since they&apos;re the one who withdrew it.</li>
+          <li>If the email is for information only or not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
+          <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong>. This doesn&apos;t notify the requester either, since they withdrew it.</li>
         </ol>
       </section>
 
@@ -369,47 +379,47 @@ export default async function InstructionsPage() {
             </tr>
           </thead>
           <tbody>
-            <tr><td>View pool / self-assign</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>View the Pool / claim a ticket</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Assign a Pool ticket to someone else / reassign any ticket</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
-            <tr><td>Edit ticket metadata, category, business unit, priority</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
+            <tr><td>Edit ticket metadata (priority, category, business unit)</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
             <tr><td>Set the current action (awaiting response, response received, action items)</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
-            <tr><td>Set target due date</td><td>Yes</td><td>Yes</td><td>Any ticket, not just your own</td></tr>
-            <tr><td>Draft and send outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
-            <tr><td>&quot;Info only&quot; close / Autoclose / Withdrawn close</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+            <tr><td>Set the target due date</td><td>Yes</td><td>Yes</td><td>Any ticket you can see</td></tr>
+            <tr><td>Draft and send the outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
+            <tr><td>Close as Info only, Autoclose or Withdrawn</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Reopen a closed ticket (within 2 working days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Merge a ticket into another</td><td>Yes</td><td>Yes</td><td>If you&apos;re assigned to the ticket</td></tr>
+            <tr><td>Merge a ticket into another</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>HR dashboard</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Set / clear confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
-            <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if granted or assigned</td></tr>
+            <tr><td>Set / clear the confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+            <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if given access or assigned</td></tr>
             <tr><td>Set / clear legal hold</td><td>Yes</td><td>No</td><td>No</td></tr>
             <tr><td>Reverse a status transition</td><td>Yes (step-up required)</td><td>No</td><td>No</td></tr>
             <tr><td>Soft-delete a ticket</td><td>Yes (step-up required)</td><td>No</td><td>No</td></tr>
             <tr><td>Manage users and colours, categories, business units, action items, calendar, block list, ignored images</td><td>Yes</td><td>No</td><td>No</td></tr>
-            <tr><td>View audit log, legal holds list, address book</td><td>Yes</td><td>Yes</td><td>No</td></tr>
+            <tr><td>View the audit log, legal holds list and address book</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>Bulk export (CSV)</td><td>Yes</td><td>Yes</td><td>No</td></tr>
           </tbody>
         </table>
         <p>
           &quot;Step-up required&quot; means you&apos;ll be asked to re-confirm your sign-in immediately before the
-          action goes through -- this applies to the handful of genuinely destructive actions (reversing a
-          ticket, deleting one, clearing confidential status, changing someone&apos;s role).
+          action goes through. This applies to the few actions that can&apos;t easily be undone: reversing a status
+          change, deleting a ticket, clearing confidential status and changing someone&apos;s role.
         </p>
       </section>
 
       <section className="section-card">
-        <h2>Admin tasks (ADMIN only, listed here for visibility)</h2>
+        <h2>Admin tasks (Admins only, listed here for information)</h2>
         <ul>
-          <li><strong>Admin -- Users</strong>: create/pre-provision users, change roles, set a person&apos;s real display name, pick their colour (or Automatic), archive/restore a user.</li>
-          <li><strong>Admin -- Calendar</strong>: the non-working days (Victorian public holidays, Tasco shutdowns) skipped when counting working days -- for target due dates, the reply windows and the dashboard. Add next year&apos;s dates each year.</li>
-          <li><strong>Admin -- Address book</strong> (ADMIN and HR_LEAD): every address the People Desk has seen (requesters, CCs, anyone who emailed or was emailed by HR) -- the list the To and CC suggestions come from. Built from the tickets themselves, so it&apos;s always up to date; read-only.</li>
-          <li><strong>Admin -- Categories</strong> / <strong>Business units</strong> / <strong>Action items</strong>: add new ones, rename existing ones, deactivate (never delete -- existing tickets keep their history either way).</li>
-          <li><strong>Admin -- Legal holds</strong>: see every ticket currently under hold, oldest first.</li>
-          <li><strong>Admin -- Deleted</strong>: see soft-deleted tickets (no drill-down back into them, by design).</li>
-          <li><strong>Admin -- Audit log</strong>: search every recorded action by ticket number, actor, action type, date range, or correlation ID.</li>
-          <li><strong>Admin -- Failed sends</strong>: any outbound email that failed after 3 attempts.</li>
-          <li><strong>Admin -- Block list</strong>: stop obvious non-HR email (newsletters, app sign-up notices, job ads) becoming tickets, by exact sender, whole domain, or words in the subject. Rules are switched off, never deleted. On a ticket from an outside sender, <strong>Block this sender</strong> adds a Sender rule and closes the ticket as Info only in one step.</li>
-          <li><strong>Admin -- Blocked emails</strong>: everything the Block list stopped, and which rule caught it. Nothing is lost -- the email stays in the hrtickets@ mailbox; switch the rule off and it comes in on the next import.</li>
-          <li><strong>Admin -- Ignored images</strong>: email signature and footer images (Tasco logos etc.) to skip when emails come in. It suggests images repeated across 3+ tickets; ignoring one also takes the copies already on tickets off them (reversible -- switching it off puts them back). On a ticket, <strong>Always ignore</strong> next to an emailed image does the same. Only that exact image is skipped -- pasted screenshots still come through.</li>
+          <li><strong>Admin &rarr; Users</strong>: create or pre-provision users, change roles, set a person&apos;s real display name, pick their colour (or Automatic), archive/restore a user.</li>
+          <li><strong>Admin &rarr; Calendar</strong>: the non-working days (Victorian public holidays, Tasco shutdowns) skipped when counting working days -- for target due dates, the reply windows and the dashboard. Add next year&apos;s dates each year.</li>
+          <li><strong>Admin &rarr; Address book</strong> (Admins and HR Leads): every address the People Desk has seen (requesters, CCs, anyone who emailed or was emailed by HR) -- the list the To and CC suggestions come from. It&apos;s built from the tickets themselves, so it&apos;s always up to date, and it&apos;s read-only.</li>
+          <li><strong>Admin &rarr; Categories</strong> / <strong>Business units</strong> / <strong>Action items</strong>: add new ones, rename existing ones, deactivate (never delete -- existing tickets keep their history either way).</li>
+          <li><strong>Admin &rarr; Legal holds</strong>: see every ticket currently under hold, oldest first.</li>
+          <li><strong>Admin &rarr; Deleted</strong>: see soft-deleted tickets (they can&apos;t be opened from here, by design).</li>
+          <li><strong>Admin &rarr; Audit log</strong>: search every recorded action by ticket number, actor, action type, date range, or correlation ID.</li>
+          <li><strong>Admin &rarr; Failed sends</strong>: any outbound email that failed after 3 attempts.</li>
+          <li><strong>Admin &rarr; Block list</strong>: stop obvious non-HR email (newsletters, app sign-up notices, job ads) becoming tickets, by exact sender, whole domain, or words in the subject. Rules are switched off, never deleted. On a ticket from an outside sender, <strong>Block this sender</strong> adds a Sender rule and closes the ticket as Info only in one step.</li>
+          <li><strong>Admin &rarr; Blocked emails</strong>: everything the Block list stopped, and which rule caught it. Nothing is lost -- the email stays in the hrtickets@ mailbox; switch the rule off and it comes in on the next mailbox check.</li>
+          <li><strong>Admin &rarr; Ignored images</strong>: email signature and footer images (Tasco logos etc.) to skip when emails come in. It suggests images repeated across 3+ tickets; ignoring one also takes the copies already on tickets off them (reversible -- switching it off puts them back). On a ticket, <strong>Always ignore</strong> next to an emailed image does the same. Only that exact image is skipped -- pasted screenshots still come through.</li>
         </ul>
       </section>
     </main>

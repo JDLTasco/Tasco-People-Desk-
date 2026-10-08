@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { canViewDashboard } from "@/lib/rbac";
 import { loadDashboard } from "@/lib/dashboard/load";
-import { isTrendRange, type ComplianceRow, type CountRow, type TrendRange } from "@/lib/dashboard/metrics";
+import { TREND_RANGES, type ComplianceRow, type CountRow, type TrendRange } from "@/lib/dashboard/metrics";
+import { PERIOD_PRESETS, resolvePeriod } from "@/lib/dashboard/period";
 import { formatAuDateTime } from "@/lib/format-date";
 import { loadUpcomingTerminations } from "@/lib/dashboard/terminations";
 import { BarList, ComplianceChart, TrendTable, VolumeChart, type BarRow } from "./charts";
@@ -57,7 +58,7 @@ function Tile({ label, value, href, tone, sub }: { label: string; value: string 
   );
 }
 
-export default async function DashboardPage({ searchParams }: { searchParams: { range?: string } }) {
+export default async function DashboardPage({ searchParams }: { searchParams: { range?: string; from?: string; to?: string } }) {
   const session = await getSession();
   if (!session?.user) return null;
   if (!canViewDashboard(session.user.role)) {
@@ -69,15 +70,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
     );
   }
 
-  const range: TrendRange = isTrendRange(searchParams.range) ? searchParams.range : "30d";
+  // Reporting period (2026-10-08): quick range, month/quarter preset, or From/To dates.
+  const { period, error: periodError } = resolvePeriod(searchParams, new Date());
   const [d, terminations, me] = await Promise.all([
-    loadDashboard(session.user.id, session.user.role, range),
+    loadDashboard(session.user.id, session.user.role, period),
     loadUpcomingTerminations(session.user.id, session.user.role),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { dashboardLayout: true } }),
   ]);
   const w = d.workload;
   const tp = d.throughput;
-  const rangeText = `last ${RANGE_LABELS[range]}`;
+  const rangeText = period.label;
   const melbDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-AU", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Australia/Melbourne" });
   const monthName = new Date(d.generatedAt).toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "Australia/Melbourne" });
@@ -157,14 +159,37 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       <section aria-labelledby="trend-h" className="dash-trends">
         <div className="dash-head">
           <h2 id="trend-h">Trends and target-date compliance</h2>
-          <nav className="dash-range" aria-label="Trend range">
-            {(Object.keys(RANGE_LABELS) as TrendRange[]).map((r) => (
-              <Link key={r} href={`/admin/dashboard?range=${r}`} aria-current={r === range ? "page" : undefined} className={r === range ? "active" : undefined}>
-                {RANGE_LABELS[r]}
+          <nav className="dash-range" aria-label="Reporting period">
+            {[...TREND_RANGES.map((r) => ({ key: r as string, label: RANGE_LABELS[r] })), ...PERIOD_PRESETS].map((r) => (
+              <Link
+                key={r.key}
+                href={`/admin/dashboard?range=${r.key}`}
+                aria-current={r.key === period.key ? "page" : undefined}
+                className={r.key === period.key ? "active" : undefined}
+              >
+                {r.label}
               </Link>
             ))}
           </nav>
         </div>
+        {/* Any From/To dates, e.g. for month-end or quarter-end reporting (2026-10-08). */}
+        <form className="dash-dates" method="get" action="/admin/dashboard">
+          <label>
+            From <input type="date" name="from" defaultValue={period.from} required />
+          </label>
+          <label>
+            To <input type="date" name="to" defaultValue={period.to} required />
+          </label>
+          <button type="submit" className={period.key === "custom" ? undefined : "secondary"}>
+            Show
+          </button>
+          <span className="text-muted">Showing {rangeText}</span>
+        </form>
+        {periodError && (
+          <p role="alert" className="banner banner-error">
+            {periodError} Showing the last 30 days instead.
+          </p>
+        )}
         <div className="dash-tiles">
           <Tile
             label={`On-time rate, ${rangeText}`}
@@ -223,7 +248,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <div>
           <dt>Reporting period (trends, on-time rate, time to resolve)</dt>
           <dd>
-            Last {RANGE_LABELS[range]}: {melbDate(d.rangeStart)} to {melbDate(d.generatedAt)}
+            {rangeText.charAt(0).toUpperCase() + rangeText.slice(1)}: {melbDate(d.rangeStart)} to{" "}
+            {melbDate(new Date(new Date(d.rangeEnd).getTime() - 1).toISOString())}
           </dd>
         </div>
         <div>

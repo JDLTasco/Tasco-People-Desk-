@@ -979,6 +979,9 @@ a.dash-tile:hover { border-color: var(--tasco-navy); }
   padding: 0.35rem 0.8rem; border: 1px solid var(--border); border-radius: 999px;
   text-decoration: none; color: var(--ink); font-size: 0.85rem; background: var(--surface);
 }
+.dash-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.6rem; font-size: 0.85rem; }
+.dash-dates input { margin-left: 0.3rem; }
+.dash-dates button { padding: 0.3rem 0.9rem; }
 .dash-range a.active { background: var(--tasco-navy); border-color: var(--tasco-navy); color: #fff; }
 
 /* Horizontal bar list */
