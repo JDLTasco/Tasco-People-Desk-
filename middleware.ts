@@ -10,7 +10,9 @@ import { CORRELATION_ID_HEADER, getOrCreateCorrelationId } from "@/lib/correlati
 // -- as must the sign-in and no-access pages themselves, or nobody could
 // ever reach them to sign in.
 const PUBLIC_API_PREFIXES = ["/api/auth", "/api/graph/notifications", "/api/scan/notifications", "/api/jobs", "/api/health"];
-const PUBLIC_PAGES = new Set(["/sign-in", "/auth/no-access"]);
+// The Tasco logo shown on the sign-in page (John, 2026-10-08) -- a public
+// brand image, so it must load before anyone has signed in.
+const PUBLIC_PAGES = new Set(["/sign-in", "/auth/no-access", "/tasco-logo.jpg"]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

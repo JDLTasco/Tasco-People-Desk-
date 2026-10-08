@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { APP_VERSION } from "@/lib/version";
 
 interface MockUser {
   id: string;
@@ -26,6 +28,10 @@ export default function SignInForm({
   return (
     <div className="auth-shell">
       <div className="auth-card">
+        {/* Tasco Petroleum logo (John, 2026-10-08) -- same image as the nav bar. */}
+        <div className="auth-card-logo">
+          <Image src="/tasco-logo.jpg" alt="Tasco Petroleum" width={531} height={272} priority unoptimized />
+        </div>
         <div className="auth-card-header">
           <h1>Tasco People Desk</h1>
           <p>HR ticketing -- Tasco Petroleum</p>
@@ -92,6 +98,15 @@ export default function SignInForm({
           )}
         </div>
       </div>
+      {/* Notice + version (John, 2026-10-08). The site-wide footer is hidden on this page (globals.css). */}
+      <footer className="auth-footer">
+        <p>
+          Human Resources Ticketing System: all emails to{" "}
+          <strong>humanresources@tascopetroleum.com.au</strong> will have a ticket created and be logged into a Pool to
+          be actioned by HR staff.
+        </p>
+        <p className="auth-footer-version">Powered by JDL &middot; v{APP_VERSION}</p>
+      </footer>
     </div>
   );
 }

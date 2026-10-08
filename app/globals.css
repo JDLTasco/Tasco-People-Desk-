@@ -416,10 +416,34 @@ button.secondary:hover:not(:disabled) {
 .auth-shell {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--tasco-navy-pale);
 }
+/* Sign-in page: logo above the card's navy header, notice + version at the
+   bottom of the screen (John, 2026-10-08). */
+.auth-card-logo {
+  display: flex;
+  justify-content: center;
+  background: #fff;
+  padding: 1rem 1.5rem 0.75rem;
+  line-height: 0;
+}
+.auth-card-logo img { height: 90px; width: auto; }
+.auth-footer {
+  margin-top: auto;
+  max-width: 640px;
+  padding: 1rem 1.5rem 1.25rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--label-color);
+}
+.auth-footer p { margin: 0.3rem 0; }
+.auth-footer-version { font-size: 0.75rem; color: var(--muted); }
+/* Card stays centred: equal flexible space above it and above the footer. */
+.auth-shell::before { content: ""; margin-bottom: auto; }
+.auth-shell + .site-footer { display: none; }
 .auth-card {
   width: 100%;
   max-width: 440px;

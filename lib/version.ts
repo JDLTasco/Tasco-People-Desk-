@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.8.0";
+export const APP_VERSION = "2.9.0";
 
 // History:
+// 2.9.0 (2026-10-08) -- sign-in page: Tasco Petroleum logo, notice about the
+//   humanresources@ mailbox, "Powered by JDL" + version at the bottom
 // 2.8.0 (2026-10-08) -- Customise dashboard: drag sections into any order,
 //   choose full/half/third width, hide sections; saved per person
 // 2.7.0 (2026-10-08) -- Dashboard is the opening page after sign-in (was the
