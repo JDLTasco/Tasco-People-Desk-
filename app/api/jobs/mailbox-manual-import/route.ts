@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import { checkJobKey } from "@/lib/jobs/auth";
 import { runJob } from "@/lib/jobs/run";
-import { GraphApiClient } from "@/lib/graph/client";
-import { processInboundMessage } from "@/lib/ingestion/process-message";
+import { importMailboxSince, mailboxImportClient, MANUAL_IMPORT_JOB } from "@/lib/ingestion/mailbox-import";
 
-// One-off operator-triggered import, deliberately separate from the real
-// §7.2 delta poller (mailbox-delta-poll). Constructs its own GraphApiClient
-// directly with a hardcoded mailbox rather than going through
-// getGraphClient()/isGraphConfigured() -- HR_MAILBOX_ID stays unset on
-// purpose so every email-sending route (claim/assign/outcome/close,
-// sla-escalation) keeps failing closed via the existing "Graph is not
-// configured" path. This endpoint only ever reads; it never has the
-// ability to send. See STATUS.md's 2026-09-23 mailbox smoke-test entry.
-const SMOKE_TEST_MAILBOX = "hrtickets@tascopetroleum.com.au";
+// One-off operator-triggered import (run from Cloud Shell), deliberately
+// separate from the real §7.2 delta poller (mailbox-delta-poll). The import
+// itself, and why it reads a fixed mailbox with HR_MAILBOX_ID left unset,
+// is in lib/ingestion/mailbox-import.ts (shared with the "Check mailbox"
+// button since 2026-10-08).
 
 export async function POST(request: Request) {
   const authError = checkJobKey(request);
@@ -28,10 +23,8 @@ export async function POST(request: Request) {
     // No body / not JSON -- default to 24h.
   }
 
-  const tenantId = process.env.AZURE_AD_TENANT_ID;
-  const clientId = process.env.AZURE_AD_CLIENT_ID;
-  const clientSecret = process.env.AZURE_AD_CLIENT_SECRET;
-  if (!tenantId || !clientId || !clientSecret) {
+  const client = mailboxImportClient();
+  if (!client) {
     return NextResponse.json({ error: "AZURE_AD_TENANT_ID/CLIENT_ID/CLIENT_SECRET must be set for a manual import" }, { status: 500 });
   }
 
@@ -42,41 +35,9 @@ export async function POST(request: Request) {
   // synchronous run got its response truncated mid-transfer. Poll job_runs
   // (job_name = 'mailbox-manual-import') for the real outcome rather than
   // trusting this response.
-  void runJob("mailbox-manual-import", async (correlationId) => {
-    const client = new GraphApiClient(tenantId, clientId, clientSecret, SMOKE_TEST_MAILBOX);
-    const sinceIso = new Date(Date.now() - sinceHours * 60 * 60 * 1000).toISOString();
-    const messages = await client.listInboxSince(sinceIso);
-
-    let created = 0;
-    let threaded = 0;
-    let suppressed = 0;
-    let ignored = 0;
-    let duplicate = 0;
-    const createdTicketNos: string[] = [];
-
-    for (const message of messages) {
-      const result = await processInboundMessage(message, correlationId);
-      switch (result.action) {
-        case "CREATED":
-          created++;
-          createdTicketNos.push(result.ticketNo);
-          break;
-        case "THREADED":
-          threaded++;
-          break;
-        case "SUPPRESSED":
-          suppressed++;
-          break;
-        case "AUTO_REPLY_IGNORED":
-          ignored++;
-          break;
-        case "DUPLICATE":
-          duplicate++;
-          break;
-      }
-    }
-
-    return { mailbox: SMOKE_TEST_MAILBOX, sinceHours, processed: messages.length, created, threaded, suppressed, ignored, duplicate, createdTicketNos };
+  void runJob(MANUAL_IMPORT_JOB, async (correlationId) => {
+    const since = new Date(Date.now() - sinceHours * 60 * 60 * 1000);
+    return { ...(await importMailboxSince(client, since, correlationId)), sinceHours };
   });
 
   return NextResponse.json({ accepted: true, sinceHours, note: "Processing in the background -- poll job_runs (job_name='mailbox-manual-import') for the result." }, { status: 202 });

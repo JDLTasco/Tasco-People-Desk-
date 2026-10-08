@@ -5,6 +5,7 @@ import { canManageAdminSettings, canViewAuditLog, canViewDashboard } from "@/lib
 import SignOutButton from "./SignOutButton";
 import ThemeToggle from "./ThemeToggle";
 import RefreshButton from "./RefreshButton";
+import CheckMailboxButton from "./CheckMailboxButton";
 import AdminMenu from "./AdminMenu";
 import NavLinks from "./NavLinks";
 import { countResponseAlerts } from "@/lib/tickets/queries";
@@ -83,6 +84,7 @@ export default async function NavBar() {
       <span className="nav-spacer">
         {session.user.name} ({session.user.role})
       </span>
+      <CheckMailboxButton />
       <RefreshButton />
       <ThemeToggle />
       <SignOutButton />

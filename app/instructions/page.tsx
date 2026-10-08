@@ -225,6 +225,13 @@ export default async function InstructionsPage() {
           people allowed to open them, so figures can differ slightly between users.
         </p>
         <p>
+          <strong>Check mailbox</strong> (the orange button with the envelope, top right on every page) brings in new
+          emails from the HR mailbox straight away instead of waiting. It takes a few seconds to a minute; when it
+          finishes a message shows how many new tickets were created and how many replies were added to existing
+          tickets, and the page refreshes. Emails already brought in are skipped, so pressing it twice does no harm. If
+          someone else&apos;s check is already running, the button waits for that one instead of starting another.
+        </p>
+        <p>
           <strong>Upcoming terminations</strong> (near the top of the dashboard) lists every open ticket in the
           Terminations/Resignations category with its termination date, business unit, assignee and due date -- soonest
           termination first; click the <strong>Termination date</strong> heading to reverse the order. Click a ticket

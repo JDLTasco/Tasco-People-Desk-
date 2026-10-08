@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.9.1";
+export const APP_VERSION = "2.10.0";
 
 // History:
+// 2.10.0 (2026-10-08) -- orange "Check mailbox" button on the menu bar: bring
+//   in new HR mailbox emails now instead of waiting
 // 2.9.1 (2026-10-08) -- fix: signing in always opens the Dashboard (it went
 //   back to whatever page the browser was on, e.g. My tickets); a link to a
 //   specific ticket still opens that ticket
