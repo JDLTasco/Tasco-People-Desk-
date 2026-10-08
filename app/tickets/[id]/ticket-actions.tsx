@@ -8,6 +8,7 @@ import MergeTicketForm from "./merge-ticket-form";
 import QuestionModal from "./question-modal";
 import { autoTargetDue, isAutoTargetReason, shouldRecalculateTarget } from "@/lib/tickets/target-due";
 import { registerSaver, type SaveResult } from "@/components/pending-saves";
+import { isTerminationCategoryName } from "@/lib/tickets/terminations";
 
 interface OutcomeAttachment {
   id: string;
@@ -21,6 +22,8 @@ interface Props {
   priority: "P1" | "P2" | "P3";
   categoryId: string | null;
   businessUnitId: string | null;
+  /** "YYYY-MM-DD" or "" -- see lib/tickets/terminations.ts. */
+  terminationDate: string;
   isAssignedTicket: boolean;
   assignedToId: string | null;
   canEditMetadata: boolean;
@@ -79,6 +82,7 @@ export default function TicketActions({
   priority,
   categoryId,
   businessUnitId,
+  terminationDate,
   isAssignedTicket,
   assignedToId,
   canEditMetadata,
@@ -111,6 +115,8 @@ export default function TicketActions({
   const [selectedPriority, setSelectedPriority] = useState<"P1" | "P2" | "P3">(priority);
   const [selectedCategory, setSelectedCategory] = useState(categoryId ?? "");
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState(businessUnitId ?? "");
+  const [selectedTerminationDate, setSelectedTerminationDate] = useState(terminationDate);
+  useEffect(() => setSelectedTerminationDate(terminationDate), [terminationDate]);
   const [reverseTo, setReverseTo] = useState("");
   const [reverseReason, setReverseReason] = useState("");
   // §8: target_due_at shown in the datetime-local input's "YYYY-MM-DDTHH:mm"
@@ -175,6 +181,7 @@ export default function TicketActions({
       if (selectedPriority !== priority || (targetPreview && targetMissing)) changes.priority = selectedPriority;
       if ((selectedCategory || null) !== categoryId) changes.categoryId = selectedCategory || null;
       if ((selectedBusinessUnit || null) !== businessUnitId) changes.businessUnitId = selectedBusinessUnit || null;
+      if (selectedTerminationDate !== terminationDate) changes.terminationDate = selectedTerminationDate || null;
     }
     // The date is only sent when its minute really changed; a reason edited on
     // its own is sent alone (2026-10-06: re-sending the same date, which the
@@ -384,6 +391,23 @@ export default function TicketActions({
               ))}
             </select>
           </label>
+          {/* Termination date (John, 2026-10-08): shown for the Terminations/Resignations
+              category, or whenever a date is already set; listed on the dashboard. */}
+          {(isTerminationCategoryName(categories.find((c) => c.id === selectedCategory)?.name) ||
+            selectedTerminationDate !== "" ||
+            terminationDate !== "") && (
+            <>
+              {" "}
+              <label>
+                Termination date:{" "}
+                <input
+                  type="date"
+                  value={selectedTerminationDate}
+                  onChange={(e) => setSelectedTerminationDate(e.target.value)}
+                />
+              </label>
+            </>
+          )}
           </p>
         )}
 

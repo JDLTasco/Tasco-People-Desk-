@@ -4,7 +4,9 @@ import { canViewDashboard } from "@/lib/rbac";
 import { loadDashboard } from "@/lib/dashboard/load";
 import { isTrendRange, type ComplianceRow, type CountRow, type TrendRange } from "@/lib/dashboard/metrics";
 import { formatAuDateTime } from "@/lib/format-date";
+import { loadUpcomingTerminations } from "@/lib/dashboard/terminations";
 import { BarList, ComplianceChart, TrendTable, VolumeChart, type BarRow } from "./charts";
+import UpcomingTerminations from "./upcoming-terminations";
 
 // HR Management Dashboard (John, 2026-10-03) -- ADMIN / HR_LEAD. All figures
 // come from lib/dashboard (soft-deleted excluded, §9-filtered per viewer).
@@ -65,7 +67,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   }
 
   const range: TrendRange = isTrendRange(searchParams.range) ? searchParams.range : "30d";
-  const d = await loadDashboard(session.user.id, session.user.role, range);
+  const [d, terminations] = await Promise.all([
+    loadDashboard(session.user.id, session.user.role, range),
+    loadUpcomingTerminations(session.user.id, session.user.role),
+  ]);
   const w = d.workload;
   const tp = d.throughput;
   const rangeText = `last ${RANGE_LABELS[range]}`;
@@ -96,6 +101,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             sub={w.avgAgeWorkingDays === null ? undefined : `${w.avgAgeWorkingDays} working days`}
           />
         </div>
+      </section>
+
+      <section className="section-card" aria-labelledby="terminations-h">
+        <h2 id="terminations-h">Upcoming terminations</h2>
+        <UpcomingTerminations rows={terminations} />
       </section>
 
       <div className="dash-grid">

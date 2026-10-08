@@ -224,6 +224,14 @@ export default async function InstructionsPage() {
           exact value, or use &quot;Show as a table&quot;. Everyone sees it; confidential tickets are only counted for
           people allowed to open them, so figures can differ slightly between users.
         </p>
+        <p>
+          <strong>Upcoming terminations</strong> (near the top of the dashboard) lists every open ticket in the
+          Terminations/Resignations category with its termination date, business unit, assignee and due date -- soonest
+          termination first; click the <strong>Termination date</strong> heading to reverse the order. Click a ticket
+          number or subject to open it. The termination date is entered on the ticket itself: pick the
+          Terminations/Resignations category and a <strong>Termination date</strong> box appears next to Business unit.
+          Tickets without a date yet show &quot;not set&quot; at the bottom.
+        </p>
       </section>
 
       <section className="section-card">

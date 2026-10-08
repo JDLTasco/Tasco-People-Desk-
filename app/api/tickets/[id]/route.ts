@@ -9,6 +9,7 @@ import { TICKET_DETAIL_INCLUDE as DETAIL_INCLUDE, loadTicketForViewer } from "@/
 import { dueFieldsForPriorityChange } from "@/lib/tickets/sla";
 import { isAutoTargetReason, missingTargetFields, sameMinute } from "@/lib/tickets/target-due";
 import { loadHolidaySet } from "@/lib/calendar/holidays";
+import { parseTerminationDate, terminationDateKey } from "@/lib/tickets/terminations";
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const ctx = await requireApiContext(request);
@@ -38,6 +39,8 @@ interface PatchBody {
   businessUnitId?: string | null;
   targetDueAt?: string | null;
   targetDueReason?: string | null;
+  /** "YYYY-MM-DD", or null to clear (2026-10-08, Terminations/Resignations tickets). */
+  terminationDate?: string | null;
 }
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -69,9 +72,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     body.priority !== undefined ||
     body.ccRecipients !== undefined ||
     body.categoryId !== undefined ||
-    body.businessUnitId !== undefined;
+    body.businessUnitId !== undefined ||
+    body.terminationDate !== undefined;
   if (touchesRestrictedFields && !canEditTicketMetadata(session.user.role)) {
     return badRequest("Not permitted to edit this ticket's metadata");
+  }
+  const terminationDate = body.terminationDate === undefined ? undefined : parseTerminationDate(body.terminationDate);
+  if (body.terminationDate !== undefined && terminationDate === undefined) {
+    return badRequest("terminationDate must be a date (YYYY-MM-DD) or null");
   }
 
   // The ticket page's date box holds minutes only, but automatic target dates
@@ -117,6 +125,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (body.categoryId !== undefined) setField("categoryId", "categoryId", body.categoryId, current.categoryId);
   if (body.businessUnitId !== undefined)
     setField("businessUnitId", "businessUnitId", body.businessUnitId, current.businessUnitId);
+  if (terminationDate !== undefined) {
+    data.terminationDate = terminationDate;
+    before.terminationDate = terminationDateKey(current.terminationDate) || null;
+    after.terminationDate = terminationDateKey(terminationDate) || null;
+  }
 
   if (body.priority !== undefined && body.priority !== current.priority) {
     setField("priority", "priority", body.priority, current.priority);

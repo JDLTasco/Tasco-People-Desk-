@@ -272,6 +272,8 @@ model Ticket {
   slaDueAt        DateTime  @map("sla_due_at")
   targetDueAt     DateTime? @map("target_due_at")
   targetDueReason String?   @map("target_due_reason")
+  /// Employee's termination/resignation date (2026-10-08) -- set on Terminations/Resignations tickets, see lib/tickets/terminations.ts.
+  terminationDate DateTime? @map("termination_date") @db.Date
 
   status TicketStatus @default(NEW)
 

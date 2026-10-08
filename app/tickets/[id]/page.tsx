@@ -10,6 +10,7 @@ import { canActOnAssignedTicket, canEditTicketMetadata, canManageAdminSettings }
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
 import { currentActionLabel, displayStatus } from "@/lib/tickets/action-status";
+import { formatTerminationDate, terminationDateKey } from "@/lib/tickets/terminations";
 import TicketActions from "./ticket-actions";
 import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
@@ -131,6 +132,11 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             <div>
               <strong>Business unit:</strong> {ticket.businessUnit?.name ?? <em>optional, not set</em>}
             </div>
+            {ticket.terminationDate && (
+              <div>
+                <strong>Termination date:</strong> {formatTerminationDate(terminationDateKey(ticket.terminationDate))}
+              </div>
+            )}
             <div>
               <strong>Assignee:</strong>{" "}
               {ticket.assignee ? (
@@ -170,6 +176,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
             priority={ticket.priority}
             categoryId={ticket.categoryId}
             businessUnitId={ticket.businessUnitId}
+            terminationDate={terminationDateKey(ticket.terminationDate)}
             isAssignedTicket={isAssignedTicket}
             assignedToId={ticket.assignedToId}
             canEditMetadata={canEditMetadata}
