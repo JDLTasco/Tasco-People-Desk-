@@ -27,6 +27,7 @@ function t(o: Partial<DashboardTicket>): DashboardTicket {
     status: "NEW",
     priority: "P3",
     receivedAt: melb(2026, 10, 1),
+    assignedAt: null,
     closedAt: null,
     closeReason: null,
     slaDueAt: melb(2026, 10, 31),
@@ -83,6 +84,26 @@ describe("workload", () => {
   it("average age in calendar and working days", () => {
     assert.ok(w.avgAgeCalendarDays! > 12 && w.avgAgeCalendarDays! < 14);
     assert.equal(w.avgAgeWorkingDays, 9); // Thu 1 Oct -> Wed 14 Oct
+  });
+  it("counts Pool tickets overdue to be assigned (1 working day)", () => {
+    assert.equal(w.assignOverdue, 1); // the NEW ticket from 1 Oct
+    const fresh = workload([t({ status: "NEW", receivedAt: melb(2026, 10, 13, 14) })], NOW, NONE); // Tue 2pm, due Wed 2pm
+    assert.equal(fresh.assignOverdue, 0);
+  });
+});
+
+describe("assignment KPI over the reporting period", () => {
+  const start = melb(2026, 10, 5, 0);
+  const rows = [
+    t({ status: "ALLOCATED", receivedAt: melb(2026, 10, 6), assignedAt: melb(2026, 10, 6, 15), assignee: LF }), // met
+    t({ status: "IN_ACTION", receivedAt: melb(2026, 10, 6), assignedAt: melb(2026, 10, 8), assignee: LF }), // missed (2 days)
+    t({ status: "NEW", receivedAt: melb(2026, 10, 7) }), // still in Pool, overdue -> missed
+    t({ status: "NEW", receivedAt: melb(2026, 10, 14, 9) }), // not due yet -> not counted
+    t({ status: "CLOSED", receivedAt: melb(2026, 10, 7), closedAt: melb(2026, 10, 7, 11), closeReason: "NOT_A_REQUEST" }), // never assigned -> not counted
+    t({ status: "ALLOCATED", receivedAt: melb(2026, 10, 1), assignedAt: melb(2026, 10, 1, 11), assignee: DN }), // before the period
+  ];
+  it("share of tickets received in the period that were assigned in time", () => {
+    assert.deepEqual(throughput(rows, NOW, start, NONE).assignment, { counted: 3, met: 1, rate: 33.3 });
   });
 });
 

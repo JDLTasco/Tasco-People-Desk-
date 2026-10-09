@@ -11,13 +11,23 @@ test("no saved layout = standard order, widths, nothing hidden", () => {
   assert.ok(r.every((s) => !s.hidden));
 });
 
-test("saved order/size/hidden apply; missing sections go at the end", () => {
+test("saved order/size/hidden apply; missing sections slot in after the section they follow", () => {
   const layout = parseDashboardLayout({ order: ["terminations", "workload"], hidden: ["info"], sizes: { workload: "half" } });
   const r = resolveDashboardLayout(layout);
-  assert.deepEqual(r.slice(0, 2).map((s) => s.id), ["terminations", "workload"]);
+  const ids = r.map((s) => s.id);
+  assert.equal(ids[0], "terminations");
+  assert.ok(ids.indexOf("terminations") < ids.indexOf("workload"));
+  assert.equal(ids.indexOf("assignment"), ids.indexOf("workload") + 1);
+  assert.equal(ids.indexOf("byStatus"), ids.indexOf("terminations") + 1);
   assert.equal(r.length, defaultIds.length);
-  assert.equal(r[1].size, "half");
+  assert.equal(r.find((s) => s.id === "workload")?.size, "half");
   assert.equal(r.find((s) => s.id === "info")?.hidden, true);
+});
+
+test("a section added later appears after its neighbour in a saved layout", () => {
+  const saved = defaultIds.filter((id) => id !== "assignment").reverse();
+  const r = resolveDashboardLayout(parseDashboardLayout({ order: saved, hidden: [], sizes: {} })).map((s) => s.id);
+  assert.equal(r.indexOf("assignment"), r.indexOf("workload") + 1);
 });
 
 test("parse drops unknown and repeated sections and bad sizes; refuses non-layouts", () => {

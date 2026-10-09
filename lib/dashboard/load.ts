@@ -19,6 +19,7 @@ export async function loadDashboard(userId: string, role: UserRole, period: Repo
         status: true,
         priority: true,
         receivedAt: true,
+        assignedAt: true,
         closedAt: true,
         closeReason: true,
         slaDueAt: true,

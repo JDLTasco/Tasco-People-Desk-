@@ -9,6 +9,7 @@ export const SECTION_SIZES: SectionSize[] = ["full", "half", "third"];
 /** Every dashboard section, in the standard order with its standard width. */
 export const DASHBOARD_SECTIONS = [
   { id: "workload", label: "Workload now", size: "full" },
+  { id: "assignment", label: "Assignment KPI (1 working day)", size: "full" },
   { id: "terminations", label: "Upcoming terminations", size: "full" },
   { id: "byStatus", label: "Open tickets by status", size: "third" },
   { id: "byAssignee", label: "Open tickets by assignee", size: "third" },
@@ -57,13 +58,25 @@ export interface ResolvedSection {
 
 /**
  * The sections in this person's order. Any section missing from a saved
- * order (e.g. one added to the dashboard later) goes at the end.
+ * order (e.g. one added to the dashboard later) goes straight after the
+ * section it follows in the standard order (2026-10-10: was "at the end",
+ * which hid new sections at the bottom for anyone with a saved layout).
  */
 export function resolveDashboardLayout(layout: DashboardLayout | null): ResolvedSection[] {
   const byId = new Map(DASHBOARD_SECTIONS.map((s) => [s.id as DashboardSectionId, s]));
-  const order = [...(layout?.order ?? []), ...DASHBOARD_SECTIONS.map((s) => s.id)].filter(
-    (id, i, all) => all.indexOf(id) === i,
-  );
+  const order: DashboardSectionId[] = Array.from(new Set(layout?.order ?? []));
+  DASHBOARD_SECTIONS.forEach((s, i) => {
+    if (order.includes(s.id)) return;
+    let at = 0;
+    for (let j = i - 1; j >= 0; j--) {
+      const k = order.indexOf(DASHBOARD_SECTIONS[j].id);
+      if (k !== -1) {
+        at = k + 1;
+        break;
+      }
+    }
+    order.splice(at, 0, s.id);
+  });
   return order.map((id) => {
     const s = byId.get(id)!;
     return { id, label: s.label, size: layout?.sizes[id] ?? s.size, hidden: layout?.hidden.includes(id) ?? false };

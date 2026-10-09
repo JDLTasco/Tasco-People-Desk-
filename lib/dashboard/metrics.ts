@@ -17,12 +17,15 @@ import { effectiveDueDate, isOverdue } from "../tickets/due-dates";
 import { OPEN_STATUSES, type TicketStatus } from "../tickets/transitions";
 import { addCalendarDaysMelbourne, addWorkingDays, melbourneDateKey, workingDaysBetween } from "../calendar/working-days";
 import { melbourneParts, melbourneWallTimeToUtc } from "../timezone";
+import { assignmentKpiResult, isAssignmentOverdue } from "../tickets/assignment-kpi";
 
 export interface DashboardTicket {
   id: string;
   status: TicketStatus;
   priority: "P1" | "P2" | "P3";
   receivedAt: Date;
+  /** First claim/assignment out of the Pool (assignment KPI, 2026-10-10). */
+  assignedAt: Date | null;
   closedAt: Date | null;
   closeReason: string | null;
   slaDueAt: Date;
@@ -67,6 +70,8 @@ export interface Workload {
   byPriority: { P1: number; P2: number; P3: number };
   byStatus: { key: string; label: string; count: number }[];
   unassigned: number;
+  /** In the Pool past the 1-working-day assignment deadline (lib/tickets/assignment-kpi.ts). */
+  assignOverdue: number;
   overdue: number;
   dueNext7WorkingDays: number;
   avgAgeCalendarDays: number | null;
@@ -106,6 +111,7 @@ export function workload(rows: DashboardTicket[], now: Date, holidays: Set<strin
     },
     byStatus: Array.from(statusCounts, ([key, v]) => ({ key, label: v.label, count: v.count })),
     unassigned: open.filter((t) => t.assignee === null).length,
+    assignOverdue: rows.filter((t) => isAssignmentOverdue({ ...t, assignedToId: t.assignee?.id ?? null }, now, holidays)).length,
     overdue: open.filter((t) => isOverdue(t.slaDueAt, t.targetDueAt, t.status, now)).length,
     dueNext7WorkingDays: open.filter((t) => {
       const due = effectiveDueDate(t.slaDueAt, t.targetDueAt);
@@ -157,6 +163,8 @@ export interface Throughput {
   avgResolutionWorkingDays: number | null;
   complianceRate: number | null;
   resolvedInRange: number;
+  /** Assignment KPI over tickets that arrived in the range: share claimed/assigned within 1 working day. */
+  assignment: { counted: number; met: number; rate: number | null };
 }
 
 /** Resolved tickets closed in [start, end) -- no upper limit when `end` is left out. */
@@ -172,6 +180,11 @@ export function throughput(rows: DashboardTicket[], now: Date, rangeStart: Date,
   const workDurations = resolvedRange.map((t) => workingDaysBetween(t.receivedAt, t.closedAt!, holidays));
   const resolvedMonth = closedMonth.filter((t) => t.closeReason === "RESOLVED").length;
   const dropsMonth = closedMonth.filter((t) => ADMIN_DROP_REASONS.has(t.closeReason ?? "")).length;
+  const assignResults = rows
+    .filter((t) => t.receivedAt >= rangeStart && (!rangeEnd || t.receivedAt < rangeEnd))
+    .map((t) => assignmentKpiResult({ ...t, assignedToId: t.assignee?.id ?? null }, now, holidays))
+    .filter((r) => r !== null);
+  const assignMet = assignResults.filter((r) => r === "met").length;
   return {
     createdThisMonth: rows.filter((t) => t.receivedAt >= monthStart).length,
     closedThisMonth: {
@@ -184,6 +197,7 @@ export function throughput(rows: DashboardTicket[], now: Date, rangeStart: Date,
     avgResolutionWorkingDays: workDurations.length ? round1(workDurations.reduce((a, b) => a + b, 0) / workDurations.length) : null,
     complianceRate: pct(resolvedRange.filter(isOnTime).length, resolvedRange.length),
     resolvedInRange: resolvedRange.length,
+    assignment: { counted: assignResults.length, met: assignMet, rate: pct(assignMet, assignResults.length) },
   };
 }
 

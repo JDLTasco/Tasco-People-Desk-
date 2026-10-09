@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.11.1";
+export const APP_VERSION = "2.12.0";
 
 // History:
+// 2.12.0 (2026-10-10) -- Assignment KPI: every ticket claimed or assigned
+//   within 1 working day; dashboard section with the overdue-to-assign list
+//   and on-time rate (tiles open the Pool); Pool warning banner
 // 2.11.1 (2026-10-08) -- dashboard From/To dates sit right under the period
 //   choices on the right, instead of on the left
 // 2.11.0 (2026-10-08) -- dashboard reporting period: Last month, This quarter,

@@ -93,6 +93,7 @@ describe("buildDashboard with a closed period", () => {
     id: closed.toISOString(),
     status: "CLOSED",
     priority: "P3",
+    assignedAt: null,
     receivedAt: received,
     closedAt: closed,
     closeReason: "RESOLVED",

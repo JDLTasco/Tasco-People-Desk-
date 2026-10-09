@@ -208,6 +208,15 @@ export default async function InstructionsPage() {
             selected period. An open ticket isn&apos;t counted until it is resolved -- if it is past its target due date
             in the meantime it shows as <strong>Overdue</strong>.
           </dd>
+          <dt>Assignment KPI (1 working day)</dt>
+          <dd>
+            Every ticket must be <strong>claimed or assigned</strong> within 1 working day (24 working hours) of
+            arriving. A ticket that arrives at 15:00 on a Friday must be claimed by 15:00 on Monday; one that arrives
+            on a weekend or holiday must be claimed by the end of the next working day. Only the first claim or
+            assignment out of the Pool counts -- a later reassignment doesn&apos;t change it. A ticket still in the Pool
+            after that is <strong>overdue to be assigned</strong>. Tickets closed straight from the Pool (Info only,
+            Autoclose, merged) aren&apos;t counted.
+          </dd>
         </dl>
       </section>
 
@@ -241,6 +250,13 @@ export default async function InstructionsPage() {
           finishes, a message shows how many new tickets were created and how many replies were added to existing
           tickets, and the page refreshes. Emails already brought in are skipped, so pressing it twice does no harm. If
           someone else&apos;s check is already running, the button waits for that one instead of starting another.
+        </p>
+        <p>
+          <strong>Assignment KPI</strong> (under Workload now) shows how many tickets are{" "}
+          <strong>overdue to be assigned</strong> (in the Pool for more than 1 working day), how many are unassigned,
+          and the share of tickets received in the reporting period that were claimed or assigned within 1 working day.
+          Below the tiles is the list of every overdue-to-assign ticket, oldest first. Click any of the tiles to open
+          the <strong>Pool</strong>, which also shows a red warning naming the overdue tickets.
         </p>
         <p>
           <strong>Upcoming terminations</strong> (near the top of the dashboard) lists every open ticket in the

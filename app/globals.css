@@ -972,6 +972,7 @@ a.dash-tile:hover { border-color: var(--tasco-navy); }
 .tile-sub { font-size: 0.8rem; color: var(--muted); }
 .dash-tile-alert { border-left: 4px solid var(--tasco-red); }
 .dash-tile-alert .tile-value { color: var(--tasco-red); }
+.dash-tile-ok { border-left: 4px solid var(--tasco-green); }
 .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr)); gap: 0 1rem; }
 .dash-grid h3 { margin-top: 0; }
 .dash-range { display: flex; gap: 0.25rem; flex-wrap: wrap; }
