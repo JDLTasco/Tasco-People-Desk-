@@ -255,7 +255,7 @@ export default async function InstructionsPage() {
           <strong>Assignment KPI</strong> (under Workload now) shows how many tickets are{" "}
           <strong>overdue to be assigned</strong> (in the Pool for more than 1 working day), how many are unassigned,
           and the share of tickets received in the reporting period that were claimed or assigned within 1 working day.
-          Below the tiles is the list of every overdue-to-assign ticket, oldest first. Click any of the tiles to open
+          Click any of the numbers to open
           the <strong>Pool</strong>, which also shows a red warning naming the overdue tickets.
         </p>
         <p>

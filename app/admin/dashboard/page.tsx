@@ -8,8 +8,6 @@ import { formatAuDateTime } from "@/lib/format-date";
 import { loadUpcomingTerminations } from "@/lib/dashboard/terminations";
 import { BarList, ComplianceChart, TrendTable, VolumeChart, type BarRow } from "./charts";
 import UpcomingTerminations from "./upcoming-terminations";
-import OverdueAssignments from "./overdue-assignments";
-import { loadOverdueAssignments } from "@/lib/dashboard/assignment-overdue";
 import DashboardSections from "./dashboard-sections";
 import { parseDashboardLayout } from "@/lib/dashboard/layout";
 import { prisma } from "@/lib/prisma";
@@ -74,10 +72,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
   // Reporting period (2026-10-08): quick range, month/quarter preset, or From/To dates.
   const { period, error: periodError } = resolvePeriod(searchParams, new Date());
-  const [d, terminations, overdueAssign, me] = await Promise.all([
+  const [d, terminations, me] = await Promise.all([
     loadDashboard(session.user.id, session.user.role, period),
     loadUpcomingTerminations(session.user.id, session.user.role),
-    loadOverdueAssignments(session.user.id, session.user.role),
     prisma.user.findUnique({ where: { id: session.user.id }, select: { dashboardLayout: true } }),
   ]);
   const w = d.workload;
@@ -131,8 +128,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
             sub={`${tp.assignment.met} of ${tp.assignment.counted} tickets received`}
           />
         </div>
-        <h3>Tickets overdue to be assigned</h3>
-        <OverdueAssignments rows={overdueAssign} />
       </section>
     ),
     terminations: (
