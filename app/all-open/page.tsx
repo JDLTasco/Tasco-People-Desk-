@@ -10,7 +10,7 @@ export default async function AllOpenPage() {
   return (
     <main>
       <h1>All open</h1>
-      <FilterableTicketList tickets={tickets} />
+      <FilterableTicketList tickets={tickets} title="All open" />
     </main>
   );
 }

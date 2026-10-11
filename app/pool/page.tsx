@@ -16,7 +16,7 @@ export default async function PoolPage() {
     <main>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
         <h1>Pool</h1>
-        <Link href="/tickets/new">
+        <Link href="/tickets/new" className="no-print">
           <button type="button">+ New ticket</button>
         </Link>
       </div>
@@ -35,7 +35,7 @@ export default async function PoolPage() {
           {overdue.length > 10 ? ` and ${overdue.length - 10} more` : ""}. The oldest are at the top of the list below.
         </p>
       )}
-      <FilterableTicketList tickets={tickets} />
+      <FilterableTicketList tickets={tickets} title="Pool" />
     </main>
   );
 }

@@ -10,7 +10,7 @@ export default async function OverduePage() {
   return (
     <main>
       <h1>Overdue</h1>
-      <FilterableTicketList tickets={tickets} />
+      <FilterableTicketList tickets={tickets} title="Overdue" />
     </main>
   );
 }

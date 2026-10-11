@@ -274,6 +274,11 @@ export default async function InstructionsPage() {
           follows you to any computer; <strong>Reset to standard</strong> puts it back. On a phone, sections always
           show one under another.
         </p>
+        <p>
+          <strong>Print report</strong> (top right) opens a list of the dashboard&apos;s sections with tick boxes --
+          untick anything you don&apos;t want on paper, then press <strong>Print / save as PDF</strong>. To make a PDF,
+          choose &quot;Save as PDF&quot; as the printer in the print window.
+        </p>
       </section>
 
       <section className="section-card">
@@ -284,7 +289,10 @@ export default async function InstructionsPage() {
           A ticket is shown if it matches at least one ticked value in every box you&apos;ve used. Underneath,{" "}
           <strong>Sort by</strong> / <strong>then by</strong> sorts the list by up to three things in turn (e.g.
           priority, then due date) -- choose <strong>Date received</strong> to sort by the Received column (when
-          the email arrived, or when a + New ticket was logged). <strong>Clear all filters</strong> resets everything.
+          the email arrived, or when a + New ticket was logged). <strong>Clear all filters</strong> resets everything.{" "}
+          <strong>Print report</strong> prints the list exactly as filtered and sorted, with the filters used at the
+          top (choose &quot;Save as PDF&quot; as the printer for a PDF); <strong>Export CSV</strong> downloads the same
+          tickets as a spreadsheet file. Every export is recorded in the audit log.
           Each staff member has their own colour, shown on the Assignee name (an Admin can pick it on Admin &rarr;
           Users). The coloured strip down the left edge of each row shows its priority: red P1, amber P2, navy P3. To make a column wider or narrower, drag the thin line at the right
           edge of its heading -- the columns to its right make room. To move a column, drag its heading left or

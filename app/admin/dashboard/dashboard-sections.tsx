@@ -71,9 +71,56 @@ export default function DashboardSections({
   const hidden = sections.filter((s) => s.hidden);
   const visible = sections.filter((s) => !s.hidden && content[s.id] !== undefined);
 
+  // Print report (John, 2026-10-11): tick the sections to include, then print
+  // or save as PDF from the browser's print window. Unticked sections stay on
+  // screen and are only left off the printout.
+  const [choosingPrint, setChoosingPrint] = useState(false);
+  const [skipPrint, setSkipPrint] = useState<Set<DashboardSectionId>>(new Set());
+  const toggleSkip = (id: DashboardSectionId, include: boolean) =>
+    setSkipPrint((prev) => {
+      const next = new Set(prev);
+      if (include) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const printCount = visible.filter((s) => !skipPrint.has(s.id)).length;
+
   return (
     <>
-      <div className="dash-customise-bar">
+      {choosingPrint && (
+        <div className="dash-print-panel no-print">
+          <strong>Choose what to print</strong>
+          <div className="dash-print-choices">
+            {visible.map((s) => (
+              <label key={s.id}>
+                <input type="checkbox" checked={!skipPrint.has(s.id)} onChange={(e) => toggleSkip(s.id, e.target.checked)} />{" "}
+                {s.label}
+              </label>
+            ))}
+          </div>
+          <div className="dash-print-buttons">
+            <button type="button" className="secondary" onClick={() => setSkipPrint(new Set())}>
+              Select all
+            </button>
+            <button type="button" className="secondary" onClick={() => setSkipPrint(new Set(visible.map((s) => s.id)))}>
+              Select none
+            </button>
+            <button type="button" disabled={printCount === 0} onClick={() => window.print()}>
+              Print / save as PDF
+            </button>
+            <button type="button" className="secondary" onClick={() => setChoosingPrint(false)}>
+              Close
+            </button>
+            <span className="text-muted">To save a PDF, choose &quot;Save as PDF&quot; as the printer.</span>
+          </div>
+        </div>
+      )}
+      <div className="dash-customise-bar no-print">
+        {!editing && !choosingPrint && (
+          <button type="button" className="secondary" onClick={() => setChoosingPrint(true)}>
+            Print report
+          </button>
+        )}
         {editing ? (
           <>
             <span>
@@ -116,7 +163,7 @@ export default function DashboardSections({
                 if (el) refs.current.set(s.id, el);
                 else refs.current.delete(s.id);
               }}
-              className={`dash-section dash-size-${s.size}${dragId === s.id ? " dash-dragging" : ""}${dropClass}`}
+              className={`dash-section dash-size-${s.size}${dragId === s.id ? " dash-dragging" : ""}${dropClass}${skipPrint.has(s.id) ? " print-skip" : ""}`}
               onDragOver={(e) => {
                 if (!dragId) return;
                 e.preventDefault();

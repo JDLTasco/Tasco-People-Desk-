@@ -10,7 +10,7 @@ export default async function MyTicketsPage() {
   return (
     <main>
       <h1>My tickets</h1>
-      <FilterableTicketList tickets={tickets} />
+      <FilterableTicketList tickets={tickets} title="My tickets" />
     </main>
   );
 }

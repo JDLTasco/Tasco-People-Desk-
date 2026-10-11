@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   filtersFromSearchParams,
   matchesFilters,
@@ -12,6 +13,8 @@ import {
 } from "@/lib/tickets/filters";
 import { displayStatus } from "@/lib/tickets/action-status";
 import type { TicketListRow } from "@/lib/tickets/queries";
+import { ticketListCsv } from "@/lib/tickets/list-csv";
+import { formatAuDateTime } from "@/lib/format-date";
 import TicketListTable from "./TicketListTable";
 
 function uniqueSorted(values: (string | undefined)[]): string[] {
@@ -87,7 +90,15 @@ const MAX_SORT_KEYS = 3;
 // independently of this component's state/UI. Since 2026-10-03 status,
 // priority, business unit and assignee take several choices each, and the
 // list can be sorted by up to three fields in turn.
-export default function FilterableTicketList({ tickets }: { tickets: TicketListRow[] }) {
+const DUE_LABELS: Record<Exclude<DueFilter, "">, string> = {
+  OVERDUE: "Overdue",
+  TODAY: "Due today",
+  WEEK: "Due within 7 days",
+  MONTH: "Due within 30 days",
+};
+const NONE_LABELS: Record<string, string> = { __none__: "(none set)", __unassigned__: "(unassigned)" };
+
+export default function FilterableTicketList({ tickets, title }: { tickets: TicketListRow[]; title: string }) {
   const [ticketNo, setTicketNo] = useState("");
   const [requester, setRequester] = useState("");
   const [status, setStatus] = useState<string[]>([]);
@@ -149,6 +160,68 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
   const anyFilterActive = Boolean(
     ticketNo || requester || status.length || priority.length || businessUnit.length || assignee.length || category.length || due || sortKeys.length,
   );
+
+  // Plain-English summary of the filters and sort, for the printed report
+  // header and the export's audit record (John, 2026-10-11).
+  const names = (vals: string[]) => vals.map((v) => NONE_LABELS[v] ?? v).join(", ");
+  const filterSummary =
+    [
+      ticketNo && `Ticket number contains "${ticketNo}"`,
+      requester && `Requester contains "${requester}"`,
+      status.length > 0 && `Status: ${names(status)}`,
+      priority.length > 0 && `Priority: ${names(priority)}`,
+      businessUnit.length > 0 && `Business unit: ${names(businessUnit)}`,
+      assignee.length > 0 && `Assignee: ${names(assignee)}`,
+      category.length > 0 && `Category: ${names(category)}`,
+      due && DUE_LABELS[due],
+      sortKeys.length > 0 &&
+        `Sorted by ${sortKeys.map((k) => `${SORT_FIELD_LABELS[k.field]} (${k.direction === "asc" ? "ascending" : "descending"})`).join(", then ")}`,
+    ]
+      .filter(Boolean)
+      .join("; ") || "None -- every ticket in this list";
+
+  const [printedAt, setPrintedAt] = useState("");
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  // Stamp the print time whether printed from the button or the browser's own Print (Ctrl+P).
+  useEffect(() => {
+    const stamp = () => flushSync(() => setPrintedAt(formatAuDateTime(new Date())));
+    setPrintedAt(formatAuDateTime(new Date()));
+    window.addEventListener("beforeprint", stamp);
+    return () => window.removeEventListener("beforeprint", stamp);
+  }, []);
+
+  function printReport() {
+    window.print();
+  }
+
+  // The file is only handed over once the export has been recorded in the audit log.
+  async function exportCsv() {
+    setExportError(null);
+    setExporting(true);
+    try {
+      const res = await fetch("/api/exports/list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ view: title, rowCount: filtered.length, filters: filterSummary }),
+      });
+      if (!res.ok) throw new Error();
+      const blob = new Blob([ticketListCsv(filtered)], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title.toLowerCase().replace(/\s+/g, "-")}_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("The export couldn't be recorded, so no file was created. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function setSortKey(index: number, key: SortKey | null) {
     setSortKeys((prev) => {
@@ -246,9 +319,31 @@ export default function FilterableTicketList({ tickets }: { tickets: TicketListR
           })}
         </div>
       </div>
-      <p className="text-muted">
-        {filtered.length} of {tickets.length} ticket{tickets.length === 1 ? "" : "s"}
-      </p>
+      <div className="report-actions no-print">
+        <p className="text-muted">
+          {filtered.length} of {tickets.length} ticket{tickets.length === 1 ? "" : "s"}
+        </p>
+        {/* Print / save as PDF, or CSV, of the list exactly as filtered and sorted (John, 2026-10-11). */}
+        <button type="button" className="secondary" onClick={printReport} disabled={filtered.length === 0}>
+          Print report
+        </button>
+        <button type="button" className="secondary" onClick={exportCsv} disabled={filtered.length === 0 || exporting}>
+          {exporting ? "Exporting..." : "Export CSV"}
+        </button>
+      </div>
+      {exportError && (
+        <p role="alert" className="banner banner-error no-print">
+          {exportError}
+        </p>
+      )}
+      <div className="print-only report-header">
+        <h2>{title} report</h2>
+        <p>
+          Printed {printedAt} (Melbourne time) &middot; {filtered.length} of {tickets.length} ticket
+          {tickets.length === 1 ? "" : "s"}
+        </p>
+        <p>Filters: {filterSummary}</p>
+      </div>
       <TicketListTable tickets={filtered} />
     </>
   );

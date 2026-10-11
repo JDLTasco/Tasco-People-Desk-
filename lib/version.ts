@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.12.1";
+export const APP_VERSION = "2.13.0";
 
 // History:
+// 2.13.0 (2026-10-11) -- Print report (print / save as PDF) and Export CSV on
+//   Pool, My tickets, All open, Overdue and Closed; dashboard Print report
+//   with tick boxes to choose the sections. CSV exports are audit-logged
 // 2.12.1 (2026-10-10) -- dashboard Assignment KPI: overdue-to-assign list
 //   removed; the numbers still open the Pool
 // 2.12.0 (2026-10-10) -- Assignment KPI: every ticket claimed or assigned

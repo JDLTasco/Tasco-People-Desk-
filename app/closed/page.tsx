@@ -14,7 +14,7 @@ export default async function ClosedPage() {
     <main>
       <h1>Closed</h1>
       <p>Every ticket that has been closed, most recently closed first.</p>
-      <FilterableTicketList tickets={tickets} />
+      <FilterableTicketList tickets={tickets} title="Closed" />
     </main>
   );
 }
