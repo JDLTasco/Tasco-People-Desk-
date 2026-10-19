@@ -16,6 +16,7 @@ import NoteForm from "./note-form";
 import AttachmentForm from "./attachment-form";
 import AttachmentRemoveForm from "./attachment-remove-form";
 import IgnoreImageButton from "./ignore-image-button";
+import { isViewableType } from "@/lib/attachments/viewable";
 import SaveExitButton from "./save-exit-button";
 
 // Correspondence label (John, 2026-10-05): outbound emails are named by type
@@ -216,6 +217,11 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                     ) : (
                       a.filename
                     )}{" "}
+                    {a.scanStatus === "CLEAN" && isViewableType(a.detectedContentType) && (
+                      <>
+                        [<a href={`/api/tickets/${ticket.id}/attachments/${a.id}?view=1`} target="_blank" rel="noopener noreferrer">View</a>]{" "}
+                      </>
+                    )}
                     ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}
                     {a.scanStatus === "PENDING" && "scanning"}
                     {a.scanStatus === "CLEAN" && "clean"}

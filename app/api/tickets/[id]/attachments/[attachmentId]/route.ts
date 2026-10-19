@@ -3,6 +3,8 @@ import { requireApiContext } from "@/lib/api-context";
 import { notFound, conflict } from "@/lib/http-errors";
 import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { blobStore } from "@/lib/blob-store";
+import { detectContentType } from "@/lib/ingestion/attachments";
+import { isViewableType } from "@/lib/attachments/viewable";
 
 // §7.3.1: "No attachment is downloadable while scan_status is PENDING.
 // MALICIOUS and BLOCKED are never downloadable ... Fail closed ... never
@@ -36,6 +38,24 @@ export async function GET(request: Request, { params }: { params: { id: string; 
   }
 
   const content = await blobStore.read(attachment.blobPath);
+
+  // ?view=1 (2026-10-19): open in the browser instead of downloading, but
+  // only when the bytes themselves sniff as PDF/PNG/JPEG/GIF -- anything
+  // else falls through to the forced download below. nosniff stops the
+  // browser second-guessing the type; no-store keeps HR files out of caches.
+  const sniffed = detectContentType(content);
+  if (new URL(request.url).searchParams.get("view") === "1" && isViewableType(sniffed)) {
+    return new Response(new Uint8Array(content), {
+      headers: {
+        "Content-Type": sniffed!,
+        "Content-Disposition": `inline; filename="${attachment.filename}"`,
+        "Content-Length": String(attachment.sizeBytes),
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
+
   // Served as octet-stream regardless of the file's real type, same as
   // how blob-client.ts's AzureBlobStore.save() always writes it -- forces
   // a download rather than in-browser rendering, avoiding any risk of a

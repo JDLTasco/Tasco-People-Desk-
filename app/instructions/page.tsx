@@ -35,8 +35,9 @@ export default async function InstructionsPage() {
           import), rather than arriving on their own every few minutes, and <strong>sending email is switched
           off</strong> while HR finishes testing --
           acknowledgements, questions and outcomes are recorded on the ticket and listed under Admin &rarr; Failed
-          sends instead of being delivered. Email attachments can be seen on a ticket but can&apos;t be opened
-          until IT switches on malware scanning. Everything else on this page already works exactly as described;
+          sends instead of being delivered. Attachments can be opened once the malware scan marks them clean:
+          click the file name to download it, or <strong>View</strong> (PDFs and pictures) to open it in a new
+          browser tab. Everything else on this page already works exactly as described;
           once the mailbox connection is switched on, emails flow in and out automatically with no change to how
           you work a ticket.
         </p>
