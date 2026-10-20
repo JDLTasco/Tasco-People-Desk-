@@ -1,9 +1,11 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.14.0";
+export const APP_VERSION = "2.14.1";
 
 // History:
+// 2.14.1 (2026-10-20) -- fix: opening or downloading an emailed attachment
+//   failed with "connection was reset" (wrong file size sent to the browser)
 // 2.14.0 (2026-10-19) -- View link on clean PDF and image attachments: opens
 //   in a new browser tab instead of downloading (filename still downloads)
 // 2.13.0 (2026-10-11) -- Print report (print / save as PDF) and Export CSV on

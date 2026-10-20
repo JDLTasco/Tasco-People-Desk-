@@ -5,6 +5,7 @@ import { loadTicketForViewer } from "@/lib/tickets/detail";
 import { blobStore } from "@/lib/blob-store";
 import { detectContentType } from "@/lib/ingestion/attachments";
 import { isViewableType } from "@/lib/attachments/viewable";
+import { contentDisposition } from "@/lib/attachments/content-disposition";
 
 // §7.3.1: "No attachment is downloadable while scan_status is PENDING.
 // MALICIOUS and BLOCKED are never downloadable ... Fail closed ... never
@@ -38,6 +39,11 @@ export async function GET(request: Request, { params }: { params: { id: string; 
   }
 
   const content = await blobStore.read(attachment.blobPath);
+  // Content-Length is the stored bytes, not attachment.sizeBytes: for email
+  // attachments that is Graph's `size`, which is larger than the file itself,
+  // so the browser waited for bytes that never came (ERR_CONNECTION_RESET,
+  // 2026-10-20).
+  const contentLength = String(content.length);
 
   // ?view=1 (2026-10-19): open in the browser instead of downloading, but
   // only when the bytes themselves sniff as PDF/PNG/JPEG/GIF -- anything
@@ -48,8 +54,8 @@ export async function GET(request: Request, { params }: { params: { id: string; 
     return new Response(new Uint8Array(content), {
       headers: {
         "Content-Type": sniffed!,
-        "Content-Disposition": `inline; filename="${attachment.filename}"`,
-        "Content-Length": String(attachment.sizeBytes),
+        "Content-Disposition": contentDisposition("inline", attachment.filename),
+        "Content-Length": contentLength,
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
       },
@@ -64,8 +70,8 @@ export async function GET(request: Request, { params }: { params: { id: string; 
   return new Response(new Uint8Array(content), {
     headers: {
       "Content-Type": "application/octet-stream",
-      "Content-Disposition": `attachment; filename="${attachment.filename}"`,
-      "Content-Length": String(attachment.sizeBytes),
+      "Content-Disposition": contentDisposition("attachment", attachment.filename),
+      "Content-Length": contentLength,
     },
   });
 }
