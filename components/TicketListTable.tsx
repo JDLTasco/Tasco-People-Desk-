@@ -37,6 +37,14 @@ const COLUMNS: Column[] = [
       </>
     ),
   },
+  {
+    id: "attachments",
+    label: "Attachments",
+    cell: (t) =>
+      t._count.attachments > 0 ? (
+        <span title={`${t._count.attachments} attachment${t._count.attachments === 1 ? "" : "s"}`}>📎 {t._count.attachments}</span>
+      ) : null,
+  },
   { id: "requester", label: "Requester", cell: (t) => t.requesterName },
   {
     id: "status",

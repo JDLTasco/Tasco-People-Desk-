@@ -25,6 +25,10 @@ const TICKET_LIST_SELECT = {
   businessUnit: { select: { name: true } },
   actionStatus: { select: { name: true } },
   assignee: { select: { id: true, displayName: true, initials: true } },
+  // Attachments column (John, 2026-10-20): only files still on the ticket.
+  // Ignored signature/footer images are never stored, and copies stored before
+  // they were ignored are removed (removed_at), so neither counts.
+  _count: { select: { attachments: { where: { removedAt: null, scanStatus: { not: "SKIPPED" } } } } },
 } satisfies Prisma.TicketSelect;
 
 type TicketListBaseRow = Prisma.TicketGetPayload<{ select: typeof TICKET_LIST_SELECT }>;

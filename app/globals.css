@@ -271,6 +271,21 @@ button.secondary:hover:not(:disabled) {
   background: var(--tasco-navy-pale);
 }
 
+/* View link on clean PDF/image attachments (John, 2026-10-20: highlight it) */
+a.view-button {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 10px;
+  background: var(--tasco-green);
+  color: var(--surface);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+a.view-button:hover {
+  filter: brightness(1.15);
+}
+
 /* Status / priority chips */
 .chip {
   display: inline-block;

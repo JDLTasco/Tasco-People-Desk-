@@ -219,7 +219,14 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
                     )}{" "}
                     {a.scanStatus === "CLEAN" && isViewableType(a.detectedContentType) && (
                       <>
-                        [<a href={`/api/tickets/${ticket.id}/attachments/${a.id}?view=1`} target="_blank" rel="noopener noreferrer">View</a>]{" "}
+                        <a
+                          className="view-button"
+                          href={`/api/tickets/${ticket.id}/attachments/${a.id}?view=1`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          View
+                        </a>{" "}
                       </>
                     )}
                     ({(a.sizeBytes / 1024).toFixed(1)} KB) --{" "}

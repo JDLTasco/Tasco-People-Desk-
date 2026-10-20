@@ -28,6 +28,7 @@ const HEADER = [
   "Due",
   "Overdue",
   "Confidential",
+  "Attachments",
 ];
 
 export function ticketListCsv(tickets: TicketListRow[]): string {
@@ -45,6 +46,7 @@ export function ticketListCsv(tickets: TicketListRow[]): string {
       formatAuDateTime(effectiveDueDate(t.slaDueAt, t.targetDueAt)),
       isOverdue(t.slaDueAt, t.targetDueAt, t.status) ? "Yes" : "No",
       t.isConfidential ? "Yes" : "No",
+      t._count.attachments,
     ]
       .map(csvCell)
       .join(","),

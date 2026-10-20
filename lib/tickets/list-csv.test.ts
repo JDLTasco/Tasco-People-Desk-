@@ -37,17 +37,18 @@ describe("ticketListCsv", () => {
       actionStatus: null,
       assignee: { id: "u1", displayName: "Lisa Ferguson", initials: "LF" },
       assigneeColour: 0,
+      _count: { attachments: 2 },
     };
     const rows = [
       { ...base, id: "a", ticketNo: "2610010000-1" },
-      { ...base, id: "b", ticketNo: "2610010000-2", isConfidential: true, assignee: null },
+      { ...base, id: "b", ticketNo: "2610010000-2", isConfidential: true, assignee: null, _count: { attachments: 0 } },
     ] as unknown as TicketListRow[];
     const csv = ticketListCsv(rows);
     assert.ok(csv.startsWith("﻿Ticket,Received,Subject"));
     const lines = csv.trim().split("\r\n");
     assert.equal(lines.length, 3);
     assert.match(lines[1], /^2610010000-1,"01\/10\/2026, 10:00 am","Leave, annual",Sam Smith,/);
-    assert.match(lines[1], /,Lisa Ferguson,.*,No,No$/);
-    assert.match(lines[2], /^2610010000-2,.*,,"01\/01\/2030, 11:00 am",No,Yes$/);
+    assert.match(lines[1], /,Lisa Ferguson,.*,No,No,2$/);
+    assert.match(lines[2], /^2610010000-2,.*,,"01\/01\/2030, 11:00 am",No,Yes,0$/);
   });
 });

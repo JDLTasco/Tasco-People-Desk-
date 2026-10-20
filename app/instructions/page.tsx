@@ -36,8 +36,9 @@ export default async function InstructionsPage() {
           off</strong> while HR finishes testing --
           acknowledgements, questions and outcomes are recorded on the ticket and listed under Admin &rarr; Failed
           sends instead of being delivered. Attachments can be opened once the malware scan marks them clean:
-          click the file name to download it, or <strong>View</strong> (PDFs and pictures) to open it in a new
-          browser tab. Everything else on this page already works exactly as described;
+          click the file name to download it, or the green <strong>View</strong> button (PDFs and pictures) to open
+          it in a new browser tab. On the ticket lists, the <strong>Attachments</strong> column shows 📎 and how many
+          files a ticket has (ignored signature and footer logos aren&apos;t counted). Everything else on this page already works exactly as described;
           once the mailbox connection is switched on, emails flow in and out automatically with no change to how
           you work a ticket.
         </p>

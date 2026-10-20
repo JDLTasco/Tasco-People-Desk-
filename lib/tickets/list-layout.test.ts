@@ -22,3 +22,14 @@ test("rejects an order with missing, repeated or unknown columns", () => {
   assert.equal(parseListLayout(null), null);
   assert.equal(parseListLayout("ticket"), null);
 });
+
+test("a layout saved before the Attachments column gets it back after Subject", () => {
+  const old = LIST_COLUMN_IDS.filter((id) => id !== "attachments");
+  const moved = ["subject", ...old.filter((id) => id !== "subject")];
+  const parsed = parseListLayout({ order: moved, widths: moved.map(() => 10) });
+  assert.deepEqual(parsed?.order.slice(0, 2), ["subject", "attachments"]);
+  assert.equal(parsed?.order.length, LIST_COLUMN_IDS.length);
+  assert.equal(Math.round(parsed!.widths!.reduce((a, b) => a + b, 0)), 100);
+  assert.ok(parsed!.widths![1] < parsed!.widths![0]);
+  assert.deepEqual(parseListLayout({ order: old }), { order: [...LIST_COLUMN_IDS], widths: null });
+});
