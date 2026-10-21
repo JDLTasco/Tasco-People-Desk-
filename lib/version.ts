@@ -1,9 +1,12 @@
 // The app version shown in the nav bar and footer (John, 2026-10-01).
 // Bump this with every update that gets pushed, and add a line below.
 // Patch (x.y.Z) for fixes and small tweaks, minor (x.Y.0) for new features.
-export const APP_VERSION = "2.15.0";
+export const APP_VERSION = "2.16.0";
 
 // History:
+// 2.16.0 (2026-10-21) -- HR Officers can merge a NEW (pooled) ticket without
+//   claiming it; ticket Action buttons renamed (Withdrawn, Close (Autoclose
+//   spam)) and Merge into another ticket moved into that row
 // 2.15.0 (2026-10-20) -- Attachments column (📎 + count) on every ticket list
 //   and in Export CSV, not counting ignored signature/footer images; the
 //   View link on a ticket is now a green button

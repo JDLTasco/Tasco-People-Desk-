@@ -38,7 +38,7 @@ export default async function ProcedurePage() {
         <h3>2. Triage -- take ownership and set it up</h3>
         <ol>
           <li>Check the <a href="/pool">Pool</a> regularly (the Dashboard you land on shows how many are waiting). Open a ticket and read it.</li>
-          <li>If it isn&apos;t an HR matter: <strong>Close -- Info only</strong> (for information only, or sent to the wrong address) or <strong>Close -- Autoclose</strong> (spam). Both archive straight away and send nothing. An Admin can use <strong>Block this sender</strong> for repeat junk from outside Tasco.</li>
+          <li>If it isn&apos;t an HR matter: <strong>Close -- Info only</strong> (for information only, or sent to the wrong address) or <strong>Close (Autoclose spam)</strong> (spam). Both archive straight away and send nothing. An Admin can use <strong>Block this sender</strong> for repeat junk from outside Tasco.</li>
           <li>If it duplicates another ticket: <strong>Merge into another ticket</strong> (see &quot;The ticket lifecycle&quot;).</li>
           <li>Otherwise <strong>Claim</strong> it, or <strong>Assign to</strong> a colleague. It becomes ALLOCATED.</li>
           <li>Set the real <strong>Priority</strong>, a <strong>Category</strong> (required before work can start) and a <strong>Business unit</strong> if relevant. The target due date follows the priority: P1 3, P2 10, P3 20 working days from arrival. Override it, with a reason, only for a real external deadline.</li>
@@ -58,7 +58,7 @@ export default async function ProcedurePage() {
         <h3>4. Resolve it</h3>
         <ol>
           <li>Click <strong>Send outcome to employee</strong>, write the outcome, check To and CC, review the email and confirm. The ticket becomes OUTCOME.</li>
-          <li>If the requester withdraws before then, use <strong>Close -- Withdrawn</strong> instead (no email).</li>
+          <li>If the requester withdraws before then, use <strong>Withdrawn</strong> instead (no email).</li>
         </ol>
 
         <h3>5. After the outcome -- reply windows (automatic)</h3>

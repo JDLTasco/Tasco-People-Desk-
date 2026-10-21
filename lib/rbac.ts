@@ -68,11 +68,13 @@ export function canEditTicketMetadata(_role: UserRole): boolean {
  * Merge one ticket into another (added directly with John, Sep 2026 --
  * not in the original v1.3 permission matrix). ADMIN / HR_LEAD
  * unconditionally; HR_OFFICER only if they're the assignee of at least
- * one of the two tickets involved.
+ * one of the two tickets involved, or the ticket being merged away is still
+ * NEW in the pool (John, 2026-10-21 -- so any officer can fold a duplicate
+ * into an existing ticket without claiming it first).
  */
-export function canMergeTickets(role: UserRole, isAssigneeOfEitherTicket: boolean): boolean {
+export function canMergeTickets(role: UserRole, isAssigneeOfEitherTicket: boolean, sourceIsNew = false): boolean {
   if (role === "ADMIN" || role === "HR_LEAD") return true;
-  return isAssigneeOfEitherTicket;
+  return isAssigneeOfEitherTicket || sourceIsNew;
 }
 
 /** Add internal notes -- ADMIN / HR_LEAD / HR_OFFICER, any ticket. */

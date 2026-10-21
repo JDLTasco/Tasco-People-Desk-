@@ -63,6 +63,11 @@ describe("Merge one ticket into another (added directly with John, Sep 2026)", (
     assert.equal(canMergeTickets(HR_OFFICER, true), true);
     assert.equal(canMergeTickets(HR_OFFICER, false), false);
   });
+
+  it("HR_OFFICER can merge a NEW (pooled) ticket away without being its assignee (2026-10-21)", () => {
+    assert.equal(canMergeTickets(HR_OFFICER, false, true), true);
+    assert.equal(canMergeTickets(HR_OFFICER, false, false), false);
+  });
 });
 
 describe("Reassign another user's ticket (amended 2026-10-03: every HR role, any ticket)", () => {

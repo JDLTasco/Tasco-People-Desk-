@@ -6,7 +6,7 @@ import { isAutoTargetReason } from "@/lib/tickets/target-due";
 import { getAssigneeColourMap } from "@/lib/users/colours";
 import { loadHolidaySet } from "@/lib/calendar/holidays";
 import { validateReopen } from "@/lib/tickets/reopen";
-import { canActOnAssignedTicket, canEditTicketMetadata, canManageAdminSettings } from "@/lib/rbac";
+import { canEditTicketMetadata, canManageAdminSettings, canMergeTickets } from "@/lib/rbac";
 import { formatAuDateTime } from "@/lib/format-date";
 import { messageDisplayText } from "@/lib/email/html-to-text";
 import { currentActionLabel, displayStatus } from "@/lib/tickets/action-status";
@@ -44,7 +44,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   const isAssignedTicket = ticket.assignedToId === session.user.id;
   const canEditMetadata = canEditTicketMetadata(session.user.role);
-  const canMerge = canActOnAssignedTicket(session.user.role, isAssignedTicket);
+  const canMerge = canMergeTickets(session.user.role, isAssignedTicket, ticket.status === "NEW");
   const due = effectiveDueDate(ticket.slaDueAt, ticket.targetDueAt);
   const overdue = isOverdue(ticket.slaDueAt, ticket.targetDueAt, ticket.status);
   const lastChange = ticket.statusHistory[ticket.statusHistory.length - 1];

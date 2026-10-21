@@ -61,8 +61,8 @@ export async function POST(request: Request, { params }: { params: { id: string 
   if (!check.ok) return badRequest(check.error!);
 
   const isAssigneeOfEitherTicket = source.assignedToId === session.user.id || target.assignedToId === session.user.id;
-  if (!canMergeTickets(session.user.role, isAssigneeOfEitherTicket)) {
-    return forbidden("You must be the assignee of one of the two tickets (or ADMIN/HR_LEAD) to merge them");
+  if (!canMergeTickets(session.user.role, isAssigneeOfEitherTicket, source.status === "NEW")) {
+    return forbidden("You must be the assignee of one of the two tickets (or ADMIN/HR_LEAD), or the ticket must still be NEW, to merge them");
   }
 
   const mergedCcRecipients = Array.from(new Set([...target.ccRecipients, ...source.ccRecipients]));

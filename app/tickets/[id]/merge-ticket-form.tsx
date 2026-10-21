@@ -89,7 +89,7 @@ export default function MergeTicketForm({ ticketId, ticketNo, saveChanges }: Pro
   }
 
   return (
-    <div className="section-card">
+    <div className="section-card" style={{ flexBasis: "100%" }}>
       <h3>Merge {ticketNo} into another ticket</h3>
       <p>
         All correspondence, notes, and attachments from {ticketNo} will move into the ticket you choose below, which

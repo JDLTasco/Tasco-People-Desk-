@@ -388,8 +388,8 @@ export default async function InstructionsPage() {
             doesn&apos;t reply within 2 working days the ticket closes by itself overnight, and is archived 2 working
             days after that. If they do reply in that time, it comes back to you as Response received.
           </li>
-          <li>If the email is for information only or not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close -- Autoclose</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
-          <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Close -- Withdrawn</strong>. This doesn&apos;t notify the requester either, since they withdrew it.</li>
+          <li>If the email is for information only or not an HR matter, use <strong>Close -- Info only</strong>; for spam or anything needing no action, <strong>Close (Autoclose spam)</strong>. Neither needs a priority, category or target date, neither notifies the requester, and both <strong>archive the ticket straight away</strong> (you&apos;re asked to confirm, as it can&apos;t be reopened afterwards).</li>
+          <li>If the requester withdraws the request before it&apos;s resolved, use <strong>Withdrawn</strong>. This doesn&apos;t notify the requester either, since they withdrew it.</li>
         </ol>
       </section>
 
@@ -413,7 +413,7 @@ export default async function InstructionsPage() {
             <tr><td>Draft and send the outcome, close</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
             <tr><td>Close as Info only, Autoclose or Withdrawn</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Reopen a closed ticket (within 2 working days, reason required)</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
-            <tr><td>Merge a ticket into another</td><td>Yes</td><td>Yes</td><td>Assigned tickets only</td></tr>
+            <tr><td>Merge a ticket into another</td><td>Yes</td><td>Yes</td><td>Assigned or new (pool) tickets</td></tr>
             <tr><td>HR dashboard</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
             <tr><td>Set / clear the confidential flag</td><td>Yes</td><td>Yes</td><td>No</td></tr>
             <tr><td>View a confidential ticket</td><td>Yes (logged)</td><td>Yes (logged)</td><td>Only if given access or assigned</td></tr>

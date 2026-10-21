@@ -571,7 +571,7 @@ export default function TicketActions({
               disabled={busy}
               onClick={() => runWithSave((v) => postJson(`/api/tickets/${ticketId}/close-withdrawn`, { version: v }))}
             >
-              Close -- Withdrawn
+              Withdrawn
             </button>
           )}
 
@@ -600,8 +600,23 @@ export default function TicketActions({
                 void run(() => postJson(`/api/tickets/${ticketId}/close-autoclose`, { version }));
               }}
             >
-              Close -- Autoclose (spam / no action needed)
+              Close (Autoclose spam)
             </button>
+          )}
+
+          {/* Merge sits with the other Action buttons (John, 2026-10-21; it
+              used to be its own row below). Opening it wraps the search form
+              onto its own full-width line. */}
+          {canMerge && (status === "NEW" || status === "ALLOCATED" || isWorking || status === "OUTCOME") && (
+            <MergeTicketForm
+              ticketId={ticketId}
+              ticketNo={ticketNo}
+              saveChanges={async () => {
+                const saved = await saveChanges();
+                if ("ok" in saved) return { error: saved.data?.error ?? `Saving changes failed (${saved.status})` };
+                return saved;
+              }}
+            />
           )}
 
           {/* Block this sender (John, 2026-10-05): ADMIN only, since the
@@ -651,20 +666,6 @@ export default function TicketActions({
           )}
         </div>
       </div>
-
-      {canMerge && (status === "NEW" || status === "ALLOCATED" || isWorking || status === "OUTCOME") && (
-        <div style={{ marginBottom: "1rem" }}>
-          <MergeTicketForm
-            ticketId={ticketId}
-            ticketNo={ticketNo}
-            saveChanges={async () => {
-              const saved = await saveChanges();
-              if ("ok" in saved) return { error: saved.data?.error ?? `Saving changes failed (${saved.status})` };
-              return saved;
-            }}
-          />
-        </div>
-      )}
 
       {/* Any HR role may assign a pooled ticket to someone else (2026-10-03). */}
       {status === "NEW" && (
